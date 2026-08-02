@@ -1,1 +1,815 @@
-﻿export default function Page() { return <div className="min-h-screen flex items-center justify-center">Browse page</div>; }
+﻿// app/search/page.tsx
+"use client";
+
+import React, { useState, useRef, useEffect, Suspense } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Search, SlidersHorizontal, MapPin, Star, ShieldCheck, Zap, 
+  Camera, Laptop, Gamepad2, Smartphone, Projector, Wrench, 
+  Compass, Music, Armchair, Package, Sparkles, 
+  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
+
+// ==========================================
+// MOCK DATA & TYPES
+// ==========================================
+interface ProductListing {
+  id: string;
+  title: string;
+  category: string;
+  dailyPrice: number;
+  rating: number;
+  reviewsCount: number;
+  image: string;
+  city: string;
+  distance: string;
+  verifiedHost: boolean;
+  instantBook: boolean;
+  condition: string;
+}
+
+const CATEGORIES = [
+  { name: "All Categories", icon: <Package className="w-4 h-4" /> },
+  { name: "Electronics", icon: <Zap className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Cameras", icon: <Camera className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Laptops", icon: <Laptop className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Gaming Consoles", icon: <Gamepad2 className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Mobile Phones", icon: <Smartphone className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Projectors", icon: <Projector className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Tools", icon: <Wrench className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Sports Equipment", icon: <Compass className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Musical Instruments", icon: <Music className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Furniture", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
+];
+
+const SORT_OPTIONS = [
+  { id: "recommended", label: "Sort: Recommended" },
+  { id: "price-low", label: "Price: Low to High" },
+  { id: "price-high", label: "Price: High to Low" },
+  { id: "rating", label: "Highest Rated" },
+];
+
+const INDIAN_CITIES = [
+  "Bengaluru, KA", "Mumbai, MH", "Delhi, DL", "Hyderabad, TS", "Chennai, TN",
+  "Kolkata, WB", "Pune, MH", "Ahmedabad, GJ", "Jaipur, RJ", "Surat, GJ",
+  "Lucknow, UP", "Kanpur, UP", "Nagpur, MH", "Indore, MP", "Thane, MH",
+  "Bhopal, MP", "Visakhapatnam, AP", "Patna, BR", "Vadodara, GJ", "Ghaziabad, UP",
+  "Ludhiana, PB", "Agra, UP", "Nashik, MH", "Faridabad, HR", "Meerut, UP",
+  "Rajkot, GJ", "Kalyan-Dombivli, MH", "Vasai-Virar, MH", "Varanasi, UP", "Srinagar, JK",
+  "Aurangabad, MH", "Dhanbad, JH", "Amritsar, PB", "Navi Mumbai, MH", "Allahabad (Prayagraj), UP",
+  "Ranchi, JH", "Howrah, WB", "Coimbatore, TN", "Jabalpur, MP", "Gwalior, MP",
+  "Vijayawada, AP", "Jodhpur, RJ", "Madurai, TN", "Raipur, CG", "Kota, RJ",
+  "Guwahati, AS", "Chandigarh, CH", "Solapur, MH", "Hubli-Dharwad, KA", "Mysore, KA",
+];
+
+const POPULAR_SEARCHES = ["Sony Alpha", "PlayStation 5", "DJI Mini 3", "Camp Tent", "Power Tools"];
+const PLACEHOLDERS = [
+  "What do you want to rent?",
+  "Search Sony A7 IV Camera...",
+  "Search PS5 DualSense Consoles...",
+  "Search DJI Mavic 3 Drones...",
+  "Search Ather Electric Scooters...",
+];
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+const formatDateString = (year: number, month: number, day: number) => {
+  const m = String(month + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+};
+
+const formatDisplayDate = (dateString: string) => {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split("-");
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  if (isNaN(date.getTime())) return dateString;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+const MOCK_LISTINGS: ProductListing[] = [
+  {
+    id: "sony-alpha-7iv",
+    title: "Sony Alpha 7IV Mirrorless Camera with 24-70mm Lens",
+    category: "Cameras",
+    dailyPrice: 850,
+    rating: 4.9,
+    reviewsCount: 42,
+    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800",
+    city: "Bengaluru, KA",
+    distance: "1.2 km away",
+    verifiedHost: true,
+    instantBook: true,
+    condition: "Like New",
+  },
+  {
+    id: "macbook-pro-m3",
+    title: "MacBook Pro 16\" M3 Max (32GB RAM, 1TB SSD)",
+    category: "Laptops",
+    dailyPrice: 1200,
+    rating: 5.0,
+    reviewsCount: 28,
+    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=800",
+    city: "Bengaluru, KA",
+    distance: "2.4 km away",
+    verifiedHost: true,
+    instantBook: true,
+    condition: "Brand New",
+  },
+  {
+    id: "dji-mavic-3-pro",
+    title: "DJI Mavic 3 Pro Drone Fly More Combo",
+    category: "Electronics",
+    dailyPrice: 950,
+    rating: 4.8,
+    reviewsCount: 35,
+    image: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=800",
+    city: "Mumbai, MH",
+    distance: "3.1 km away",
+    verifiedHost: true,
+    instantBook: false,
+    condition: "Excellent",
+  },
+  {
+    id: "playstation-5-bundle",
+    title: "PlayStation 5 Console + 2 Controllers & 4 Games",
+    category: "Gaming Consoles",
+    dailyPrice: 450,
+    rating: 4.9,
+    reviewsCount: 64,
+    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&q=80&w=800",
+    city: "Bengaluru, KA",
+    distance: "0.8 km away",
+    verifiedHost: true,
+    instantBook: true,
+    condition: "Like New",
+  },
+  {
+    id: "4k-laser-projector",
+    title: "Anker Nebula Cosmos Laser 4K Projector + 100\" Screen",
+    category: "Projectors",
+    dailyPrice: 700,
+    rating: 4.7,
+    reviewsCount: 19,
+    image: "https://images.unsplash.com/photo-1535016120720-40c646be5580?auto=format&fit=crop&q=80&w=800",
+    city: "Delhi, DL",
+    distance: "4.5 km away",
+    verifiedHost: false,
+    instantBook: true,
+    condition: "Excellent",
+  },
+  {
+    id: "electric-cargo-bike",
+    title: "Electric Urban Commuter Bicycle with Basket",
+    category: "Sports Equipment",
+    dailyPrice: 600,
+    rating: 4.9,
+    reviewsCount: 51,
+    image: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&q=80&w=800",
+    city: "Chennai, TN",
+    distance: "1.9 km away",
+    verifiedHost: true,
+    instantBook: true,
+    condition: "Like New",
+  },
+];
+
+function SearchContent() {
+  const searchParams = useSearchParams();
+
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [isFocused, setIsFocused] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [priceRange, setPriceRange] = useState(1500);
+  const [selectedCondition, setSelectedCondition] = useState("All");
+  const [instantBookOnly, setInstantBookOnly] = useState(false);
+  const [verifiedHostOnly, setVerifiedHostOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("recommended");
+  
+  const [selectedCity, setSelectedCity] = useState(searchParams.get("location") || "Bengaluru, KA");
+  const [citySearchQuery, setCitySearchQuery] = useState("");
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+
+  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "2026-08-05");
+  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "2026-08-08");
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+  // Calendar View State
+  const [currentMonth, setCurrentMonth] = useState(7); // August
+  const [currentYear, setCurrentYear] = useState(2026);
+
+  // Custom Dropdown State for Sorting
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
+  const calendarDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sync state if URL params change externally
+  useEffect(() => {
+    const q = searchParams.get("q");
+    const loc = searchParams.get("location");
+    const start = searchParams.get("startDate");
+    const end = searchParams.get("endDate");
+
+    if (q !== null) setSearchQuery(q);
+    if (loc) setSelectedCity(loc);
+    if (start) setStartDate(start);
+    if (end) setEndDate(end);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPlaceholderIdx((prev) => (prev + 1) % PLACEHOLDERS.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+        setIsSortOpen(false);
+      }
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setIsCityDropdownOpen(false);
+      }
+      if (calendarDropdownRef.current && !calendarDropdownRef.current.contains(event.target as Node)) {
+        setIsCalendarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const currentSortLabel = SORT_OPTIONS.find((opt) => opt.id === sortBy)?.label || "Sort: Recommended";
+
+  const filteredCities = INDIAN_CITIES.filter((city) =>
+    city.toLowerCase().includes(citySearchQuery.toLowerCase())
+  );
+
+  // Generate Days for Calendar Grid
+  const getDaysInMonth = (year: number, month: number) => {
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const prevTotalDays = new Date(year, month, 0).getDate();
+
+    const days = [];
+
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = prevTotalDays - i;
+      const prevM = month === 0 ? 11 : month - 1;
+      const prevY = month === 0 ? year - 1 : year;
+      days.push({ day: dayNum, dateStr: formatDateString(prevY, prevM, dayNum), isCurrentMonth: false });
+    }
+
+    for (let i = 1; i <= totalDays; i++) {
+      days.push({ day: i, dateStr: formatDateString(year, month, i), isCurrentMonth: true });
+    }
+
+    const remainingCells = 42 - days.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      const nextM = month === 11 ? 0 : month + 1;
+      const nextY = month === 11 ? year + 1 : year;
+      days.push({ day: i, dateStr: formatDateString(nextY, nextM, i), isCurrentMonth: false });
+    }
+
+    return days;
+  };
+
+  const handleDateClick = (dateStr: string) => {
+    if (!startDate || (startDate && endDate)) {
+      setStartDate(dateStr);
+      setEndDate("");
+    } else if (startDate && !endDate) {
+      if (dateStr < startDate) {
+        setStartDate(dateStr);
+      } else {
+        setEndDate(dateStr);
+        setIsCalendarOpen(false);
+      }
+    }
+  };
+
+  const nextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const prevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  // Filter listings based on criteria
+  const filteredListings = MOCK_LISTINGS.filter((item) => {
+    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "All Categories" || item.category === selectedCategory;
+    const matchesCity = item.city === selectedCity;
+    const matchesPrice = item.dailyPrice <= priceRange;
+    const matchesCondition = selectedCondition === "All" || item.condition === selectedCondition;
+    const matchesInstant = !instantBookOnly || item.instantBook;
+    const matchesVerified = !verifiedHostOnly || item.verifiedHost;
+
+    return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesCondition && matchesInstant && matchesVerified;
+  }).sort((a, b) => {
+    if (sortBy === "price-low") return a.dailyPrice - b.dailyPrice;
+    if (sortBy === "price-high") return b.dailyPrice - a.dailyPrice;
+    if (sortBy === "rating") return b.rating - a.rating;
+    return 0;
+  });
+
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-slate-900 selection:bg-[#2563EB] selection:text-white">
+      <Navbar />
+
+      <main className="flex-1 pt-28 pb-20 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
+        
+        {/* Search Bar Container */}
+        <section className="relative z-30 mx-auto max-w-full mb-8">
+          <div className="rounded-[28px] glass-panel bg-white/95 p-4 lg:p-5 shadow-2xl shadow-blue-900/10 border border-white/80">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-center">
+              
+              {/* 1. Main Search Input */}
+              <div className="relative md:col-span-5 flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent focus-within:border-[#2563EB] focus-within:bg-white transition-all">
+                <Search className="h-5 w-5 text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                  placeholder={PLACEHOLDERS[placeholderIdx]}
+                  aria-label="Search items"
+                  className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search query"
+                    className="text-gray-400 hover:text-gray-600 shrink-0 cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+
+                <AnimatePresence>
+                  {isFocused && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute left-0 right-0 top-full mt-3 rounded-[20px] bg-white p-4 shadow-xl border border-gray-100 z-50"
+                    >
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <Sparkles className="h-3.5 w-3.5 text-[#2563EB]" />
+                        <span>Popular Searches</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {POPULAR_SEARCHES.map((item) => (
+                          <button
+                            key={item}
+                            onClick={() => { setSearchQuery(item); }}
+                            className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-[#2563EB] transition-colors cursor-pointer"
+                          >
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* 2. Location Dropdown */}
+              <div className="md:col-span-3 relative" ref={cityDropdownRef}>
+                <div 
+                  onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                  className="flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent hover:bg-gray-200/60 focus-within:border-[#2563EB] focus-within:bg-white transition-all cursor-pointer"
+                >
+                  <MapPin className="h-5 w-5 text-[#2563EB] shrink-0" />
+                  <div className="w-full overflow-hidden">
+                    <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Location</span>
+                    <span className="text-sm font-semibold text-gray-900 block truncate">{selectedCity}</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
+                </div>
+
+                <AnimatePresence>
+                  {isCityDropdownOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-3 max-h-72 flex flex-col"
+                    >
+                      <input 
+                        type="text"
+                        placeholder="Search city in India..."
+                        value={citySearchQuery}
+                        onChange={(e) => setCitySearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#2563EB] mb-2"
+                      />
+                      <div className="overflow-y-auto space-y-1 pr-1">
+                        {filteredCities.map((city) => (
+                          <button
+                            key={city}
+                            onClick={() => {
+                              setSelectedCity(city);
+                              setIsCityDropdownOpen(false);
+                              setCitySearchQuery("");
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                              selectedCity === city ? "bg-blue-50 text-[#2563EB]" : "text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            {city}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* 3. Dates Dropdown */}
+              <div className="md:col-span-2 relative" ref={calendarDropdownRef}>
+                <div 
+                  onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                  className="flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent hover:bg-gray-200/60 focus-within:border-[#2563EB] focus-within:bg-white transition-all cursor-pointer"
+                >
+                  <Calendar className="h-5 w-5 text-gray-400 shrink-0" />
+                  <div className="w-full overflow-hidden">
+                    <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Dates</span>
+                    <span className="text-sm font-semibold text-gray-900 block truncate">
+                      {formatDisplayDate(startDate)} {endDate ? `- ${formatDisplayDate(endDate)}` : ""}
+                    </span>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {isCalendarOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="absolute right-0 md:left-auto md:right-0 top-full mt-3 w-[340px] bg-white rounded-[24px] shadow-2xl border border-gray-100 z-50 p-5"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-gray-900">
+                          {MONTH_NAMES[currentMonth]} {currentYear}
+                        </h3>
+                        <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                          <button 
+                            onClick={prevMonth}
+                            aria-label="Previous month"
+                            className="p-1.5 rounded-lg text-gray-600 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={nextMonth}
+                            aria-label="Next month"
+                            className="p-1.5 rounded-lg text-gray-600 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                        {WEEKDAYS.map((w) => (
+                          <span key={w} className="text-[11px] font-bold text-gray-400 uppercase">{w}</span>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-1 text-center">
+                        {getDaysInMonth(currentYear, currentMonth).map(({ day, dateStr, isCurrentMonth }, idx) => {
+                          const isSelected = dateStr === startDate || dateStr === endDate;
+                          const isInRange = startDate && endDate && dateStr > startDate && dateStr < endDate;
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleDateClick(dateStr)}
+                              className={`h-9 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                                isSelected 
+                                  ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105 z-10" 
+                                  : isInRange 
+                                  ? "bg-blue-50 text-[#2563EB] rounded-none" 
+                                  : isCurrentMonth 
+                                  ? "text-gray-800 hover:bg-gray-100" 
+                                  : "text-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-100">
+                        <button 
+                          onClick={() => { setStartDate(""); setEndDate(""); }}
+                          className="text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                        <button 
+                          onClick={() => setIsCalendarOpen(false)}
+                          className="px-4 py-2 bg-[#2563EB] text-white rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors cursor-pointer"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* 4. Sort Component */}
+              <div className="md:col-span-2 relative" ref={sortRef}>
+                <div
+                  onClick={() => setIsSortOpen(!isSortOpen)}
+                  className="flex items-center justify-between rounded-[18px] bg-gray-100/80 px-4 py-3.5 border border-transparent hover:bg-gray-200/60 cursor-pointer transition-all"
+                >
+                  <span className="text-sm font-semibold text-gray-800 truncate">{currentSortLabel}</span>
+                  <ArrowUpDown className="w-4 h-4 text-gray-400 shrink-0" />
+                </div>
+
+                <AnimatePresence>
+                  {isSortOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                      className="absolute right-0 top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 p-2 space-y-1"
+                    >
+                      {SORT_OPTIONS.map((option) => {
+                        const isSelected = sortBy === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            onClick={() => {
+                              setSortBy(option.id);
+                              setIsSortOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                              isSelected 
+                                ? "bg-blue-50 text-[#2563EB]" 
+                                : "text-slate-700 hover:bg-slate-50"
+                            }`}
+                          >
+                            <span>{option.label}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* Horizontal Category Carousel Pill Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8">
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.name;
+            return (
+              <button
+                key={cat.name}
+                onClick={() => setSelectedCategory(cat.name)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 cursor-pointer ${
+                  isSelected 
+                    ? "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white shadow-md shadow-blue-500/25 scale-105" 
+                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                {cat.icon}
+                <span>{cat.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Main Content Layout: Filters Sidebar (Col 3) + Listings Grid (Col 9) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* DESKTOP FILTERS SIDEBAR */}
+          <div className="hidden lg:block lg:col-span-3 bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80 sticky top-28 space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-[#2563EB]" />
+                <h3 className="font-bold text-base text-slate-900">Filters</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedCategory("All Categories");
+                  setPriceRange(1500);
+                  setSelectedCondition("All");
+                  setInstantBookOnly(false);
+                  setVerifiedHostOnly(false);
+                  setSearchQuery("");
+                }}
+                className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
+              >
+                Reset All
+              </button>
+            </div>
+
+            {/* Price Range Slider */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-slate-800">Max Daily Price</label>
+                <span className="text-sm font-extrabold text-[#2563EB]">₹{priceRange} / day</span>
+              </div>
+              <input 
+                type="range" 
+                min="200" 
+                max="2000" 
+                step="50"
+                value={priceRange}
+                onChange={(e) => setPriceRange(Number(e.target.value))}
+                className="w-full accent-[#2563EB] cursor-pointer"
+              />
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                <span>₹200</span>
+                <span>₹2,000+</span>
+              </div>
+            </div>
+
+            {/* Condition Filter */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-800 block">Item Condition</label>
+              <div className="space-y-2">
+                {["All", "Brand New", "Like New", "Excellent"].map((cond) => (
+                  <label key={cond} className="flex items-center gap-3 text-sm font-medium text-slate-700 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="condition"
+                      checked={selectedCondition === cond}
+                      onChange={() => setSelectedCondition(cond)}
+                      className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB]"
+                    />
+                    <span>{cond}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Trust & Booking Toggles */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <label className="text-sm font-bold text-slate-800 block">Preferences</label>
+              
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-amber-500" /> Instant Book
+                </span>
+                <input 
+                  type="checkbox" 
+                  checked={instantBookOnly}
+                  onChange={(e) => setInstantBookOnly(e.target.checked)}
+                  className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB] cursor-pointer"
+                />
+              </label>
+
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-[#2563EB]" /> Verified Host
+                </span>
+                <input 
+                  type="checkbox" 
+                  checked={verifiedHostOnly}
+                  onChange={(e) => setVerifiedHostOnly(e.target.checked)}
+                  className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB] cursor-pointer"
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* LISTINGS RESULTS GRID (Span 9) */}
+          <div className="lg:col-span-9 space-y-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-600">
+                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> verified items available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span>
+              </p>
+            </div>
+
+            {filteredListings.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm space-y-4">
+                <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <Search className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold font-heading text-slate-900">No matching items found in {selectedCity}</h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  Try switching your city location or dates using the picker above, adjusting your search filters, or increasing your max price range.
+                </p>
+                <button 
+                  onClick={() => {
+                    setSelectedCategory("All Categories");
+                    setPriceRange(1500);
+                    setSelectedCondition("All");
+                    setInstantBookOnly(false);
+                    setVerifiedHostOnly(false);
+                    setSearchQuery("");
+                  }}
+                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold text-sm shadow-md shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredListings.map((item) => (
+                  <motion.div 
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => window.location.href = `/listings/${item.id}`}
+                    className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group"
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                      <img 
+                        src={item.image} 
+                        alt={item.title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-3 left-3 flex flex-col gap-1">
+                        {item.instantBook && (
+                          <span className="bg-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                            <Zap className="w-3 h-3 fill-current" /> Instant Book
+                          </span>
+                        )}
+                      </div>
+                      <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-[#2563EB]" /> {item.distance}
+                      </div>
+                    </div>
+
+                    <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
+                            {item.category}
+                          </span>
+                          <div className="flex items-center gap-1 text-xs font-bold text-slate-800">
+                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <span>{item.rating}</span>
+                            <span className="text-slate-400 font-normal">({item.reviewsCount})</span>
+                          </div>
+                        </div>
+
+                        <h3 className="font-bold text-slate-900 text-base line-clamp-2 group-hover:text-[#2563EB] transition-colors">
+                          {item.title}
+                        </h3>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-lg font-extrabold text-[#2563EB]">₹{item.dailyPrice}</span>
+                          <span className="text-xs text-slate-500"> / day</span>
+                        </div>
+                        <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">
+                          Rent Now
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">Loading search...</div>}>
+      <SearchContent />
+    </Suspense>
+  );
+}

@@ -138,7 +138,7 @@ export const Navbar = () => {
               className="hidden sm:inline-flex gap-2 rounded-[18px] bg-gradient-to-r from-[#2563EB] to-[#4F46E5] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 cursor-pointer"
             >
               <Plus className="h-4 w-4 stroke-[3]" />
-              <span>Start Renting</span>
+              <span>Start Lending</span>
             </RippleButton>
 
             {/* Mobile Hamburger Toggle */}

@@ -3,8 +3,15 @@
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, ShieldCheck, Zap, Check, X, Calendar, ChevronLeft, ChevronRight, MapPin, Heart, Share2, ArrowRightLeft, MessageSquare, Flag, Award, Clock, Shield, RotateCcw, ThumbsUp, Maximize2, Eye, Play } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { 
+  Star, ShieldCheck, Zap, Camera, Laptop, Gamepad2, Smartphone, 
+  Projector, Wrench, Compass, Music, Armchair, Package, Sparkles, 
+  Check, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, 
+  MapPin, Heart, Share2, ArrowRightLeft, User, MessageSquare, 
+  Flag, Award, Clock, Shield, Truck, RotateCcw, ThumbsUp, 
+  Maximize2, Eye, Play, Info, AlertCircle
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
@@ -251,7 +258,6 @@ const formatDisplayDate = (dateString: string) => {
 function ProductDetailContent() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const rawId = params?.id;
   const productId = Array.isArray(rawId) ? rawId[0] : rawId;
   const product = (productId && MOCK_PRODUCTS[productId]) || DEFAULT_PRODUCT;
@@ -266,9 +272,9 @@ function ProductDetailContent() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Booking & Date State (Pre-set from search query params if available)
-  const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "2026-08-05");
-  const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "2026-08-08");
+  // Booking & Date State
+  const [startDate, setStartDate] = useState("2026-08-05");
+  const [endDate, setEndDate] = useState("2026-08-08");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(7); // August
   const [currentYear, setCurrentYear] = useState(2026);
@@ -357,43 +363,15 @@ function ProductDetailContent() {
       <main className="flex-1 pt-28 pb-24 px-6 lg:px-12 max-w-[1440px] mx-auto w-full space-y-12">
         
         {/* ==========================================
-            1. PRODUCT HEADING SECTION (Breadcrumb removed per request)
+            1. BREADCRUMB
         ========================================== */}
-        <section className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-extrabold text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full">
-              {product.category}
-            </span>
-            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-              Condition: {product.condition}
-            </span>
-            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-              Age: {product.age}
-            </span>
-            {product.instantBook && (
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-500 text-white flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 fill-current" /> Instant Book
-              </span>
-            )}
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-heading text-slate-900 tracking-tight">
-            {product.title}
-          </h1>
-
-          <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm font-semibold text-slate-600 pt-1">
-            <div className="flex items-center gap-1 text-slate-900">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              <span>{product.rating}</span>
-              <span className="text-slate-400 font-normal">({product.reviewsCount} reviews)</span>
-            </div>
-            <span>•</span>
-            <div className="flex items-center gap-1 text-slate-700">
-              <MapPin className="w-4 h-4 text-[#2563EB]" />
-              <span>{product.city} ({product.area}) • {product.distance}</span>
-            </div>
-          </div>
-        </section>
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <a href="/" className="hover:text-[#2563EB] transition-colors">Home</a>
+          <span>/</span>
+          <a href="/search" className="hover:text-[#2563EB] transition-colors">{product.category}</a>
+          <span>/</span>
+          <span className="text-slate-800 font-bold truncate max-w-[250px]">{product.title}</span>
+        </nav>
 
         {/* ==========================================
             2. PRODUCT GALLERY
@@ -414,6 +392,11 @@ function ProductDetailContent() {
                 <span className="bg-slate-900/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                   {activeImageIdx + 1} / {product.images.length}
                 </span>
+                {product.instantBook && (
+                  <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 fill-current" /> Instant Book
+                  </span>
+                )}
               </div>
 
               <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -484,17 +467,39 @@ function ProductDetailContent() {
           {/* LEFT COLUMN: Info, Specs, Owner, Reviews (Span 8) */}
           <div className="lg:col-span-8 space-y-10">
             
-            {/* Product Description Box */}
+            {/* Product Information Header */}
             <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-200/80 space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold font-heading text-slate-900">About this item</h3>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full">
+                    {product.category}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                    Condition: {product.condition}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                    Age: {product.age}
+                  </span>
+                </div>
                 <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
                   <span className="flex items-center gap-1"><Eye className="w-4 h-4 text-[#2563EB]" /> {product.viewsCount} views</span>
                   <span className="flex items-center gap-1"><Heart className="w-4 h-4 text-red-500" /> {product.wishlistCount} wishlists</span>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-extrabold font-heading text-slate-900 mb-2">
+                  {product.title}
+                </h1>
+                <div className="flex items-center gap-4 text-sm font-semibold text-slate-600">
+                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#2563EB]" /> {product.city} ({product.area}) • {product.distance}</span>
+                  <span className="flex items-center gap-1 text-amber-500">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> {product.rating} ({product.reviewsCount} reviews)
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100 space-y-4">
                 <p className="text-sm font-semibold text-slate-800 leading-relaxed">
                   {product.shortDescription}
                 </p>
