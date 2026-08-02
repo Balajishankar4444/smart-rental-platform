@@ -25,6 +25,17 @@
     letter-spacing: -0.03em;
   }
 
+  /* Fix for section alignment under fixed navbar */
+  #hero,
+  #categories,
+  #browse,
+  #how-it-works,
+  #calculator,
+  #trust-and-safety,
+  #faq {
+    scroll-margin-top: 100px;
+  }
+
   /* Accessible Focus Indicators */
   *:focus-visible {
     outline: 2px solid #2563EB !important;

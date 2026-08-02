@@ -1,0 +1,1 @@
+﻿import { useMemo } from "react"; export default function useSearch<T>(items: T[], query: string, matcher: (item: T) => string) { return useMemo(() => items.filter(item => matcher(item).toLowerCase().includes(query.toLowerCase())), [items, query, matcher]); }

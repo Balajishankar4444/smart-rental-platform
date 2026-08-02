@@ -1,0 +1,1 @@
+﻿import { useEffect, useState } from "react"; export default function useScroll() { const [scrollY, setScrollY] = useState(0); useEffect(() => { const handle = () => setScrollY(window.scrollY); window.addEventListener("scroll", handle); handle(); return () => window.removeEventListener("scroll", handle); }, []); return scrollY; }

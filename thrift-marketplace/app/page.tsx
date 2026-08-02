@@ -3,7 +3,7 @@
 
 import { motion, useScroll, useSpring } from "framer-motion";
 
-// Custom UI Modules (CustomCursor import removed)
+// Custom UI Modules
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { InteractiveSearch } from "@/components/InteractiveSearch";
@@ -35,17 +35,42 @@ export default function Home() {
       {/* Site Header */}
       <Navbar />
 
-      {/* Page Sections */}
+      {/* Page Sections (Ordered to match Navbar) */}
       <main>
+        {/* 1. Home / Hero & Search */}
         <Hero />
         <InteractiveSearch />
-        <Categories />
-        <HowItWorks />
-        <FeaturedRentals />
-        <EarningsCalculator />
-        <TrustAndSafety />
-        <Testimonials />
-        <FAQ />
+
+        {/* 2. Browse Section */}
+        <div id="browse">
+          <FeaturedRentals />
+        </div>
+
+        {/* 3. Categories Section */}
+        <div id="categories">
+          <Categories />
+        </div>
+
+        {/* 4. How it Works */}
+        <div id="how-it-works">
+          <HowItWorks />
+        </div>
+
+        {/* 5. Become a Lender */}
+        <div id="calculator">
+          <EarningsCalculator />
+        </div>
+
+        {/* 6. Trust & Safety */}
+        <div id="trust-and-safety">
+          <TrustAndSafety />
+        </div>
+
+        {/* 7. Contact / FAQ (and Testimonials) */}
+        <div id="faq">
+          <Testimonials />
+          <FAQ />
+        </div>
       </main>
 
       {/* Site Footer */}
