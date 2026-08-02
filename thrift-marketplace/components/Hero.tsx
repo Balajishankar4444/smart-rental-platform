@@ -27,7 +27,10 @@ export const Hero = () => {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4 w-full sm:w-auto">
-            <RippleButton onClick={() => router.push("/browse")} className="w-full sm:w-auto gap-3 rounded-[18px] bg-gradient-to-r from-[#2563EB] to-[#4F46E5] px-8 py-4 text-base font-semibold text-white shadow-xl">
+            <RippleButton
+              onClick={() => router.push("/browse")}
+              className="w-full sm:w-auto gap-3 rounded-[18px] bg-gradient-to-r from-[#2563EB] to-[#4F46E5] px-8 py-4 text-base font-semibold text-white shadow-xl"
+            >
               <span>Start Renting</span>
               <ArrowRight className="h-5 w-5" />
             </RippleButton>

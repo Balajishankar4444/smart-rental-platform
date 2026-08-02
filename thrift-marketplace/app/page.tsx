@@ -10,7 +10,7 @@ import { InteractiveSearch } from "@/components/InteractiveSearch";
 import { Categories } from "@/components/Categories";
 import { HowItWorks } from "@/components/HowItWorks";
 import { FeaturedRentals } from "@/components/FeaturedRentals";
-import { EarningsCalculator } from "@/components/EarningsCalculator";
+import { StartEarningSection } from "@/components/StartEarningSection";
 import { TrustAndSafety } from "@/components/TrustAndSafety";
 import { Testimonials } from "@/components/Testimonials";
 import { FAQ } from "@/components/FAQ";
@@ -57,9 +57,7 @@ export default function Home() {
         </div>
 
         {/* 5. Become a Lender */}
-        <div id="calculator">
-          <EarningsCalculator />
-        </div>
+          <StartEarningSection />
 
         {/* 6. Trust & Safety */}
         <div id="trust-and-safety">
