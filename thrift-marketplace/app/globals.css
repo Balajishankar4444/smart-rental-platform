@@ -1,55 +1,93 @@
 /* app/globals.css */
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-geist), system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
-  :root {
-    --font-poppins: 'Poppins', sans-serif;
-    --font-inter: 'Inter', sans-serif;
-    --font-manrope: 'Manrope', sans-serif;
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
-    font-family: var(--font-inter);
+    font-family: var(--font-geist), system-ui, -apple-system, sans-serif;
     background-color: #FAFAFA;
-    color: #111827;
+    color: #0F172A;
+    letter-spacing: -0.015em;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-poppins);
+    font-family: var(--font-jakarta), system-ui, sans-serif;
+    letter-spacing: -0.03em;
   }
 
-  .font-num {
-    font-family: var(--font-manrope);
+  /* Accessible Focus Indicators */
+  *:focus-visible {
+    outline: 2px solid #2563EB !important;
+    outline-offset: 2px !important;
   }
 }
 
-/* Glassmorphism utility */
+/* Glassmorphic Panels */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .glass-dark {
-  background: rgba(17, 24, 39, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Custom minimal scrollbar */
+/* Custom Ripple Effect */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-span {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-anim 600ms linear;
+  background-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+@keyframes ripple-anim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #FAFAFA;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E5E7EB;
-  border-radius: 9999px;
+  background: #CBD5E1;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
+  background: #94A3B8;
+}
+
+/* Disable Custom Cursor on Touch Devices */
+@media (pointer: coarse) {
+  .custom-cursor {
+    display: none !important;
+  }
 }

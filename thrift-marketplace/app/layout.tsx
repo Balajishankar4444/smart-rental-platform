@@ -1,27 +1,24 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Poppins, Inter, Manrope } from "next/font/google";
+import { Geist, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const poppins = Poppins({
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
   weight: ["500", "600", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-poppins",
+  display: "swap",
 });
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-geist",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "RentIt — Turn Unused Items Into Income | Premium Peer-to-Peer Rental Marketplace",
-  description: "Rent cameras, bikes, PS5s, drones, and tools safely across India. Verified users, instant payouts, and ₹50,000 insurance coverage.",
+  title: "RentIt — Turn Unused Items Into Income | Premium Rental Marketplace",
+  description: "Rent cameras, bikes, PS5s, drones, and tools safely across India.",
 };
 
 export default function RootLayout({
@@ -32,9 +29,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} ${inter.variable} ${manrope.variable} h-full antialiased selection:bg-blue-600 selection:text-white`}
+      className={`${jakarta.variable} ${geist.variable} h-full antialiased selection:bg-blue-600 selection:text-white`}
     >
-      <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#111827] font-sans">
+      <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#0F172A] font-sans">
         {children}
       </body>
     </html>
