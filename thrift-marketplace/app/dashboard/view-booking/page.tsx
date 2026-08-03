@@ -80,8 +80,6 @@ interface Booking {
   }[];
 }
 
-const router = useRouter();
-
 const MOCK_BOOKINGS: Booking[] = [
   {
     id: "b-1",
@@ -274,6 +272,9 @@ function getStatusBadge(status: BookingStatus) {
 // ==========================================
 
 export default function MyBookingsPage() {
+  // ✅ Correctly called inside the function component body
+  const router = useRouter();
+
   // Loading & Skeleton State simulation
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");

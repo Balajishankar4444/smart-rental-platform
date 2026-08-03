@@ -30,6 +30,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import Link from "next/link"; // Added Link import
 
 const PRODUCT = {
   name: "Sony Alpha a7 IV Mirrorless Camera + 24-70mm Lens",
@@ -140,6 +141,14 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Save bookings to localStorage whenever they change
+  useEffect(() => {
+    const existing = localStorage.getItem("user_bookings");
+    if (!existing) {
+      localStorage.setItem("user_bookings", JSON.stringify(bookedItems));
+    }
+  }, [bookedItems]);
+
   const calculateDuration = () => {
     if (!startDate || !endDate) return 1;
     const start = new Date(startDate);
@@ -242,7 +251,7 @@ export default function Home() {
       setIsConfirming(false);
       setIsConfirmed(true);
 
-      // Add to booked items dashboard state
+      // Add to booked items dashboard state & localStorage
       const newBooking: Booking = {
         id: `RNT-${Math.floor(100000 + Math.random() * 900000)}`,
         productName: PRODUCT.name,
@@ -259,7 +268,11 @@ export default function Home() {
         bookingDate: new Date().toISOString().split("T")[0]
       };
 
-      setBookedItems(prev => [newBooking, ...prev]);
+      setBookedItems(prev => {
+        const updated = [newBooking, ...prev];
+        localStorage.setItem("user_bookings", JSON.stringify(updated));
+        return updated;
+      });
     }, 1200);
   };
 
@@ -622,13 +635,13 @@ export default function Home() {
                         Order confirmation & digital pass sent to your registered mobile and email. Security deposit of ₹1,500 is fully refundable upon return.
                       </p>
                       <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
-                        <button 
-  onClick={() => setIsDashboardOpen(true)}
-  className="flex items-center space-x-2 px-6 py-3.5 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer"
->
-  <PackageCheck className="w-4 h-4" />
-  <span>View Bookings Dashboard ({bookedItems.length})</span>
-</button>
+                        <Link 
+                          href="/dashboard/view-booking"
+                          className="flex items-center space-x-2 px-6 py-3.5 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer"
+                        >
+                          <PackageCheck className="w-4 h-4" />
+                          <span>View Bookings</span>
+                        </Link>
                       </div>
                     </motion.div>
                   ) : (
@@ -781,13 +794,13 @@ export default function Home() {
                 <h3 className="font-extrabold font-heading text-lg text-[#0F172A]">
                   Rental Summary
                 </h3>
-                <button 
-                  onClick={() => setIsDashboardOpen(true)}
+                <Link 
+                  href="/dashboard/view-booking"
                   className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>My Bookings ({bookedItems.length})</span>
-                </button>
+                </Link>
               </div>
 
               <div className="flex items-center space-x-3">
@@ -845,182 +858,6 @@ export default function Home() {
 
         </div>
       </main>
-
-      {/* Booked Items Dashboard Modal */}
-      <AnimatePresence>
-        {isDashboardOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white border border-slate-200 rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]"
-            >
-              <div className="bg-gradient-to-r from-slate-900 to-blue-900 p-6 text-white flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                    <PackageCheck className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-extrabold font-heading">My Booked Items Dashboard</h3>
-                    <p className="text-xs text-slate-300">Manage all your active and past equipment rentals</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsDashboardOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-sm transition-all cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-6 sm:p-8 space-y-4 overflow-y-auto flex-grow bg-slate-50/50">
-                {bookedItems.length === 0 ? (
-                  <div className="text-center py-12 space-y-3">
-                    <CalendarDays className="w-12 h-12 text-slate-300 mx-auto" />
-                    <h4 className="font-extrabold text-slate-700 text-base">No active rentals found</h4>
-                    <p className="text-xs text-slate-500">Book your first gear item to see it listed here in your dashboard.</p>
-                  </div>
-                ) : (
-                  bookedItems.map((item) => (
-                    <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 hover:border-blue-300 transition-all">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono text-xs font-extrabold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-lg">
-                            {item.id}
-                          </span>
-                          <span className="text-xs text-slate-400">• Booked on {item.bookingDate}</span>
-                        </div>
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                          {item.status}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center space-x-4">
-                        <img src={item.productImage} alt="" className="w-16 h-16 object-cover rounded-xl flex-shrink-0" />
-                        <div className="flex-grow truncate">
-                          <h4 className="font-extrabold text-sm text-[#0F172A] truncate">{item.productName}</h4>
-                          <p className="text-xs text-slate-500 mt-1 flex items-center">
-                            <CalendarIcon className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                            {formatDisplayDate(item.startDate)} - {formatDisplayDate(item.endDate)} ({item.duration} Days)
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
-                        <div>
-                          <span className="text-slate-400 font-bold block text-[10px] uppercase">Fulfillment</span>
-                          <span className="font-extrabold text-slate-700 capitalize">{item.fulfillmentType === "home" ? "Home Delivery" : "Store Pickup"}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-slate-400 font-bold block text-[10px] uppercase">Total Paid</span>
-                          <span className="font-extrabold text-[#2563EB]">₹{item.grandTotal}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end pt-1">
-                        <button 
-                          onClick={() => setSelectedBookingDetails(item)}
-                          className="flex items-center space-x-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View Full Pass</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center flex-shrink-0">
-                <span className="text-xs text-slate-500">Showing {bookedItems.length} rental record(s)</span>
-                <button 
-                  onClick={() => setIsDashboardOpen(false)}
-                  className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Close Dashboard
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Individual Booking Pass Modal */}
-      <AnimatePresence>
-        {selectedBookingDetails && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white border border-slate-200 rounded-[32px] shadow-2xl w-full max-w-xl overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <PackageCheck className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-extrabold font-heading">Booking Pass Details</h3>
-                    <p className="text-xs text-blue-100">Order ID: {selectedBookingDetails.id}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setSelectedBookingDetails(null)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-sm transition-all cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-6 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
-                <div className="flex items-center space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <img src={selectedBookingDetails.productImage} alt="" className="w-16 h-16 object-cover rounded-xl flex-shrink-0" />
-                  <div>
-                    <h4 className="font-extrabold text-sm text-[#0F172A]">{selectedBookingDetails.productName}</h4>
-                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-extrabold uppercase">
-                      {selectedBookingDetails.status} & Paid
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                    <span className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Rental Period</span>
-                    <span className="font-extrabold text-slate-800 mt-1 block">{formatDisplayDate(selectedBookingDetails.startDate)} - {formatDisplayDate(selectedBookingDetails.endDate)} ({selectedBookingDetails.duration} Days)</span>
-                  </div>
-                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-                    <span className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Fulfillment Mode</span>
-                    <span className="font-extrabold text-slate-800 mt-1 block capitalize">{selectedBookingDetails.fulfillmentType === "home" ? "Home Delivery" : "Store Pickup"}</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2 text-xs">
-                  <span className="block text-gray-400 font-bold uppercase tracking-wider text-[10px]">Fulfillment Location / Address</span>
-                  <p className="font-semibold text-slate-700">{selectedBookingDetails.address}</p>
-                </div>
-
-                <div className="space-y-2 text-xs border-t border-slate-100 pt-4">
-                  <div className="flex justify-between text-sm font-extrabold pt-2">
-                    <span className="text-slate-900">Total Paid (Inclusive of Security Deposit)</span>
-                    <span className="text-blue-600">₹{selectedBookingDetails.grandTotal}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button 
-                    onClick={() => setSelectedBookingDetails(null)}
-                    className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl text-xs transition-all cursor-pointer shadow-md"
-                  >
-                    Close Pass
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <Footer />
     </div>
