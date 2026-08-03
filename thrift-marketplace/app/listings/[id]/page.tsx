@@ -1,242 +1,451 @@
-// app/listings/[id]/page.tsx
 "use client";
 
-import React, { use, useState } from "react";
-import { motion } from "framer-motion";
-import {
-  ShieldCheck,
-  MapPin,
-  Star,
-  Heart,
-  Share2,
-  Clock,
-  Check,
-  Calendar,
-  ArrowLeft,
-  Lock,
-  Award,
-  Sparkles,
-  ChevronRight,
-} from "lucide-react";
+import React, { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import {
+  Package,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  Search,
+  Heart,
+  Plus,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  ChevronRight,
+} from "lucide-react";
 
-interface ListingPageProps {
-  params: Promise<{
-    id: string;
-  }>;
+// --- Ripple Button Component ---
+interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+  className?: string;
 }
 
-export default function PublicLiveListingPage({ params }: ListingPageProps) {
-  // Unwrap the params promise using React.use()
-  const resolvedParams = use(params);
-  const listingId = resolvedParams.id;
+const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", onClick, ...props }) => {
+  const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
 
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [selectedDates, setSelectedDates] = useState({ start: "", end: "" });
-  const [isBooked, setIsBooked] = useState(false);
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const newRipple = { x, y, id: Date.now() };
 
-  const listingData = {
-    id: listingId,
-    productName: "Sony Alpha 7IV Mirrorless Camera with 24-70mm Lens",
-    category: "Cameras",
-    subcategory: "Full-Frame Cameras",
-    condition: "Like New (Mint Condition)",
-    owner: "Balaji S.",
-    location: "Stuttgart, Baden-Württemberg",
-    dailyPrice: 900,
-    weeklyPrice: 5400,
-    monthlyPrice: 18000,
-    securityDeposit: 3000,
-    deliveryOptions: "Pickup & Doorstep Delivery (up to 15km)",
-    responseTime: "Under 1 hour",
-    rating: 4.98,
-    reviewsCount: 42,
-    description:
-      "Professional full-frame mirrorless camera kit in pristine condition. Perfect for cinematic videography and high-resolution photography. Includes UV filter, extra battery, and rugged transport case.",
-    accessoriesIncluded: ["2x Rechargeable Batteries", "Dual Slot Charger", "64GB V90 SD Card", "Peak Design Strap", "Waterproof Hard Case"],
-    productHighlights: ["Real-time Eye AF for humans/animals", "4K 60p 10-bit 4:2:2 recording", "Active In-Body Image Stabilization"],
-    images: [
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=1200",
-      "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1200",
-    ],
-  };
-
-  const handleBooking = () => {
-    setIsBooked(true);
+    setRipples((prev) => [...prev, newRipple]);
+    if (onClick) onClick(e);
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-[#0F172A] selection:bg-blue-600 selection:text-white">
+    <button
+      onClick={handleClick}
+      className={`relative overflow-hidden transition-all active:scale-95 ${className}`}
+      {...props}
+    >
+      {children}
+      {ripples.map((ripple) => (
+        <span
+          key={ripple.id}
+          className="absolute bg-white/30 rounded-full animate-ping pointer-events-none"
+          style={{
+            left: ripple.x,
+            top: ripple.y,
+            width: 20,
+            height: 20,
+            transform: "translate(-50%, -50%)",
+          }}
+          onAnimationEnd={() => {
+            setRipples((prev) => prev.filter((r) => r.id !== ripple.id));
+          }}
+        />
+      ))}
+    </button>
+  );
+};
+
+// --- Mock Data ---
+const rentalMetrics = [
+  { label: "Active Rentals", value: "3", change: "+1 this week", icon: Package, color: "text-[#2563EB]", bg: "bg-blue-50" },
+  { label: "Upcoming Pickups", value: "2", change: "Next in 2 days", icon: Calendar, color: "text-amber-600", bg: "bg-amber-50" },
+  { label: "Pending Returns", value: "1", change: "Due tomorrow", icon: Clock, color: "text-[#4F46E5]", bg: "bg-indigo-50" },
+  { label: "Total Rental Spend", value: "$1,240", change: "+12% vs last mo", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
+  { label: "Savings vs Buying", value: "$3,450", change: "Based on retail", icon: TrendingUp, color: "text-[#4F46E5]", bg: "bg-indigo-50" },
+  { label: "Success Rate", value: "100%", change: "14 completed", icon: ShieldCheck, color: "text-teal-600", bg: "bg-teal-50" },
+];
+
+const hostMetrics = [
+  { label: "Total Listings", value: "6", change: "+2 active", icon: Package, color: "text-[#2563EB]", bg: "bg-blue-50" },
+  { label: "Active Listings", value: "5", change: "83% utilization", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
+  { label: "Monthly Earnings", value: "$2,890", change: "+18% vs last mo", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
+  { label: "Utilization Rate", value: "78%", change: "+5% avg", icon: TrendingUp, color: "text-[#4F46E5]", bg: "bg-indigo-50" },
+  { label: "Total Views", value: "1,420", change: "+120 today", icon: Search, color: "text-amber-600", bg: "bg-amber-50" },
+  { label: "Conversion Rate", value: "6.4%", change: "+0.8%", icon: ShieldCheck, color: "text-teal-600", bg: "bg-teal-50" },
+  { label: "Wishlist Count", value: "48", change: "High demand", icon: Heart, color: "text-rose-600", bg: "bg-rose-50" },
+];
+
+const myRentals = [
+  {
+    id: "RENT-8831",
+    name: "Sony Alpha a7 IV Mirrorless Camera",
+    category: "Photography",
+    owner: "Marcus Vance",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces",
+    startDate: "Oct 12, 2026",
+    endDate: "Oct 19, 2026",
+    status: "Active",
+    statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    totalPrice: "$245.00",
+    securityDeposit: "$500.00",
+    location: "Downtown / Financial District",
+    progress: 60,
+    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=200&fit=crop",
+  },
+  {
+    id: "RENT-8902",
+    name: "Thule Rooftop Cargo Box & Crossbars",
+    category: "Travel & Outdoors",
+    owner: "Sarah Jenkins",
+    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=faces",
+    startDate: "Oct 22, 2026",
+    endDate: "Oct 29, 2026",
+    status: "Upcoming",
+    statusColor: "bg-amber-50 text-amber-700 border-amber-200",
+    totalPrice: "$140.00",
+    securityDeposit: "$200.00",
+    location: "North Suburbs",
+    progress: 0,
+    image: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&h=200&fit=crop",
+  },
+  {
+    id: "RENT-8710",
+    name: "DJI Mavic 3 Pro Cine Drone",
+    category: "Electronics",
+    owner: "David Ross",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces",
+    startDate: "Oct 01, 2026",
+    endDate: "Oct 08, 2026",
+    status: "Returned",
+    statusColor: "bg-blue-50 text-blue-700 border-blue-200",
+    totalPrice: "$315.00",
+    securityDeposit: "$800.00",
+    location: "West End",
+    progress: 100,
+    image: "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?w=300&h=200&fit=crop",
+  },
+];
+
+const myListings = [
+  {
+    id: "LIST-301",
+    name: "Yamaha Portable Generator EF2000iSV2",
+    category: "Tools & Equipment",
+    pricePerDay: "$45.00 /day",
+    status: "Active",
+    statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    earnings: "$630.00",
+    utilization: "71%",
+    views: "340",
+    image: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=300&h=200&fit=crop",
+  },
+  {
+    id: "LIST-302",
+    name: "Bosch Rotary Hammer Drill Set",
+    category: "Tools & Equipment",
+    pricePerDay: "$25.00 /day",
+    status: "Active",
+    statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    earnings: "$420.00",
+    utilization: "85%",
+    views: "210",
+    image: "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=300&h=200&fit=crop",
+  },
+  {
+    id: "LIST-303",
+    name: "Specialized Turbo Vado E-Bike",
+    category: "Sports & Recreation",
+    pricePerDay: "$60.00 /day",
+    status: "Rented Out",
+    statusColor: "bg-blue-50 text-blue-700 border-blue-200",
+    earnings: "$1,200.00",
+    utilization: "90%",
+    views: "580",
+    image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=300&h=200&fit=crop",
+  },
+];
+
+export default function RentItDashboard() {
+  const [activeTab, setActiveTab] = useState<"rentals" | "listings">("rentals");
+  const [rentalFilter, setRentalFilter] = useState("All");
+
+  const filteredRentals = myRentals.filter((item) => {
+    if (rentalFilter === "All") return true;
+    return item.status.toLowerCase() === rentalFilter.toLowerCase();
+  });
+
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] text-slate-800 flex flex-col font-sans">
       <Navbar />
 
-      <main className="flex-1 pt-28 pb-32 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
-        <div className="mb-8">
-          <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+      <main className="max-w-7xl mx-auto px-6 lg:px-12 pt-28 pb-16 flex-1 w-full space-y-8">
+        
+        {/* Section Switcher Tabs */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-6">
+          <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
             <button
-              onClick={() => window.history.back()}
-              className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+              onClick={() => setActiveTab("rentals")}
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                activeTab === "rentals"
+                  ? "bg-white text-[#2563EB] shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
             >
-              <ArrowLeft className="w-4 h-4" /> Back
+              My Rentals
             </button>
-            <span className="text-xs text-gray-500">Listing ID: {listingData.id}</span>
+            <button
+              onClick={() => setActiveTab("listings")}
+              className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                activeTab === "listings"
+                  ? "bg-white text-[#2563EB] shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              My Listings
+            </button>
           </div>
-          <h1 className="text-3xl lg:text-4xl font-extrabold font-heading text-gray-900 tracking-tight">
-            {listingData.productName}
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">A real listing page for id <strong>{listingId}</strong>.</p>
+
+          <div className="text-sm font-medium text-slate-500 hidden sm:block">
+            Dashboard / <span className="text-slate-800 font-bold capitalize">{activeTab}</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          <div className="lg:col-span-7 space-y-8">
-            <div className="space-y-3">
-              <div className="relative rounded-3xl overflow-hidden border border-gray-200 bg-gray-100 aspect-video shadow-lg group">
-                <motion.img
-                  key={activeImageIndex}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  src={listingData.images[activeImageIndex]}
-                  alt={listingData.productName}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-emerald-100">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> Verified Item & Owner
-                </div>
+        {/* --- TAB 1: MY RENTALS DASHBOARD --- */}
+        {activeTab === "rentals" && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  My Rentals Dashboard
+                </h1>
+                <p className="text-slate-500 text-sm mt-1">
+                  Manage active bookings, monitor return schedules, and track rental savings.
+                </p>
               </div>
+              <RippleButton className="inline-flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-2xl shadow-lg shadow-blue-600/20 text-sm transition-all">
+                <Search className="w-4 h-4" /> Explore More Gear
+              </RippleButton>
+            </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {listingData.images.map((img, idx) => (
+            {/* KPI Metrics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              {rentalMetrics.map((metric, idx) => {
+                const IconComponent = metric.icon;
+                return (
+                  <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        {metric.label}
+                      </span>
+                      <div className={`p-2.5 rounded-xl ${metric.bg} ${metric.color}`}>
+                        <IconComponent className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-baseline justify-between">
+                      <span className="text-2xl font-extrabold text-slate-900">{metric.value}</span>
+                      <span className="text-xs font-medium text-emerald-600">{metric.change}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                {["All", "Active", "Upcoming", "Returned", "Cancelled", "Disputed"].map((filter) => (
                   <button
-                    key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`relative rounded-2xl overflow-hidden aspect-video border-2 transition-all cursor-pointer shadow-xs ${activeImageIndex === idx ? 'border-[#2563EB] ring-2 ring-blue-100 scale-[1.02]' : 'border-transparent opacity-75 hover:opacity-100'}`}
+                    key={filter}
+                    onClick={() => setRentalFilter(filter)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                      rentalFilter === filter
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {filter}
                   </button>
                 ))}
               </div>
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search gear or owner..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                />
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="px-3.5 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
-                  {listingData.category} • {listingData.subcategory}
-                </span>
-                <div className="flex items-center gap-1 text-sm font-bold text-gray-900 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" /> {listingData.rating} ({listingData.reviewsCount} reviews)
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between flex-wrap gap-4 py-4 border-y border-gray-200/80 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#2563EB] to-[#4F46E5] text-white font-bold flex items-center justify-center text-sm shadow-md">
-                    {listingData.owner[0]}
+            {/* Rental Cards List */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {filteredRentals.map((rental) => (
+                <div key={rental.id} className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                  <div className="relative h-48 bg-slate-100">
+                    <img src={rental.image} alt={rental.name} className="w-full h-full object-cover" />
+                    <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md bg-white/90 ${rental.statusColor}`}>
+                      {rental.status}
+                    </span>
+                    <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-xl text-xs font-semibold bg-slate-900/70 text-white backdrop-blur-md">
+                      {rental.category}
+                    </span>
                   </div>
-                  <div>
-                    <span className="text-xs text-gray-400 block font-medium">Hosted by</span>
-                    <span className="font-bold text-gray-900">{listingData.owner}</span>
+
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>{rental.id}</span>
+                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {rental.location}</span>
+                      </div>
+                      <h3 className="font-bold text-slate-900 text-lg leading-snug">{rental.name}</h3>
+
+                      {/* Owner Details */}
+                      <div className="flex items-center gap-2.5 mt-3 pt-3 border-t border-slate-100">
+                        <img src={rental.avatar} alt={rental.owner} className="w-8 h-8 rounded-full object-cover" />
+                        <div>
+                          <div className="text-xs text-slate-400">Rented from</div>
+                          <div className="text-xs font-bold text-slate-700">{rental.owner}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Timeline / Dates */}
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Rental Period</span>
+                        <span className="font-semibold text-slate-800">{rental.startDate} → {rental.endDate}</span>
+                      </div>
+                      {rental.progress > 0 && rental.progress < 100 && (
+                        <div>
+                          <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>Rental Progress</span>
+                            <span>{rental.progress}% completed</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#2563EB] rounded-full" style={{ width: `${rental.progress}%` }}></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price & Actions */}
+                    <div className="flex items-center justify-between pt-2">
+                      <div>
+                        <div className="text-[10px] uppercase font-semibold text-slate-400">Total Price</div>
+                        <div className="text-lg font-extrabold text-[#2563EB]">{rental.totalPrice}</div>
+                      </div>
+                      <RippleButton className="px-4.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm">
+                        View Details
+                      </RippleButton>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-gray-700 font-medium text-xs">
-                  <MapPin className="w-4 h-4 text-[#2563EB]" /> {listingData.location}
-                </div>
-                <div className="flex items-center gap-1.5 text-gray-700 font-medium text-xs">
-                  <Clock className="w-4 h-4 text-emerald-600" /> Responds {listingData.responseTime}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-bold text-lg text-gray-900 font-heading">About this item</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{listingData.description}</p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-5 rounded-2xl border border-gray-200 bg-white space-y-3 shadow-xs">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-gray-400">Included Accessories</h4>
-                  <ul className="space-y-2 text-xs text-gray-700 font-medium">
-                    {listingData.accessoriesIncluded.map((item, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-600" /> {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="p-5 rounded-2xl border border-gray-200 bg-white space-y-3 shadow-xs">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-gray-400">Product Highlights</h4>
-                  <ul className="space-y-2 text-xs text-gray-700 font-medium">
-                    {listingData.productHighlights.map((item, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-[#2563EB]" /> {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4">
-              <div className="p-4 rounded-2xl bg-white border border-gray-200 shadow-xs flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-[#2563EB]" />
-                <div>
-                  <h5 className="font-bold text-xs text-gray-900">Secure Escrow</h5>
-                  <p className="text-[10px] text-gray-500">Deposit protected</p>
-                </div>
-              </div>
-              <div className="p-4 rounded-2xl bg-white border border-gray-200 shadow-xs flex items-center gap-3">
-                <Award className="w-5 h-5 text-emerald-600" />
-                <div>
-                  <h5 className="font-bold text-xs text-gray-900">Damage Cover</h5>
-                  <p className="text-[10px] text-gray-500">Up to ₹50,000 insured</p>
-                </div>
-              </div>
-              <div className="p-4 rounded-2xl bg-white border border-gray-200 shadow-xs flex items-center gap-3 col-span-2 sm:col-span-1">
-                <Lock className="w-5 h-5 text-indigo-600" />
-                <div>
-                  <h5 className="font-bold text-xs text-gray-900">Verified ID</h5>
-                  <p className="text-[10px] text-gray-500">Trusted host profile</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
+        )}
 
-          <div className="lg:col-span-5 sticky top-28">
-            <div className="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-200/90 bg-white space-y-6">
-              <div className="flex items-baseline justify-between pb-4 border-b border-gray-100">
-                <div>
-                  <span className="text-3xl font-extrabold text-[#2563EB]">₹{listingData.dailyPrice}</span>
-                  <span className="text-xs text-gray-500 font-medium"> / day</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                    Available Now
-                  </span>
-                </div>
+        {/* --- TAB 2: MY LISTINGS DASHBOARD --- */}
+        {activeTab === "listings" && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  Host & Listings Dashboard
+                </h1>
+                <p className="text-slate-500 text-sm mt-1">
+                  Manage your shared gear, track utilization rates, and view hosting earnings.
+                </p>
               </div>
+              <RippleButton className="inline-flex items-center justify-center gap-2 bg-[#2563EB] hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-2xl shadow-lg shadow-blue-600/20 text-sm transition-all">
+                <Plus className="w-4 h-4" /> Add New Listing
+              </RippleButton>
+            </div>
 
-              <button
-                onClick={handleBooking}
-                className="w-full rounded-3xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] py-4 text-white font-bold text-base shadow-xl shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
-              >
-                {isBooked ? "Booked" : "Book Now"}
-              </button>
+            {/* Host KPI Metrics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+              {hostMetrics.map((metric, idx) => {
+                const IconComponent = metric.icon;
+                return (
+                  <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                        {metric.label}
+                      </span>
+                      <div className={`p-2.5 rounded-xl ${metric.bg} ${metric.color}`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-baseline justify-between">
+                      <span className="text-2xl font-extrabold text-slate-900">{metric.value}</span>
+                      <span className="text-[10px] font-medium text-emerald-600">{metric.change}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4 text-center">
-                  <p className="font-bold">Weekly</p>
-                  <p className="mt-2">₹{listingData.weeklyPrice}</p>
+            {/* Listings Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {myListings.map((listing) => (
+                <div key={listing.id} className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                  <div className="relative h-48 bg-slate-100">
+                    <img src={listing.image} alt={listing.name} className="w-full h-full object-cover" />
+                    <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md bg-white/90 ${listing.statusColor}`}>
+                      {listing.status}
+                    </span>
+                    <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-xl text-xs font-semibold bg-slate-900/70 text-white backdrop-blur-md">
+                      {listing.category}
+                    </span>
+                  </div>
+
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="text-xs text-slate-400 mb-1">{listing.id}</div>
+                      <h3 className="font-bold text-slate-900 text-lg leading-snug">{listing.name}</h3>
+                      <div className="text-[#2563EB] font-extrabold text-base mt-2">{listing.pricePerDay}</div>
+                    </div>
+
+                    {/* Stats Pill */}
+                    <div className="grid grid-cols-3 gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-center">
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Earnings</div>
+                        <div className="text-xs font-bold text-slate-800">{listing.earnings}</div>
+                      </div>
+                      <div className="border-x border-slate-200">
+                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Util Rate</div>
+                        <div className="text-xs font-bold text-emerald-600">{listing.utilization}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Views</div>
+                        <div className="text-xs font-bold text-slate-800">{listing.views}</div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2 gap-3">
+                      <RippleButton className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors">
+                        Edit Listing
+                      </RippleButton>
+                      <RippleButton className="flex-1 px-4 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm">
+                        View Analytics
+                      </RippleButton>
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4 text-center">
-                  <p className="font-bold">Monthly</p>
-                  <p className="mt-2">₹{listingData.monthlyPrice}</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
+        )}
       </main>
 
       <Footer />
