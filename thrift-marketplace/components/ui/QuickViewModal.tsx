@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Star, MapPin, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { RippleButton } from "./RippleButton";
@@ -28,6 +29,8 @@ interface QuickViewModalProps {
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({ item, onClose }) => {
+  const router = useRouter();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -41,6 +44,13 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ item, onClose })
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [item, onClose]);
+
+  const handleProceedToBooking = () => {
+    if (!item) return;
+    onClose();
+    // Redirects to the specific item's listing page for taking the order
+    router.push(`/listing/${item.id}`);
+  };
 
   return (
     <AnimatePresence>
@@ -120,7 +130,10 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ item, onClose })
                     <span className="text-3xl font-black text-gray-900 font-num">₹{item.pricePerDay}</span>
                     <span className="text-xs text-gray-400 font-medium"> / day</span>
                   </div>
-                  <RippleButton className="rounded-xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25">
+                  <RippleButton
+                    onClick={handleProceedToBooking}
+                    className="rounded-xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25 cursor-pointer"
+                  >
                     Proceed to Booking
                   </RippleButton>
                 </div>

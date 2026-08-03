@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Heart, MapPin, Eye } from "lucide-react";
+import { Star, MapPin, Eye } from "lucide-react";
 import { QuickViewModal, ItemDetail } from "./ui/QuickViewModal";
 
 const FEATURED_ITEMS: ItemDetail[] = [
@@ -74,13 +74,7 @@ const FEATURED_ITEMS: ItemDetail[] = [
 
 export const FeaturedRentals = () => {
   const [activeTab, setActiveTab] = useState("all");
-  const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
-
-  const toggleWishlist = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setWishlist((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const filteredItems =
     activeTab === "all"
@@ -115,7 +109,6 @@ export const FeaturedRentals = () => {
       <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <AnimatePresence>
           {filteredItems.map((item) => {
-            const isFav = wishlist[item.id];
             return (
               <motion.div
                 key={item.id}
@@ -143,17 +136,6 @@ export const FeaturedRentals = () => {
                         Quick View
                       </span>
                     </div>
-
-                    {/* Wishlist Heart */}
-                    <button
-                      onClick={(e) => toggleWishlist(item.id, e)}
-                      aria-label="Add to wishlist"
-                      className="absolute top-4 right-4 h-9 w-9 rounded-full glass-panel flex items-center justify-center text-gray-700 hover:text-red-500 transition shadow-2xs z-10"
-                    >
-                      <motion.div whileTap={{ scale: 1.4 }}>
-                        <Heart className={`h-5 w-5 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
-                      </motion.div>
-                    </button>
 
                     <div className="absolute bottom-3 left-3 bg-gray-900/80 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full">
                       Value: {item.marketValue}

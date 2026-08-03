@@ -40,20 +40,27 @@ export const StartEarningSection = () => {
   const earningCards = [
     {
       title: "DSLR Camera",
+      category: "Photography",
       earnings: "₹1,200/day",
       image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80",
     },
     {
       title: "Mountain Bike",
+      category: "Vehicles",
       earnings: "₹700/day",
       image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80",
     },
     {
       title: "PlayStation 5",
+      category: "Gaming",
       earnings: "₹900/day",
       image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=600&q=80",
     },
   ];
+
+  const handleCardClick = (category: string) => {
+    router.push(`/browse?category=${encodeURIComponent(category)}`);
+  };
 
   return (
     <>
@@ -237,7 +244,8 @@ export const StartEarningSection = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.15 }}
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                className="glass-panel group relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-gray-200/50 border border-gray-200/80 bg-white/85 backdrop-blur-xl"
+                onClick={() => handleCardClick(card.category)}
+                className="glass-panel group relative overflow-hidden rounded-3xl p-5 shadow-lg shadow-gray-200/50 border border-gray-200/80 bg-white/85 backdrop-blur-xl cursor-pointer"
               >
                 <div className="relative h-52 w-full overflow-hidden rounded-2xl mb-4 bg-gray-100">
                   <motion.img

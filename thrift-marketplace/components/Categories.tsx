@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Camera,
@@ -32,6 +33,13 @@ const CATEGORIES = [
 ];
 
 export const Categories = () => {
+  const router = useRouter();
+
+  const handleCategoryClick = (categoryName: string) => {
+    // Navigates to browse page, optionally passing the category as a query param if needed
+    router.push(`/browse?category=${encodeURIComponent(categoryName)}`);
+  };
+
   return (
     <section className="py-20 mx-auto max-w-[1440px] px-6 lg:px-12" id="categories">
       <div className="flex items-end justify-between mb-10">
@@ -52,6 +60,7 @@ export const Categories = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.3, delay: idx * 0.04 }}
               whileHover={{ y: -6, scale: 1.02 }}
+              onClick={() => handleCategoryClick(cat.name)}
               className="group flex flex-col items-center justify-center p-6 rounded-[24px] bg-white border border-gray-200/80 shadow-2xs hover:shadow-xl hover:border-blue-200 transition-all cursor-pointer text-center"
             >
               <div className="h-14 w-14 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center mb-4 group-hover:bg-[#2563EB] group-hover:text-white transition-colors duration-300">
