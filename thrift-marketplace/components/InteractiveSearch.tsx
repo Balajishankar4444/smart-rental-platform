@@ -98,7 +98,7 @@ export const InteractiveSearch = () => {
     params.set("startDate", startDate);
     params.set("endDate", endDate);
 
-    router.push(`/browse?${params.toString()}`);
+    router.push(`/browse?${params.toString()}#search-section`);
   };
 
   // Generate Days for Calendar Grid
@@ -166,7 +166,7 @@ export const InteractiveSearch = () => {
   };
 
   return (
-    <section className="relative z-30 -mt-8 mx-auto max-w-[1200px] px-6">
+    <section id="search-section" className="relative z-30 -mt-8 mx-auto max-w-[1200px] px-6">
       <div className="rounded-[28px] glass-panel bg-white/95 p-4 lg:p-5 shadow-2xl shadow-blue-900/10 border border-white/80">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-center">
           
@@ -179,7 +179,12 @@ export const InteractiveSearch = () => {
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
               placeholder={PLACEHOLDERS[placeholderIdx]}
               aria-label="Search items"
               className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none"
@@ -210,7 +215,8 @@ export const InteractiveSearch = () => {
                     {POPULAR_SEARCHES.map((item) => (
                       <button
                         key={item}
-                        onClick={() => { setQuery(item); handleSearch(); }}
+                        type="button"
+                        onClick={() => { setQuery(item); setIsFocused(false); }}
                         className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-[#2563EB] transition-colors cursor-pointer"
                       >
                         {item}
