@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { 
   Camera, Laptop, Gamepad2, Smartphone, Projector, Disc, Wrench, 
   Bike, Compass, Car, Music, Armchair, Home, Baby, Watch, Sparkles, 
@@ -27,7 +28,6 @@ type CategoryType =
   | "Construction Equipment" | "Agriculture Equipment" | "Other";
 
 interface ListingFormState {
-  // Step 1: Info
   productName: string;
   category: CategoryType | "";
   subcategory: string;
@@ -49,11 +49,9 @@ interface ListingFormState {
   minRentalDuration: string;
   maxRentalDuration: string;
   
-  // Step 2: Images
   images: string[];
   primaryImageIndex: number;
 
-  // Step 3: Pricing
   dailyPrice: string;
   weeklyPrice: string;
   monthlyPrice: string;
@@ -62,7 +60,6 @@ interface ListingFormState {
   weeklyDiscount: string;
   monthlyDiscount: string;
 
-  // Step 4: Availability
   unavailableDates: string[];
   advanceNotice: string;
   instantBooking: boolean;
@@ -70,7 +67,6 @@ interface ListingFormState {
   returnTime: string;
   maxConcurrent: string;
 
-  // Step 5: Location
   address: string;
   city: string;
   state: string;
@@ -116,6 +112,14 @@ const CATEGORIES: { name: CategoryType; icon: React.ReactNode }[] = [
 ];
 
 export default function ListItemPage() {
+  return (
+    <ProtectedRoute>
+      <ListItemContent />
+    </ProtectedRoute>
+  );
+}
+
+function ListItemContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -193,7 +197,6 @@ export default function ListItemPage() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Fixed File Upload handler clearing the target value to prevent caching same-file pick issues
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -204,7 +207,6 @@ export default function ListItemPage() {
       });
       setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
     }
-    // Reset file input value so selecting the same image consecutively triggers onChange correctly
     e.target.value = "";
   };
 
@@ -242,7 +244,6 @@ export default function ListItemPage() {
               Your item is now live and optimized for maximum trust and conversion on RentIt. Verified renters in your area can now discover and book your product.
             </p>
 
-            {/* Product Card Preview Snapshot */}
             <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 text-left flex items-center gap-4 shadow-sm">
               <img 
                 src={form.images[form.primaryImageIndex] || form.images[0]} 
@@ -292,7 +293,6 @@ export default function ListItemPage() {
       <Navbar />
 
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
-        {/* Top Header & Draft Indicator */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full">
@@ -324,7 +324,6 @@ export default function ListItemPage() {
           </div>
         </div>
 
-        {/* Top Progress Stepper */}
         <div className="glass-panel rounded-2xl p-4 mb-8 shadow-xs border border-gray-200/80 overflow-x-auto">
           <div className="flex items-center justify-between min-w-[700px] gap-2">
             {[
@@ -367,15 +366,11 @@ export default function ListItemPage() {
           </div>
         </div>
 
-        {/* Main Grid Layout: Form Container + Right Sidebar + Help Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT/CENTER: Step Form Container (Span 8) */}
           <div className="lg:col-span-8 space-y-6">
             <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-xl border border-gray-200/80">
               
               <AnimatePresence mode="wait">
-                {/* ================= STEP 1: BASIC INFORMATION ================= */}
                 {currentStep === 1 && (
                   <motion.div 
                     key="step1"
@@ -543,7 +538,6 @@ export default function ListItemPage() {
                   </motion.div>
                 )}
 
-                {/* ================= STEP 2: UPLOAD IMAGES ================= */}
                 {currentStep === 2 && (
                   <motion.div 
                     key="step2"
@@ -558,7 +552,6 @@ export default function ListItemPage() {
                       <p className="text-sm text-gray-500 mt-1">Listings with 4+ high-resolution photos get up to 3x more rental inquiries.</p>
                     </div>
 
-                    {/* AI Photo Quality Indicator */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/60 p-4 rounded-2xl flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                         <Sparkles className="w-5 h-5" />
@@ -572,7 +565,6 @@ export default function ListItemPage() {
                       </div>
                     </div>
 
-                    {/* Drag & Drop Zone with Interactive Hidden File Input */}
                     <label className="border-2 border-dashed border-gray-300 hover:border-[#2563EB] bg-gray-50/50 rounded-3xl p-8 text-center transition-all cursor-pointer block">
                       <div className="w-16 h-16 bg-blue-100 text-[#2563EB] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
                         <UploadCloud className="w-8 h-8" />
@@ -584,7 +576,6 @@ export default function ListItemPage() {
                         Browse Files
                       </span>
 
-                      {/* Hidden file input with the event value reset fix */}
                       <input 
                         type="file" 
                         accept="image/*"
@@ -594,7 +585,6 @@ export default function ListItemPage() {
                       />
                     </label>
 
-                    {/* Image Preview Grid */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-bold text-sm text-gray-900">Uploaded Photos ({form.images.length}/10)</h4>
@@ -605,14 +595,12 @@ export default function ListItemPage() {
                           <div key={idx} className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-square bg-gray-100">
                             <img src={imgUrl} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
                             
-                            {/* Primary Badge */}
                             {idx === form.primaryImageIndex && (
                               <span className="absolute top-2 left-2 bg-[#2563EB] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
                                 Primary Cover
                               </span>
                             )}
 
-                            {/* Actions Overlay */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
                               <button 
                                 title="Set as Primary"
@@ -642,7 +630,6 @@ export default function ListItemPage() {
                   </motion.div>
                 )}
 
-                {/* ================= STEP 3: PRICING ================= */}
                 {currentStep === 3 && (
                   <motion.div 
                     key="step3"
@@ -657,7 +644,6 @@ export default function ListItemPage() {
                       <p className="text-sm text-gray-500 mt-1">Smart pricing recommendations maximize your monthly passive income.</p>
                     </div>
 
-                    {/* AI Suggested Price Card */}
                     <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 p-5 rounded-2xl flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
@@ -756,7 +742,6 @@ export default function ListItemPage() {
                   </motion.div>
                 )}
 
-                {/* ================= STEP 4: AVAILABILITY ================= */}
                 {currentStep === 4 && (
                   <motion.div 
                     key="step4"
@@ -831,7 +816,6 @@ export default function ListItemPage() {
                   </motion.div>
                 )}
 
-                {/* ================= STEP 5: LOCATION ================= */}
                 {currentStep === 5 && (
                   <motion.div 
                     key="step5"
@@ -913,7 +897,6 @@ export default function ListItemPage() {
                   </motion.div>
                 )}
 
-                {/* ================= STEP 6: PREVIEW ================= */}
                 {currentStep === 6 && (
                   <motion.div 
                     key="step6"
@@ -928,7 +911,6 @@ export default function ListItemPage() {
                       <p className="text-sm text-gray-500 mt-1">This is exactly how your product card will appear to thousands of verified renters.</p>
                     </div>
 
-                    {/* Professional Product Card Preview */}
                     <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <img 
@@ -987,7 +969,6 @@ export default function ListItemPage() {
                 )}
               </AnimatePresence>
 
-              {/* Bottom Action Bar */}
               <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-200">
                 <button 
                   onClick={prevStep}
@@ -1026,10 +1007,7 @@ export default function ListItemPage() {
             </div>
           </div>
 
-          {/* RIGHT SIDEBAR: Live Preview & Help Panel (Span 4) */}
           <div className="lg:col-span-4 space-y-6">
-            
-            {/* Live Product Preview Widget */}
             <div className="glass-panel rounded-3xl p-6 shadow-xl border border-gray-200/80 sticky top-28">
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
@@ -1069,7 +1047,6 @@ export default function ListItemPage() {
                 </div>
               </div>
 
-              {/* Help & Safety Tips Panel */}
               <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center gap-2 text-[#2563EB]">
                   <ShieldCheck className="w-4 h-4" />

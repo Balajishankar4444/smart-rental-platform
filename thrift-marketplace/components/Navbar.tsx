@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
@@ -34,7 +34,12 @@ const NAV_LINKS = [
 export const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isHome = pathname === "/";
+
+  // Dynamically compute the current page URL with query parameters for login redirection[cite: 2]
+  const currentUrl =
+    pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
 
   // Global Auth Context
   const { user, isLoggedIn, logout, isLoading } = useAuth();
@@ -121,7 +126,7 @@ export const Navbar = () => {
     (link) => isHome || link.name !== "Home"
   );
 
-  // Routes configuration (listingPath updated to point to view-booking dashboard)
+  // Routes configuration (listingPath updated to point to view-booking dashboard)[cite: 2]
   const profilePath = "/profile/demo";
   const listingPath = "/dashboard/view-booking";
   const settingPath = "/setting";
@@ -306,8 +311,8 @@ export const Navbar = () => {
               ) : (
                 /* ================= LOGGED OUT STATE ================= */
                 <Link
-                  href="/login"
-                  className="hidden text-sm font-semibold text-gray-700 hover:text-[#2563EB] sm:block cursor-pointer"
+                  href={`/login?redirect=${encodeURIComponent(currentUrl)}`}
+                  className="hidden sm:inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:text-[#2563EB] transition"
                 >
                   Log In
                 </Link>
@@ -418,9 +423,9 @@ export const Navbar = () => {
                 ) : (
                   <>
                     <Link
-                      href="/login"
+                      href={`/login?redirect=${encodeURIComponent(currentUrl)}`}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="w-full py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 text-center block cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="w-full py-3 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 text-center block cursor-pointer hover:bg-gray-50"
                     >
                       Log In
                     </Link>

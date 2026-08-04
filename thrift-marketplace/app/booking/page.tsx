@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -130,6 +131,7 @@ export default function Home() {
   ]);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -275,8 +277,8 @@ export default function Home() {
       });
     }, 1200);
   };
-
   return (
+    <ProtectedRoute>
     <div className="relative min-h-screen bg-[#FAFAFA] text-[#111827] selection:bg-blue-600 selection:text-white">
       <Navbar />
 
@@ -861,5 +863,6 @@ export default function Home() {
 
       <Footer />
     </div>
+    </ProtectedRoute>
   );
 }

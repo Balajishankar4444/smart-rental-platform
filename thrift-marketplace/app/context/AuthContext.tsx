@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export interface UserProfile {
   name: string;
@@ -8,10 +9,13 @@ export interface UserProfile {
   avatar?: string;
 }
 
+export type AuthStatus = "loading" | "authenticated" | "guest";
+
 interface AuthContextType {
   user: UserProfile | null;
   isLoggedIn: boolean;
   isLoading: boolean;
+  authStatus: AuthStatus;
   login: (email: string, name?: string) => void;
   signup: (name: string, email: string) => void;
   logout: () => void;
@@ -22,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   // Read saved user session from localStorage when page loads
   useEffect(() => {
@@ -36,6 +41,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  const handlePostAuthRedirect = () => {
+    if (typeof window === "undefined") return;
+    const redirectUrl = sessionStorage.getItem("auth_redirect_url");
+    if (redirectUrl) {
+      sessionStorage.removeItem("auth_redirect_url");
+      router.push(redirectUrl);
+    } else {
+      router.push("/");
+    }
+  };
+
   const login = (email: string, name?: string) => {
     const userData: UserProfile = {
       name: name || email.split("@")[0] || "User",
@@ -45,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setUser(userData);
     localStorage.setItem("rentit_user", JSON.stringify(userData));
+    handlePostAuthRedirect();
   };
 
   const signup = (name: string, email: string) => {
@@ -56,12 +73,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setUser(userData);
     localStorage.setItem("rentit_user", JSON.stringify(userData));
+    handlePostAuthRedirect();
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("rentit_user");
+    router.push("/");
   };
+
+  const authStatus: AuthStatus = isLoading
+    ? "loading"
+    : user
+    ? "authenticated"
+    : "guest";
 
   return (
     <AuthContext.Provider
@@ -69,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoggedIn: !!user,
         isLoading,
+        authStatus,
         login,
         signup,
         logout,

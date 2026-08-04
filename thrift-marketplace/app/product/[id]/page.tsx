@@ -272,6 +272,10 @@ function ProductDetailContent() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Same-page Booking Drawer / State (Instead of route navigation)
+  const [showBookingDrawer, setShowBookingDrawer] = useState(false);
+  const [bookingStep, setBookingStep] = useState<1 | 2 | 3>(1);
+
   // Booking & Date State
   const [startDate, setStartDate] = useState("2026-08-05");
   const [endDate, setEndDate] = useState("2026-08-08");
@@ -428,13 +432,13 @@ function ProductDetailContent() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => alert("360° View is currently in development and coming soon!")}
-                    className="bg-white/90 hover:bg-white text-slate-900 text-xs font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="bg-white/95 hover:bg-white text-slate-900 text-xs font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-md transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Eye className="w-4 h-4 text-[#2563EB]" /> 360° View (Coming Soon)
                   </button>
                   <button 
                     onClick={() => alert("Video preview demo mode active.")}
-                    className="bg-white/90 hover:bg-white text-slate-900 text-xs font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="bg-white/95 hover:bg-white text-slate-900 text-xs font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-md transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Play className="w-4 h-4 text-[#2563EB] fill-[#2563EB]" /> Video Preview
                   </button>
@@ -1012,10 +1016,13 @@ function ProductDetailContent() {
                   <span>Free cancellation up to 48 hours before rental start date.</span>
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons (Opens same-page drawer instead of navigating away) */}
                 <div className="space-y-3 pt-2">
                   <button 
-                    onClick={() => router.push("/booking")}
+                    onClick={() => {
+                      setBookingStep(1);
+                      setShowBookingDrawer(true);
+                    }}
                     className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
                   >
                     Rent Now
@@ -1163,6 +1170,135 @@ function ProductDetailContent() {
         </section>
 
       </main>
+
+      {/* ==========================================
+          SAME-PAGE BOOKING DRAWER / MODAL
+      ========================================== */}
+      {showBookingDrawer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-end animate-in fade-in">
+          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col justify-between overflow-y-auto p-6 lg:p-8">
+            
+            {/* Header */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-extrabold text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full">Secure Checkout</span>
+                  <h3 className="text-xl font-extrabold text-slate-900 mt-1">Complete Your Rental</h3>
+                </div>
+                <button 
+                  onClick={() => setShowBookingDrawer(false)}
+                  className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                <div className={`h-1.5 rounded-full ${bookingStep >= 1 ? "bg-[#2563EB]" : "bg-slate-200"}`} />
+                <div className={`h-1.5 rounded-full ${bookingStep >= 2 ? "bg-[#2563EB]" : "bg-slate-200"}`} />
+                <div className={`h-1.5 rounded-full ${bookingStep >= 3 ? "bg-[#2563EB]" : "bg-slate-200"}`} />
+              </div>
+            </div>
+
+            {/* Step Content */}
+            <div className="py-6 space-y-6 flex-1">
+              {bookingStep === 1 && (
+                <div className="space-y-4 animate-in fade-in">
+                  <h4 className="font-bold text-sm text-slate-800">1. Confirm Rental Period & Delivery</h4>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-500">Selected Dates:</span>
+                      <span className="text-slate-900 font-bold">{formatDisplayDate(startDate)} to {formatDisplayDate(endDate)} ({rentalDays} days)</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-slate-500">Fulfillment Method:</span>
+                      <span className="text-slate-900 font-bold">In-person Pickup (Free)</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 space-y-2 text-xs text-[#2563EB]">
+                    <p className="font-bold">Host Meetup Location:</p>
+                    <p>{product.city} ({product.area}) — {product.specs.pickup}</p>
+                  </div>
+                </div>
+              )}
+
+              {bookingStep === 2 && (
+                <div className="space-y-4 animate-in fade-in">
+                  <h4 className="font-bold text-sm text-slate-800">2. Review Pricing & Deposit</h4>
+                  <div className="space-y-2 text-xs font-semibold text-slate-600 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div className="flex justify-between">
+                      <span>Rental Fee ({rentalDays} days)</span>
+                      <span className="text-slate-900 font-bold">₹{rentalCost}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Refundable Security Deposit</span>
+                      <span className="text-slate-900 font-bold">₹{product.securityDeposit}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Platform Protection</span>
+                      <span className="text-slate-900 font-bold">₹{product.platformProtection}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-slate-200 text-sm font-extrabold text-slate-900">
+                      <span>Total Payable Now</span>
+                      <span className="text-[#2563EB]">₹{grandTotal}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {bookingStep === 3 && (
+                <div className="space-y-4 text-center py-8 animate-in fade-in">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-xl font-extrabold text-slate-900">Booking Confirmed!</h4>
+                  <p className="text-xs text-slate-500">Your reservation for {product.title} has been successfully registered. The host has been notified.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Buttons - Stays on same page instead of redirecting away */}
+            <div className="pt-4 border-t border-slate-100 flex gap-3">
+              {bookingStep > 1 && bookingStep < 3 && (
+                <button 
+                  onClick={() => setBookingStep((bookingStep - 1) as any)}
+                  className="w-1/3 py-3.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  Back
+                </button>
+              )}
+              {bookingStep < 2 ? (
+                <button 
+                  onClick={() => setBookingStep(2)}
+                  className="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-extrabold text-xs shadow-lg shadow-blue-500/25 cursor-pointer"
+                >
+                  Continue to Payment
+                </button>
+              ) : bookingStep === 2 ? (
+                <button 
+                  onClick={() => setBookingStep(3)}
+                  className="flex-1 py-3.5 rounded-2xl bg-emerald-600 text-white font-extrabold text-xs shadow-lg shadow-emerald-500/25 cursor-pointer"
+                >
+                  Confirm & Pay ₹{grandTotal}
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setShowBookingDrawer(false);
+                    setBookingStep(1);
+                  }}
+                  className="flex-1 py-3.5 rounded-2xl bg-[#2563EB] text-white font-extrabold text-xs cursor-pointer"
+                >
+                  Done (Stay on Page)
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* ==========================================
           SHARE MODAL
