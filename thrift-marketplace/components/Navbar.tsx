@@ -119,7 +119,8 @@ export const Navbar = () => {
     logout();
     setIsProfileOpen(false);
     setMobileMenuOpen(false);
-    router.push("/");
+    router.push(pathname);
+    // Stays on the same page instead of pushing to "/"
   };
 
   const filteredNavLinks = NAV_LINKS.filter(
