@@ -333,6 +333,10 @@ export default function ProductDetailPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [requestError, setRequestError] = useState("");
+
   const isWishlisted = productId ? isFavorite(productId) : false;
 
   const handleWishlistToggle = () => {
@@ -708,13 +712,32 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <button
-              onClick={handleProceedToBook}
-              disabled={isCheckingAuth}
-              className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current" /> Proceed to Book
-            </button>
+            {requestSent ? (
+              <div className="space-y-2 text-center">
+                <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2.5 px-3">
+                  Request sent. The owner has to approve these dates before you pay.
+                </p>
+                <Link
+                  href="/dashboard/view-booking?tab=notifications"
+                  className="block text-xs font-semibold text-[#2563EB]"
+                >
+                  Track it in notifications
+                </Link>
+              </div>
+            ) : (
+              <button
+                onClick={handleProceedToBook}
+                disabled={isCheckingAuth || isRequesting}
+                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                {isRequesting ? "Sending request..." : "Request these dates"}
+              </button>
+            )}
+
+            {requestError && (
+              <p className="text-[11px] font-semibold text-red-600 text-center">{requestError}</p>
+            )}
           </div>
         </div>
 

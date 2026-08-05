@@ -1,57 +1,13 @@
 // app/api/products/route.ts
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { deriveListingStatus, ListingRental } from '@/utils/listings';
-
-// Define the file path where product listings will be stored
-const dataFilePath = path.join(process.cwd(), 'data', 'product.json');
-
-interface StoredProduct {
-  id: string;
-  userId: string;
-  deletedAt?: string | null;
-  rental?: ListingRental | null;
-  images?: string[];
-  primaryImageIndex?: number;
-  [key: string]: unknown;
-}
-
-// Ensure the data directory and file exist
-function ensureDataFileExists() {
-  const dir = path.dirname(dataFilePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(dataFilePath)) {
-    fs.writeFileSync(dataFilePath, JSON.stringify([], null, 2), 'utf8');
-  }
-}
-
-function readProducts(): StoredProduct[] {
-  ensureDataFileExists();
-  const fileContents = fs.readFileSync(dataFilePath, 'utf8');
-  const parsed = JSON.parse(fileContents || '[]');
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-function writeProducts(products: StoredProduct[]) {
-  fs.writeFileSync(dataFilePath, JSON.stringify(products, null, 2), 'utf8');
-}
-
-// Status is always computed from the listing's own state, never taken from the client
-function withStatus(product: StoredProduct) {
-  return { ...product, status: deriveListingStatus(product) };
-}
-
-// Listing responses carry a single cover image instead of the full (base64) gallery
-function toSummary(product: StoredProduct) {
-  const { images, primaryImageIndex, ...rest } = withStatus(product);
-  return {
-    ...rest,
-    primaryImage: images?.[primaryImageIndex || 0] || '',
-  };
-}
+import { deriveListingStatus } from '@/utils/listings';
+import {
+  readProducts,
+  writeProducts,
+  toSummary,
+  withStatus,
+  StoredProduct,
+} from '@/lib/productStore';
 
 // GET: Retrieve listings, optionally scoped to an owner and/or a status.
 // `id` returns a single listing with its full image gallery.

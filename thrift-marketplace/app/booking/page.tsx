@@ -35,6 +35,11 @@ import Link from "next/link"; // Added Link import
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import {
+  BOOKING_REQUEST_LABELS,
+  BookingRequest,
+  fetchBookingRequests,
+} from "@/utils/bookingRequests";
+import {
   listingDailyPrice,
   listingImage,
   listingLocation,
@@ -80,9 +85,10 @@ interface Booking {
 function BookingFlow() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const productId = searchParams.get("productId");
+  const requestId = searchParams.get("requestId");
+  const [bookingRequest, setBookingRequest] = useState<BookingRequest | null>(null);
   const [listing, setListing] = useState<ListingSummary | null>(null);
-  const [isLoadingListing, setIsLoadingListing] = useState(Boolean(productId));
+  const [isLoadingListing, setIsLoadingListing] = useState(Boolean(requestId));
   const [bookingError, setBookingError] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
@@ -137,25 +143,40 @@ function BookingFlow() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load the listing being booked
+  // Payment always follows an owner-approved request, so that drives the page
   useEffect(() => {
-    if (!productId) return;
+    if (!requestId || !user) return;
 
     let cancelled = false;
-    fetch(`/api/auth/products?id=${encodeURIComponent(productId)}`)
-      .then((response) => response.json())
-      .then((result) => {
+
+    const load = async () => {
+      try {
+        const requests = await fetchBookingRequests(user.id);
+        const match = requests.find((item) => item.id === requestId) || null;
+        if (cancelled) return;
+
+        setBookingRequest(match);
+        if (!match) return;
+
+        setStartDate(match.startDate);
+        setEndDate(match.endDate);
+
+        const response = await fetch(`/api/auth/products?id=${encodeURIComponent(match.listingId)}`);
+        const result = await response.json();
         if (!cancelled && result?.success) setListing(result.data as ListingSummary);
-      })
-      .catch((err) => console.error("Failed to load listing", err))
-      .finally(() => {
+      } catch (err) {
+        console.error("Failed to load booking request", err);
+      } finally {
         if (!cancelled) setIsLoadingListing(false);
-      });
+      }
+    };
+
+    load();
 
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [requestId, user]);
 
   // Save bookings to localStorage whenever they change
   useEffect(() => {
@@ -273,36 +294,26 @@ function BookingFlow() {
   };
 
   const handleCompleteOrder = async () => {
-    if (!listing || !user) return;
-
-    if (!startDate || !endDate) {
-      setBookingError("Select your rental dates first");
-      return;
-    }
+    if (!listing || !user || !bookingRequest) return;
 
     setIsConfirming(true);
     setBookingError("");
 
     try {
-      // The backend records the rental; the listing's status follows from it
-      const response = await fetch("/api/auth/products", {
+      // Paying an approved request is what starts the rental
+      const response = await fetch("/api/auth/booking-requests", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: listing.id,
-          action: "rent",
-          renterId: user.id,
-          startDate,
-          endDate,
-        }),
+        body: JSON.stringify({ id: bookingRequest.id, userId: user.id, action: "pay" }),
       });
 
       const result = await response.json();
       if (!response.ok || !result?.success) {
-        throw new Error(result?.error || "Booking failed");
+        throw new Error(result?.error || "Payment failed");
       }
 
-      setListing(result.data as ListingSummary);
+      setBookingRequest(result.data as BookingRequest);
+      if (result.listing) setListing(result.listing as ListingSummary);
       setIsConfirmed(true);
 
       // Add to booked items dashboard state & localStorage
@@ -348,22 +359,25 @@ function BookingFlow() {
     );
   }
 
-  if (!isConfirmed && (!listing || listing.status !== "active")) {
+  if (!isConfirmed && (!bookingRequest || bookingRequest.status !== "approved" || !listing)) {
     return (
       <ProtectedRoute>
         <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
           <Navbar />
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center pt-28 pb-12">
             <h1 className="text-xl font-bold text-slate-900">
-              {listing ? "This item is not available right now" : "No item selected"}
+              {bookingRequest ? "This booking is not ready for payment" : "No approved booking"}
             </h1>
             <p className="text-sm text-slate-500">
-              {listing
-                ? "It is currently rented out. Try another listing."
-                : "Pick a listing to start a booking."}
+              {bookingRequest
+                ? BOOKING_REQUEST_LABELS[bookingRequest.status]
+                : "Ask the owner to approve your dates first — you can pay once they accept."}
             </p>
-            <Link href="/browse" className="text-sm font-semibold text-[#2563EB]">
-              Browse available listings
+            <Link
+              href="/dashboard/view-booking?tab=notifications"
+              className="text-sm font-semibold text-[#2563EB]"
+            >
+              Go to notifications
             </Link>
           </div>
           <Footer />
@@ -733,7 +747,7 @@ function BookingFlow() {
                       </p>
                       <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
                         <Link 
-                          href="/dashboard/view-booking"
+                          href="/dashboard/view-booking?tab=rentals"
                           className="flex items-center space-x-2 px-6 py-3.5 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer"
                         >
                           <PackageCheck className="w-4 h-4" />
@@ -896,7 +910,7 @@ function BookingFlow() {
                   Rental Summary
                 </h3>
                 <Link 
-                  href="/dashboard/view-booking"
+                  href="/dashboard/view-booking?tab=rentals"
                   className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5" />

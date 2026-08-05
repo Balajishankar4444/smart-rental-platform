@@ -1,7 +1,7 @@
 // app/dashboard/view-booking/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -15,10 +15,19 @@ import {
   MapPin,
   Trash2,
   AlertCircle,
+  Bell,
+  Clock,
   X
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import { useBookingRequests } from "@/hooks/useBookingRequests";
+import {
+  BOOKING_REQUEST_LABELS,
+  BookingRequest,
+  formatDeadline,
+} from "@/utils/bookingRequests";
 import {
   fetchListings,
   listingDailyPrice,
@@ -38,6 +47,8 @@ const formatDay = (value?: string) => {
     ? value
     : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
+
+type DashboardTab = "listings" | "rentals" | "notifications";
 
 const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -131,17 +142,54 @@ const hostMetrics = (activeListings: number) => [
   { label: "Total Views", value: "1,420", icon: Search, color: "text-indigo-600", bg: "bg-indigo-50/80" },
 ];
 
+
+function RequestSummary({ request, caption }: { request: BookingRequest; caption: string }) {
+  return (
+    <div className="flex gap-3">
+      {request.listingImage ? (
+        <img
+          src={request.listingImage}
+          alt={request.listingTitle}
+          className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0"
+        />
+      ) : (
+        <div className="w-14 h-14 rounded-xl bg-slate-100 shrink-0" />
+      )}
+      <div className="min-w-0">
+        <p className="text-[11px] text-slate-400">{caption}</p>
+        <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
+        <p className="text-[11px] text-slate-500">
+          {formatDay(request.startDate)} – {formatDay(request.endDate)} · {request.days}d · ₹
+          {request.totalAmount.toLocaleString("en-IN")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function ViewBookingPage() {
   return (
     <ProtectedRoute>
-      <ViewBookingContent />
+      <Suspense fallback={<div className="min-h-screen bg-slate-50/50" />}>
+        <ViewBookingContent />
+      </Suspense>
     </ProtectedRoute>
   );
 }
 
 function ViewBookingContent() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"rentals" | "listings">("listings");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<DashboardTab>(
+    tabParam === "rentals" || tabParam === "notifications" ? tabParam : "listings"
+  );
+  const {
+    incoming,
+    outgoing,
+    actionableCount,
+    act: actOnRequest,
+  } = useBookingRequests();
   const [myListings, setMyListings] = useState<ListingSummary[]>([]);
   const [myRentals, setMyRentals] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -245,7 +293,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My Listings ({myListings.length})
+              My Lendings ({myListings.length})
             </button>
             <button
               onClick={() => setActiveTab("rentals")}
@@ -256,6 +304,21 @@ function ViewBookingContent() {
               }`}
             >
               My Rentals ({myRentals.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={`relative px-4 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+                activeTab === "notifications"
+                  ? "bg-white text-blue-600 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Notifications ({incoming.length + outgoing.length})
+              {actionableCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                  {actionableCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -454,6 +517,107 @@ function ViewBookingContent() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+
+        {/* --- TAB 3: NOTIFICATIONS --- */}
+        {activeTab === "notifications" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Notifications</h2>
+              <p className="text-xs text-slate-500">
+                Rental requests on your gear, and updates on the items you asked to rent.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-blue-600" /> Requests for your gear
+                </h3>
+
+                {incoming.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">
+                    No one has asked to rent your listings yet.
+                  </div>
+                ) : (
+                  incoming.map((request) => (
+                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
+                      <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
+
+                      {request.status === "pending" ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => actOnRequest(request.id, "approve")}
+                            className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                          >
+                            Approve dates
+                          </button>
+                          <button
+                            onClick={() => actOnRequest(request.id, "decline")}
+                            className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] font-semibold text-slate-500">
+                          {BOOKING_REQUEST_LABELS[request.status]}
+                          {request.status === "approved" &&
+                            ` · pay by ${formatDeadline(request.paymentDeadline)}`}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-600" /> Your rental requests
+                </h3>
+
+                {outgoing.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">
+                    You have not requested any rental dates yet.
+                  </div>
+                ) : (
+                  outgoing.map((request) => (
+                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
+                      <RequestSummary request={request} caption="You requested" />
+
+                      <p className="text-[11px] font-semibold text-slate-500">
+                        {BOOKING_REQUEST_LABELS[request.status]}
+                      </p>
+
+                      {request.status === "approved" && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold text-amber-600">
+                            Pay before {formatDeadline(request.paymentDeadline)} or the approval lapses.
+                          </p>
+                          <Link
+                            href={`/booking?requestId=${request.id}`}
+                            className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
+                          >
+                            Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
+                          </Link>
+                        </div>
+                      )}
+
+                      {(request.status === "pending" || request.status === "approved") && (
+                        <button
+                          onClick={() => actOnRequest(request.id, "cancel")}
+                          className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          Cancel request
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
