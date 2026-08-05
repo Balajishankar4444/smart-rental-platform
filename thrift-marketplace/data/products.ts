@@ -6,7 +6,7 @@ import { CITIES } from "./cities";
 const BRANDS = ["Sony", "Canon", "Apple", "Dell", "Trek", "Hyundai", "Bosch", "IKEA", "Sony", "DJI", "Yamaha", "BenQ", "JBL", "GoPro", "Fitbit"];
 const CONDITIONS: ProductCondition[] = ["Brand New", "Like New", "Good", "Fair"];
 
-export const PRODUCTS: Product[] = Array.from({ length: 500 }, (_, i) => {
+const GENERATED_PRODUCTS: Product[] = Array.from({ length: 500 }, (_, i) => {
   const categoryObj = CATEGORIES[i % CATEGORIES.length];
   const cityObj = CITIES[i % CITIES.length];
   const brand = BRANDS[i % BRANDS.length];
@@ -69,3 +69,9 @@ export const PRODUCTS: Product[] = Array.from({ length: 500 }, (_, i) => {
     updatedAt: "2026-08-01T12:00:00Z",
   };
 });
+
+const DUPLICATE_PRODUCTS: Product[] = Array.from({ length: 5 }, () => ({
+  ...GENERATED_PRODUCTS[0],
+}));
+
+export const PRODUCTS: Product[] = [...GENERATED_PRODUCTS, ...DUPLICATE_PRODUCTS];
