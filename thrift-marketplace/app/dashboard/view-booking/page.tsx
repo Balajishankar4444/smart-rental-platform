@@ -18,6 +18,8 @@ import {
   X
 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/app/context/AuthContext";
+import { deletedListingsStorageKey, listingsStorageKey } from "@/utils/listings";
 
 // --- Ripple Button Component ---
 interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -118,6 +120,7 @@ export default function ViewBookingPage() {
 }
 
 function ViewBookingContent() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"rentals" | "listings">("listings");
   const [myListings, setMyListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,17 +130,22 @@ function ViewBookingContent() {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
+
     const loadListings = async () => {
       try {
-        const response = await fetch("/product.json");
-        const products = await response.json();
+        const response = await fetch(
+          `/api/auth/products?userId=${encodeURIComponent(user.id)}`
+        );
+        const result = await response.json();
+        const products = Array.isArray(result?.data) ? result.data : [];
 
         const savedListings = JSON.parse(
-          localStorage.getItem("my_listings") || "[]"
+          localStorage.getItem(listingsStorageKey(user.id)) || "[]"
         );
 
         const deletedIds = JSON.parse(
-          localStorage.getItem("deleted_listings") || "[]"
+          localStorage.getItem(deletedListingsStorageKey(user.id)) || "[]"
         );
 
         const filteredProducts = products.filter(
@@ -146,7 +154,7 @@ function ViewBookingContent() {
 
         const combinedListings = [
           ...filteredProducts,
-          ...savedListings
+          ...savedListings.filter((item: any) => item.userId === user.id)
         ].filter(
           (item, index, self) =>
             index === self.findIndex((t, i) => (t.id ? t.id === item.id : i === index))
@@ -161,7 +169,7 @@ function ViewBookingContent() {
     };
 
     loadListings();
-  }, []);
+  }, [user]);
 
   const promptDeleteListing = (id: string) => {
     setSelectedListingId(id);
@@ -169,7 +177,7 @@ function ViewBookingContent() {
   };
 
   const confirmDeleteListing = () => {
-    if (!selectedListingId) return;
+    if (!selectedListingId || !user) return;
 
     const updated = myListings.filter(
       (item, index) => (item.id ? item.id !== selectedListingId : index.toString() !== selectedListingId)
@@ -179,7 +187,7 @@ function ViewBookingContent() {
 
     // remove from saved listings
     const savedListings = JSON.parse(
-      localStorage.getItem("my_listings") || "[]"
+      localStorage.getItem(listingsStorageKey(user.id)) || "[]"
     );
 
     const updatedSaved = savedListings.filter(
@@ -187,17 +195,17 @@ function ViewBookingContent() {
     );
 
     localStorage.setItem(
-      "my_listings",
+      listingsStorageKey(user.id),
       JSON.stringify(updatedSaved)
     );
 
-    // store deleted product.json ids
+    // store deleted listing ids
     const deletedIds = JSON.parse(
-      localStorage.getItem("deleted_listings") || "[]"
+      localStorage.getItem(deletedListingsStorageKey(user.id)) || "[]"
     );
 
     localStorage.setItem(
-      "deleted_listings",
+      deletedListingsStorageKey(user.id),
       JSON.stringify([
         ...deletedIds,
         selectedListingId

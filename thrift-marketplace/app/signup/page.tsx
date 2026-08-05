@@ -176,7 +176,7 @@ export default function SignupPage() {
       setShowOtpModal(false);
 
       localStorage.setItem("isLogin", "1");
-      login(email, fullName);
+      login(email, fullName, result.user?.id);
 
       const finalDestination = returnUrl;
       sessionStorage.removeItem("auth_redirect_url");
@@ -213,7 +213,11 @@ export default function SignupPage() {
       }
       
       localStorage.setItem("isLogin", "1");
-      login(data.user?.email || "google.user@example.com", data.user?.name || "Google User");
+      login(
+        data.user?.email || "google.user@example.com",
+        data.user?.name || "Google User",
+        data.user?.id
+      );
 
       const finalDestination = returnUrl;
       sessionStorage.removeItem("auth_redirect_url");

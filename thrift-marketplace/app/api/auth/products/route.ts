@@ -17,13 +17,19 @@ function ensureDataFileExists() {
   }
 }
 
-// GET: Retrieve all product listings
-export async function GET() {
+// GET: Retrieve product listings, optionally scoped to a single owner
+export async function GET(request: Request) {
   try {
     ensureDataFileExists();
     const fileContents = fs.readFileSync(dataFilePath, 'utf8');
     const products = JSON.parse(fileContents || '[]');
-    return NextResponse.json({ success: true, data: products }, { status: 200 });
+
+    const userId = new URL(request.url).searchParams.get('userId');
+    const data = userId
+      ? products.filter((product: { userId?: string }) => product.userId === userId)
+      : products;
+
+    return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
     console.error('Error reading products file:', error);
     return NextResponse.json(
@@ -41,6 +47,13 @@ export async function POST(request: Request) {
     
     // Parse incoming request body from the frontend
     const newProduct = await request.json();
+
+    if (!newProduct.userId) {
+      return NextResponse.json(
+        { success: false, error: 'userId is required to create a listing' },
+        { status: 400 }
+      );
+    }
 
     // Read existing products from the JSON file
     const fileContents = fs.readFileSync(dataFilePath, 'utf8');

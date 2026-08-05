@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useAuth } from "@/app/context/AuthContext";
+import { listingsStorageKey } from "@/utils/listings";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -121,6 +123,7 @@ export default function ListItemPage() {
 }
 
 function ListItemContent() {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -183,13 +186,17 @@ function ListItemContent() {
 
   const publishListing = async () => {
     console.log("PUBLISH BUTTON CLICKED");
+  if (!user) {
+    alert("Please sign in again before publishing your listing.");
+    return;
+  }
   try {
     const response = await fetch("/api/auth/products", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-  body: JSON.stringify(form),
+  body: JSON.stringify({ ...form, userId: user.id }),
   });
 
   const result = await response.json();
@@ -197,17 +204,19 @@ function ListItemContent() {
   console.log(result);
   console.log("ADDING TO MY_LISTINGS");
   if (response.ok) {
+    const storageKey = listingsStorageKey(user.id);
     const existingListings = JSON.parse(
-  localStorage.getItem("my_listings") || "[]"
+  localStorage.getItem(storageKey) || "[]"
 );
 
 const newListing = {
   ...form,
-  id: `prod_${Date.now()}`
+  userId: user.id,
+  id: result?.data?.id || `prod_${Date.now()}`
 };
 
 localStorage.setItem(
-  "my_listings",
+  storageKey,
   JSON.stringify([...existingListings, newListing])
 ); 
 console.log("Saved listing:", newListing);

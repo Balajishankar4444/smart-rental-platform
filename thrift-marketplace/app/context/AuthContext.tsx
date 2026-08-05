@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export interface UserProfile {
+  id: string;
   name: string;
   email: string;
   avatar?: string;
@@ -16,8 +17,8 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   authStatus: AuthStatus;
-  login: (email: string, name?: string) => void;
-  signup: (name: string, email: string) => void;
+  login: (email: string, name?: string, id?: string) => void;
+  signup: (name: string, email: string, id?: string) => void;
   logout: () => void;
 }
 
@@ -33,7 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedUser = localStorage.getItem("rentit_user");
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser) as UserProfile;
+        // Sessions stored before user ids existed fall back to the email
+        setUser({ ...parsed, id: parsed.id || parsed.email });
       } catch (error) {
         console.error("Failed to parse stored user data:", error);
       }
@@ -52,8 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = (email: string, name?: string) => {
+  const login = (email: string, name?: string, id?: string) => {
     const userData: UserProfile = {
+      id: id || email,
       name: name || email.split("@")[0] || "User",
       email,
       avatar:
@@ -64,8 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handlePostAuthRedirect();
   };
 
-  const signup = (name: string, email: string) => {
+  const signup = (name: string, email: string, id?: string) => {
     const userData: UserProfile = {
+      id: id || email,
       name,
       email,
       avatar:
