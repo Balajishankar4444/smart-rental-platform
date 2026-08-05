@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Eye } from "lucide-react";
+import { MapPin, Eye, Heart } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
 import { QuickViewModal, ItemDetail } from "./ui/QuickViewModal";
 import {
   fetchListings,
@@ -37,6 +38,7 @@ export const FeaturedRentals = () => {
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
   const [items, setItems] = useState<ItemDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +130,22 @@ export const FeaturedRentals = () => {
                     <div className="absolute bottom-3 left-3 bg-gray-900/80 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full">
                       Value: {item.marketValue}
                     </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(item.id);
+                      }}
+                      aria-label={isFavorite(item.id) ? "Remove from favorites" : "Add to favorites"}
+                      aria-pressed={isFavorite(item.id)}
+                      className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md cursor-pointer"
+                    >
+                      <Heart
+                        className={`h-4 w-4 ${
+                          isFavorite(item.id) ? "fill-red-500 text-red-500" : "text-gray-700"
+                        }`}
+                      />
+                    </button>
                   </div>
 
                   <div className="p-5">

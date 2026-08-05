@@ -26,6 +26,7 @@ import {
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import { useFavorites } from "@/hooks/useFavorites";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
@@ -281,8 +282,7 @@ export default function ProductDetailPage() {
   // States
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(mockProduct?.wishlistCount ?? 0);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -333,14 +333,14 @@ export default function ProductDetailPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isWishlisted = productId ? isFavorite(productId) : false;
+
   const handleWishlistToggle = () => {
-    if (isWishlisted) {
-      setIsWishlisted(false);
-      setWishlistCount((prev) => prev - 1);
-    } else {
-      setIsWishlisted(true);
-      setWishlistCount((prev) => prev + 1);
+    if (!isAuthenticated) {
+      setIsLoginModalOpen(true);
+      return;
     }
+    if (productId) toggleFavorite(productId);
   };
 
   const handleCopyLink = () => {

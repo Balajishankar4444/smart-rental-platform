@@ -7,8 +7,9 @@ import {
   Search, SlidersHorizontal, MapPin, ShieldCheck, Zap, 
   Camera, Laptop, Gamepad2, Smartphone, Projector, Wrench, 
   Compass, Music, Armchair, Package, Sparkles, 
-  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown
+  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart
 } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -86,6 +87,7 @@ const formatDisplayDate = (dateString: string) => {
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
@@ -688,6 +690,21 @@ function SearchContent() {
                       <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-[#2563EB]" /> {listingLocation(item)}
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(item.id);
+                        }}
+                        aria-label={isFavorite(item.id) ? "Remove from favorites" : "Add to favorites"}
+                        aria-pressed={isFavorite(item.id)}
+                        className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md cursor-pointer"
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${
+                            isFavorite(item.id) ? "fill-red-500 text-red-500" : "text-slate-600"
+                          }`}
+                        />
+                      </button>
                     </div>
 
                     <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
