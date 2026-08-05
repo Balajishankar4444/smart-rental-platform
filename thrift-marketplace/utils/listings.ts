@@ -3,14 +3,45 @@ export const LISTING_STATUSES = ["active", "deleted", "in_rent", "in_lease"] as 
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
-  active: "Active",
+  active: "Available",
   deleted: "Deleted",
   in_rent: "In Rent",
   in_lease: "In Lease",
 };
 
-export function isListingStatus(value: unknown): value is ListingStatus {
-  return typeof value === "string" && (LISTING_STATUSES as readonly string[]).includes(value);
+/** A rental of 30 days or longer is treated as a lease rather than a rent. */
+export const LEASE_MIN_DAYS = 30;
+
+export interface ListingRental {
+  renterId: string;
+  startDate: string;
+  endDate: string;
+  bookedAt: string;
+}
+
+export function rentalDays(rental: ListingRental) {
+  const start = new Date(rental.startDate).getTime();
+  const end = new Date(rental.endDate).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return 0;
+  return Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * Status is never chosen by a user: it follows the listing's own state.
+ * Removed -> deleted, booked and not yet returned -> in_rent / in_lease, otherwise available.
+ */
+export function deriveListingStatus(
+  listing: { deletedAt?: string | null; rental?: ListingRental | null },
+  now = new Date()
+): ListingStatus {
+  if (listing.deletedAt) return "deleted";
+
+  const rental = listing.rental;
+  if (rental && new Date(rental.endDate).getTime() >= now.getTime()) {
+    return rentalDays(rental) >= LEASE_MIN_DAYS ? "in_lease" : "in_rent";
+  }
+
+  return "active";
 }
 
 /** A listing as returned by GET /api/auth/products (images collapsed to `primaryImage`). */
@@ -18,6 +49,7 @@ export interface ListingSummary {
   id: string;
   userId: string;
   status: ListingStatus;
+  rental?: ListingRental | null;
   productName: string;
   category: string;
   subcategory: string;

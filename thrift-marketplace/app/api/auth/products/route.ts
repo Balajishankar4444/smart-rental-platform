@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { isListingStatus, ListingStatus } from '@/utils/listings';
+import { deriveListingStatus, ListingRental } from '@/utils/listings';
 
 // Define the file path where product listings will be stored
 const dataFilePath = path.join(process.cwd(), 'data', 'product.json');
@@ -10,7 +10,8 @@ const dataFilePath = path.join(process.cwd(), 'data', 'product.json');
 interface StoredProduct {
   id: string;
   userId: string;
-  status: ListingStatus;
+  deletedAt?: string | null;
+  rental?: ListingRental | null;
   images?: string[];
   primaryImageIndex?: number;
   [key: string]: unknown;
@@ -38,9 +39,14 @@ function writeProducts(products: StoredProduct[]) {
   fs.writeFileSync(dataFilePath, JSON.stringify(products, null, 2), 'utf8');
 }
 
+// Status is always computed from the listing's own state, never taken from the client
+function withStatus(product: StoredProduct) {
+  return { ...product, status: deriveListingStatus(product) };
+}
+
 // Listing responses carry a single cover image instead of the full (base64) gallery
 function toSummary(product: StoredProduct) {
-  const { images, primaryImageIndex, ...rest } = product;
+  const { images, primaryImageIndex, ...rest } = withStatus(product);
   return {
     ...rest,
     primaryImage: images?.[primaryImageIndex || 0] || '',
@@ -49,7 +55,7 @@ function toSummary(product: StoredProduct) {
 
 // GET: Retrieve listings, optionally scoped to an owner and/or a status.
 // `id` returns a single listing with its full image gallery.
-// Without a status filter, soft-deleted listings are hidden; `status=all` returns everything.
+// Without a status filter, removed listings are hidden; `status=all` returns everything.
 export async function GET(request: Request) {
   try {
     const products = readProducts();
@@ -63,17 +69,17 @@ export async function GET(request: Request) {
       if (!product) {
         return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, data: product }, { status: 200 });
+      return NextResponse.json({ success: true, data: withStatus(product) }, { status: 200 });
     }
 
     const data = products
       .filter((product) => (userId ? product.userId === userId : true))
+      .map(toSummary)
       .filter((product) => {
         if (status === 'all') return true;
         if (status) return product.status === status;
         return product.status !== 'deleted';
-      })
-      .map(toSummary);
+      });
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
@@ -100,11 +106,12 @@ export async function POST(request: Request) {
 
     const products = readProducts();
 
-    // Assign a unique ID, status and timestamp if not present
+    // A freshly created listing is available: no rental, not removed
     const productWithMeta: StoredProduct = {
       id: `prod_${Date.now()}`,
       ...newProduct,
-      status: isListingStatus(newProduct.status) ? newProduct.status : 'active',
+      rental: null,
+      deletedAt: null,
       createdAt: newProduct.createdAt || new Date().toISOString(),
     };
 
@@ -128,41 +135,69 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Update the status of a listing (active / deleted / in_rent / in_lease)
+// PATCH: Record a booking or a return. The resulting status (in_rent / in_lease / active)
+// follows from the rental itself, so no caller can set a status directly.
 export async function PATCH(request: Request) {
   try {
-    const { id, userId, status } = await request.json();
+    const { id, action, renterId, startDate, endDate, userId } = await request.json();
 
-    if (!id || !userId) {
+    if (!id || (action !== 'rent' && action !== 'return')) {
       return NextResponse.json(
-        { success: false, error: 'id and userId are required' },
-        { status: 400 }
-      );
-    }
-
-    if (!isListingStatus(status)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid listing status' },
+        { success: false, error: 'id and a valid action ("rent" or "return") are required' },
         { status: 400 }
       );
     }
 
     const products = readProducts();
-    const product = products.find((item) => item.id === id && item.userId === userId);
+    const product = products.find((item) => item.id === id);
 
-    if (!product) {
+    if (!product || product.deletedAt) {
       return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
     }
 
-    product.status = status;
+    if (action === 'rent') {
+      if (!renterId || !startDate || !endDate) {
+        return NextResponse.json(
+          { success: false, error: 'renterId, startDate and endDate are required to rent' },
+          { status: 400 }
+        );
+      }
+
+      if (deriveListingStatus(product) !== 'active') {
+        return NextResponse.json(
+          { success: false, error: 'Listing is already rented out' },
+          { status: 409 }
+        );
+      }
+
+      product.rental = { renterId, startDate, endDate, bookedAt: new Date().toISOString() };
+    } else {
+      const rental = product.rental;
+      if (!rental) {
+        return NextResponse.json(
+          { success: false, error: 'Listing is not currently rented' },
+          { status: 409 }
+        );
+      }
+
+      if (userId !== product.userId && userId !== rental.renterId) {
+        return NextResponse.json(
+          { success: false, error: 'Only the owner or the renter can return a listing' },
+          { status: 403 }
+        );
+      }
+
+      product.rental = null;
+    }
+
     product.updatedAt = new Date().toISOString();
     writeProducts(products);
 
     return NextResponse.json({ success: true, data: toSummary(product) }, { status: 200 });
   } catch (error) {
-    console.error('Error updating product status:', error);
+    console.error('Error updating listing rental:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update listing status' },
+      { success: false, error: 'Failed to update listing' },
       { status: 500 }
     );
   }
@@ -189,8 +224,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
     }
 
-    product.status = 'deleted';
-    product.updatedAt = new Date().toISOString();
+    product.deletedAt = new Date().toISOString();
     writeProducts(products);
 
     return NextResponse.json({ success: true, data: toSummary(product) }, { status: 200 });

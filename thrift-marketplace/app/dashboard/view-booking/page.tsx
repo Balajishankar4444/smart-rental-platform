@@ -185,23 +185,25 @@ function ViewBookingContent() {
     }
   };
 
-  const changeListingStatus = async (id: string, status: ListingStatus) => {
+  // Ends an ongoing rental; the listing becomes available again on its own
+  const markReturned = async (id: string) => {
     if (!user) return;
 
     try {
       const response = await fetch("/api/auth/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, userId: user.id, status }),
+        body: JSON.stringify({ id, userId: user.id, action: "return" }),
       });
 
-      if (!response.ok) throw new Error("Status update failed");
+      if (!response.ok) throw new Error("Return failed");
 
+      const result = await response.json();
       setMyListings((current) =>
-        current.map((item) => (item.id === id ? { ...item, status } : item))
+        current.map((item) => (item.id === id ? result.data : item))
       );
     } catch (err) {
-      console.error("Failed to update listing status", err);
+      console.error("Failed to mark listing as returned", err);
     }
   };
 
@@ -324,16 +326,18 @@ function ViewBookingContent() {
 
                         {/* Minimal Actions */}
                         <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                          <select
-                            value={listing.status}
-                            onChange={(e) => changeListingStatus(listing.id, e.target.value as ListingStatus)}
-                            aria-label="Listing status"
-                            className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-                          >
-                            <option value="active">Active</option>
-                            <option value="in_rent">In Rent</option>
-                            <option value="in_lease">In Lease</option>
-                          </select>
+                          {listing.status === "in_rent" || listing.status === "in_lease" ? (
+                            <RippleButton
+                              onClick={() => markReturned(listing.id)}
+                              className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
+                            >
+                              Mark returned
+                            </RippleButton>
+                          ) : (
+                            <span className="flex-1 px-3 py-2 text-center text-xs font-semibold text-slate-500">
+                              Available for rent
+                            </span>
+                          )}
                           <RippleButton 
                             onClick={() => promptDeleteListing(listing.id)}
                             className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center"

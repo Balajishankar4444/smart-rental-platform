@@ -195,7 +195,7 @@ function ListItemContent() {
       headers: {
         "Content-Type": "application/json",
       },
-  body: JSON.stringify({ ...form, userId: user.id, status: "active" }),
+  body: JSON.stringify({ ...form, userId: user.id }),
   });
 
   const result = await response.json();
