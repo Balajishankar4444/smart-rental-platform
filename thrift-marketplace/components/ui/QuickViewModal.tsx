@@ -102,9 +102,15 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ item, onClose })
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                     <span className="font-semibold text-[#2563EB] uppercase tracking-wider">{item.category}</span>
                     <div className="flex items-center gap-1 font-num text-gray-900 font-bold">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span>{item.rating}</span>
-                      <span className="text-gray-400">({item.reviews} reviews)</span>
+                      {item.reviews > 0 ? (
+                        <>
+                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                          <span>{item.rating}</span>
+                          <span className="text-gray-400">({item.reviews} reviews)</span>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">No reviews yet</span>
+                      )}
                     </div>
                   </div>
 

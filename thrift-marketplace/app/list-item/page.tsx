@@ -16,7 +16,6 @@ import {
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/app/context/AuthContext";
-import { listingsStorageKey } from "@/utils/listings";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -196,33 +195,17 @@ function ListItemContent() {
       headers: {
         "Content-Type": "application/json",
       },
-  body: JSON.stringify({ ...form, userId: user.id }),
+  body: JSON.stringify({ ...form, userId: user.id, status: "active" }),
   });
 
   const result = await response.json();
 
-  console.log(result);
-  console.log("ADDING TO MY_LISTINGS");
   if (response.ok) {
-    const storageKey = listingsStorageKey(user.id);
-    const existingListings = JSON.parse(
-  localStorage.getItem(storageKey) || "[]"
-);
-
-const newListing = {
-  ...form,
-  userId: user.id,
-  id: result?.data?.id || `prod_${Date.now()}`
-};
-
-localStorage.setItem(
-  storageKey,
-  JSON.stringify([...existingListings, newListing])
-); 
-console.log("Saved listing:", newListing);
-setIsSubmitted(true);
+    localStorage.removeItem("rentit_listing_draft");
+    setIsSubmitted(true);
   } else {
-    console.error("Failed to save product");
+    console.error("Failed to save product", result);
+    alert(result?.error || "Failed to save product");
   }
 } catch (error) {
   console.error(error);

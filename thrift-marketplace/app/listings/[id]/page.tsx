@@ -23,6 +23,7 @@ import {
   Send,
   Lock,
 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -158,7 +159,94 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
   },
 };
 
-const DEFAULT_PRODUCT = MOCK_PRODUCTS["sony-alpha-7iv"];
+// A listing row as persisted by /api/auth/products
+interface StoredListing {
+  id: string;
+  productName?: string;
+  category?: string;
+  brand?: string;
+  model?: string;
+  condition?: string;
+  age?: string;
+  dailyPrice?: string;
+  weeklyPrice?: string;
+  monthlyPrice?: string;
+  securityDeposit?: string;
+  lateReturnFee?: string;
+  images?: string[];
+  city?: string;
+  state?: string;
+  address?: string;
+  instantBooking?: boolean;
+  description?: string;
+  usageInstructions?: string;
+  weight?: string;
+  color?: string;
+  dimensions?: string;
+  warranty?: boolean;
+  pickupTime?: string;
+  deliveryAvailable?: boolean;
+  accessoriesIncluded?: string;
+}
+
+// Maps a stored listing (created through /list-item) onto the detail page shape
+function toProductDetail(listing: StoredListing): ProductDetail {
+  const images: string[] = listing.images?.length
+    ? listing.images
+    : ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200"];
+
+  return {
+    id: listing.id,
+    title: listing.productName || "Untitled listing",
+    category: listing.category || "General",
+    brand: listing.brand || "—",
+    model: listing.model || "—",
+    condition: listing.condition || "—",
+    age: listing.age || "—",
+    dailyPrice: Number(listing.dailyPrice) || 0,
+    weeklyPrice: Number(listing.weeklyPrice) || 0,
+    monthlyPrice: Number(listing.monthlyPrice) || 0,
+    securityDeposit: Number(listing.securityDeposit) || 0,
+    platformProtection: 99,
+    lateFee: Number(listing.lateReturnFee) || 0,
+    rating: 0,
+    reviewsCount: 0,
+    images,
+    city: listing.city || "",
+    area: listing.address || "",
+    distance: [listing.city, listing.state].filter(Boolean).join(", "),
+    verifiedHost: false,
+    instantBook: Boolean(listing.instantBooking),
+    rentalCount: 0,
+    viewsCount: 0,
+    wishlistCount: 0,
+    shortDescription: listing.description || "",
+    fullDescription: listing.usageInstructions || listing.description || "",
+    owner: {
+      name: "Listing owner",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+      rating: 0,
+      rentalsCompleted: 0,
+      responseTime: "—",
+      memberSince: "—",
+      languages: [],
+      verified: false,
+    },
+    specs: {
+      weight: listing.weight || "—",
+      color: listing.color || "—",
+      power: listing.dimensions || "—",
+      warranty: listing.warranty ? "Active" : "None",
+      pickup: listing.pickupTime || "—",
+      delivery: listing.deliveryAvailable ? "Available" : "Pickup only",
+    },
+    included: listing.accessoriesIncluded
+      ? String(listing.accessoriesIncluded).split(",").map((part: string) => part.trim()).filter(Boolean)
+      : [],
+    reviews: [],
+  };
+}
+
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -185,19 +273,21 @@ export default function ProductDetailPage() {
   const searchParams = useSearchParams();
   const rawId = params?.id;
   const productId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const product = (productId && MOCK_PRODUCTS[productId]) || DEFAULT_PRODUCT;
+  const mockProduct = (productId && MOCK_PRODUCTS[productId]) || null;
+  const [product, setProduct] = useState<ProductDetail | null>(mockProduct);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(!mockProduct);
 
   // States
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(product.wishlistCount);
+  const [wishlistCount, setWishlistCount] = useState(mockProduct?.wishlistCount ?? 0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [messageSent, setMessageSent] = useState(false);
-  const [reviewsState, setReviewsState] = useState<Review[]>(product.reviews);
+  const [reviewsState, setReviewsState] = useState<Review[]>(mockProduct?.reviews ?? []);
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
 
   // Proper Authentication State Management
@@ -211,6 +301,25 @@ export default function ProductDetailPage() {
   const [currentMonth, setCurrentMonth] = useState(7);
   const [currentYear, setCurrentYear] = useState(2026);
   const calendarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!productId || mockProduct) return;
+    let cancelled = false;
+
+    fetch(`/api/auth/products?id=${encodeURIComponent(productId)}`)
+      .then((response) => response.json())
+      .then((result) => {
+        if (!cancelled && result?.data) setProduct(toProductDetail(result.data));
+      })
+      .catch((err) => console.error("Failed to load listing", err))
+      .finally(() => {
+        if (!cancelled) setIsLoadingProduct(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, mockProduct]);
 
   // Check authentication status on mount and when storage changes
   useEffect(() => {
@@ -276,10 +385,11 @@ export default function ProductDetailPage() {
   };
 
   const rentalDays = calculateDays();
-  const rentalCost = rentalDays * product.dailyPrice;
+  const rentalCost = rentalDays * (product?.dailyPrice ?? 0);
   const platformFee = Math.round(rentalCost * 0.08);
   const taxes = Math.round((rentalCost + platformFee) * 0.18);
-  const grandTotal = rentalCost + product.securityDeposit + product.platformProtection + platformFee + taxes;
+  const grandTotal =
+    rentalCost + (product?.securityDeposit ?? 0) + (product?.platformProtection ?? 0) + platformFee + taxes;
 
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month, 1).getDay();
@@ -343,6 +453,34 @@ export default function ProductDetailPage() {
   const handleNavigateToLoginPage = () => {
     router.push("/login");
   };
+
+  if (isLoadingProduct) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <h1 className="text-xl font-bold text-slate-900">Listing not available</h1>
+          <p className="text-sm text-slate-500">This item may have been removed by its owner.</p>
+          <Link href="/browse" className="text-sm font-semibold text-[#2563EB]">
+            Browse active listings
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-slate-900 selection:bg-[#2563EB] selection:text-white">

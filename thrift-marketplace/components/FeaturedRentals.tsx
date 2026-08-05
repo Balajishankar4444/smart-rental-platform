@@ -1,85 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MapPin, Eye } from "lucide-react";
+import { MapPin, Eye } from "lucide-react";
 import { QuickViewModal, ItemDetail } from "./ui/QuickViewModal";
+import {
+  fetchListings,
+  listingDailyPrice,
+  listingImage,
+  listingLocation,
+  listingTitle,
+  ListingSummary,
+} from "@/utils/listings";
 
-const FEATURED_ITEMS: ItemDetail[] = [
-  {
-    id: "1",
-    title: "Sony Alpha a7 IV + 24-70mm f/2.8 GM Lens",
-    category: "Photography",
-    pricePerDay: 1850,
-    marketValue: "₹2,40,000",
-    rating: 4.96,
-    reviews: 42,
-    location: "Indiranagar, Bengaluru",
-    distance: "2.4 km away",
-    owner: "Rohan V.",
-    ownerBadge: "Super Lender",
+function toItemDetail(listing: ListingSummary): ItemDetail {
+  return {
+    id: listing.id,
+    title: listingTitle(listing),
+    category: listing.category || "General",
+    pricePerDay: listingDailyPrice(listing),
+    marketValue: listing.securityDeposit ? `\u20b9${listing.securityDeposit} deposit` : "No deposit",
+    rating: 0,
+    reviews: 0,
+    location: listingLocation(listing),
+    distance: listing.condition || "",
+    owner: listing.brand || "Verified lender",
+    ownerBadge: listing.instantBooking ? "Instant Booking" : "Request to Book",
     ownerImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800",
-    verified: true,
-  },
-  {
-    id: "2",
-    title: "Sony PlayStation 5 Disc Edition + 2 Controllers",
-    category: "Gaming",
-    pricePerDay: 690,
-    marketValue: "₹54,990",
-    rating: 4.98,
-    reviews: 89,
-    location: "Koramangala, Bengaluru",
-    distance: "1.1 km away",
-    owner: "Priya S.",
-    ownerBadge: "Top Rated",
-    ownerImage: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200",
-    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&q=80&w=800",
-    verified: true,
-  },
-  {
-    id: "3",
-    title: "DJI Mini 3 Pro Fly More Combo (4K HDR)",
-    category: "Drones",
-    pricePerDay: 1450,
-    marketValue: "₹89,000",
-    rating: 4.92,
-    reviews: 31,
-    location: "Bandra West, Mumbai",
-    distance: "3.8 km away",
-    owner: "Aman K.",
-    ownerBadge: "Super Lender",
-    ownerImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
-    image: "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&q=80&w=800",
-    verified: true,
-  },
-  {
-    id: "4",
-    title: "Ather 450X Gen 3 Electric Scooter",
-    category: "Vehicles",
-    pricePerDay: 490,
-    marketValue: "₹1,45,000",
-    rating: 4.89,
-    reviews: 57,
-    location: "Connaught Place, New Delhi",
-    distance: "0.8 km away",
-    owner: "Karan M.",
-    ownerBadge: "Verified Pro",
-    ownerImage: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200",
-    image: "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&q=80&w=800",
-    verified: true,
-  },
-];
+    image: listingImage(listing),
+    verified: Boolean(listing.instantBooking),
+  };
+}
 
 export const FeaturedRentals = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedItem, setSelectedItem] = useState<ItemDetail | null>(null);
+  const [items, setItems] = useState<ItemDetail[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchListings({ status: "active" })
+      .then((listings) => {
+        if (!cancelled) setItems(listings.map(toItemDetail));
+      })
+      .catch((err) => console.error("Failed to load listings", err))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categories = ["all", ...Array.from(new Set(items.map((item) => item.category.toLowerCase())))];
 
   const filteredItems =
     activeTab === "all"
-      ? FEATURED_ITEMS
-      : FEATURED_ITEMS.filter((item) => item.category.toLowerCase() === activeTab);
+      ? items
+      : items.filter((item) => item.category.toLowerCase() === activeTab);
 
   return (
     <section className="py-20 mx-auto max-w-[1440px] px-6 lg:px-12" id="browse">
@@ -90,7 +71,7 @@ export const FeaturedRentals = () => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 w-full md:w-auto">
-          {["all", "photography", "gaming", "drones", "vehicles"].map((tab) => (
+          {categories.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -105,6 +86,13 @@ export const FeaturedRentals = () => {
           ))}
         </div>
       </div>
+
+      {!loading && filteredItems.length === 0 && (
+        <div className="rounded-[24px] border border-dashed border-gray-300 bg-white py-16 text-center">
+          <p className="text-sm font-semibold text-gray-900">No active listings yet</p>
+          <p className="mt-1 text-xs text-gray-500">Be the first to list your gear for rent.</p>
+        </div>
+      )}
 
       <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <AnimatePresence>
@@ -145,11 +133,9 @@ export const FeaturedRentals = () => {
                   <div className="p-5">
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                       <span className="font-semibold text-[#2563EB]">{item.category}</span>
-                      <div className="flex items-center gap-1 font-num text-gray-900 font-bold">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span>{item.rating}</span>
-                        <span className="text-gray-400">({item.reviews})</span>
-                      </div>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                        Available
+                      </span>
                     </div>
 
                     <h3 className="text-base font-bold text-gray-900 line-clamp-1 group-hover:text-[#2563EB] transition-colors">
@@ -158,7 +144,7 @@ export const FeaturedRentals = () => {
 
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5 shrink-0" />
-                      <span>{item.location} • {item.distance}</span>
+                      <span>{[item.location, item.distance].filter(Boolean).join(" • ")}</span>
                     </p>
 
                     <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
