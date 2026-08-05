@@ -425,14 +425,42 @@ export default function ProductDetailPage() {
   // ==========================================
   // AUTHENTICATION & BOOKING CHECK HANDLER
   // ==========================================
-  const bookingUrl = `/booking?productId=${productId}&startDate=${startDate}&endDate=${endDate}`;
+  const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
-  const handleProceedToBook = () => {
-    if (!isAuthenticated) {
+  // Renting starts as a date request; the owner approves before any payment
+  const handleProceedToBook = async () => {
+    if (!isAuthenticated || !user) {
       setIsLoginModalOpen(true);
       return;
     }
-    router.push(bookingUrl);
+
+    setRequestError("");
+    setIsRequesting(true);
+
+    try {
+      const response = await fetch("/api/auth/booking-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: productId,
+          renterId: user.id,
+          renterName: user.name,
+          startDate,
+          endDate,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "Could not send the request");
+      }
+
+      setRequestSent(true);
+    } catch (err) {
+      setRequestError(err instanceof Error ? err.message : "Could not send the request");
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
   const handleNavigateToLoginPage = () => {
