@@ -17,6 +17,7 @@ import {
   Phone,
   CheckCircle2,
   X,
+  AlertCircle,
 } from "lucide-react";
 
 export default function SignupPage() {
@@ -30,6 +31,10 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
+  // Error States
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
+
   // OTP Modal State
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -39,7 +44,6 @@ export default function SignupPage() {
   const [returnUrl, setReturnUrl] = useState<string>("/");
 
   useEffect(() => {
-    // 1. Check if an explicit redirect parameter was passed via URL query
     const redirectParam = searchParams.get("redirect");
     if (redirectParam) {
       setReturnUrl(redirectParam);
@@ -47,20 +51,20 @@ export default function SignupPage() {
       return;
     }
 
-    // 2. Check session storage as a robust fallback for page navigation/refreshes
     const storedRedirect = sessionStorage.getItem("auth_redirect_url");
     if (storedRedirect) {
       setReturnUrl(storedRedirect);
       return;
     }
 
-    // 3. Default fallback if user visited /signup directly
     setReturnUrl("/");
   }, [searchParams]);
 
   // Handle Form Submission: Trigger OTP popup
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setOtpErrorMessage(null);
     setShowOtpModal(true);
   };
 
@@ -70,6 +74,7 @@ export default function SignupPage() {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
+    if (otpErrorMessage) setOtpErrorMessage(null);
 
     // Auto-focus next input field if typing forward
     if (value && index < 5) {
@@ -86,13 +91,47 @@ export default function SignupPage() {
     }
   };
 
-  // Verify OTP, create account/login, and redirect to last visited page or home
-  const handleVerifyOtp = (e: FormEvent) => {
+  // Verify OTP (Requires '000000'). Clears digit fields on submission, keeps button active.
+  const handleVerifyOtp = async (e: FormEvent) => {
     e.preventDefault();
+    setOtpErrorMessage(null);
+
+    const enteredOtpString = otp.join("");
+
+    // Empty out the OTP digit boxes immediately when Verify is pressed
+    setOtp(["", "", "", "", "", ""]);
+
+    if (enteredOtpString !== "000000") {
+      setOtpErrorMessage("Invalid OTP code. Please use 000000.");
+      return;
+    }
+
     setIsVerifying(true);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName,
+          email,
+          password,
+          phone,
+        }),
+      });
+
+      const result = await response.json();
+
       setIsVerifying(false);
+
+      if (!result.success) {
+        setShowOtpModal(false);
+        setErrorMessage(result.message || "Registration failed.");
+        return;
+      }
+
       setShowOtpModal(false);
 
       localStorage.setItem("isLogin", "1");
@@ -101,7 +140,11 @@ export default function SignupPage() {
       const finalDestination = returnUrl;
       sessionStorage.removeItem("auth_redirect_url");
       router.push(finalDestination);
-    }, 1000);
+    } catch (err: any) {
+      setIsVerifying(false);
+      setShowOtpModal(false);
+      setErrorMessage(err.message || "An error occurred during registration.");
+    }
   };
 
   const handleGoogleSignup = () => {
@@ -122,7 +165,7 @@ export default function SignupPage() {
         <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
       </div>
 
-      {/* Header - Only Back to Home aligned right */}
+      {/* Header */}
       <header className="relative z-10 mx-auto flex w-full max-w-[1440px] items-center justify-end px-6 py-4 lg:px-12">
         <Link
           href="/"
@@ -135,7 +178,6 @@ export default function SignupPage() {
 
       {/* Main Grid Content */}
       <section className="relative z-10 mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-8 px-6 lg:grid-cols-[1fr_1.1fr] lg:px-12 my-auto">
-        {/* Left Content (Desktop) - Large Logo and Brand in Left Center space */}
         <div className="hidden lg:flex flex-col items-start justify-center pl-4">
           <Link href="/" className="flex items-center gap-3.5 group mb-6">
             <div className="flex h-16 w-16 items-center justify-center rounded-[1.6rem] bg-gradient-to-tr from-[#2563EB] to-[#4F46E5] text-white shadow-xl shadow-blue-500/30 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-105">
@@ -178,13 +220,11 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Signup Card (Right) */}
+        {/* Signup Card */}
         <div className="mx-auto w-full max-w-xl">
           <div className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-2.5 shadow-xl shadow-slate-200/70 backdrop-blur-xl">
             <div className="rounded-[1.4rem] border border-slate-100 bg-white px-6 py-5">
-              
-              {/* Header Title without internal logo */}
-              <div className="mb-4">
+              <div className="mb-3">
                 <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#2563EB] font-heading">
                   <ShieldCheck className="h-3 w-3" />
                   Quick Account Setup
@@ -198,8 +238,14 @@ export default function SignupPage() {
                 </p>
               </div>
 
+              {errorMessage && (
+                <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 animate-in fade-in">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               <form className="space-y-3" onSubmit={handleSubmit}>
-                {/* Full Name */}
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700 font-heading uppercase tracking-wide">
                     Full Name
@@ -217,7 +263,6 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {/* Contact: Phone & Email Grid */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-[11px] font-bold text-slate-700 font-heading uppercase tracking-wide">
@@ -246,7 +291,10 @@ export default function SignupPage() {
                         type="email"
                         required
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (errorMessage) setErrorMessage(null);
+                        }}
                         placeholder="you@example.com"
                         className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-xs font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-500/10"
                       />
@@ -254,7 +302,6 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {/* Password Input */}
                 <div>
                   <label className="mb-1 block text-[11px] font-bold text-slate-700 font-heading uppercase tracking-wide">
                     Password
@@ -281,7 +328,6 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {/* Terms checkbox */}
                 <div className="flex items-center gap-2 pt-0.5">
                   <input
                     type="checkbox"
@@ -298,7 +344,6 @@ export default function SignupPage() {
                   </label>
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-xs font-bold text-white shadow-lg shadow-blue-500/25 transition duration-300 font-heading tracking-wide hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer mt-1"
@@ -308,7 +353,6 @@ export default function SignupPage() {
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="my-3.5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-heading">
@@ -317,7 +361,6 @@ export default function SignupPage() {
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
 
-              {/* Google Signup */}
               <button
                 type="button"
                 onClick={handleGoogleSignup}
@@ -337,7 +380,6 @@ export default function SignupPage() {
         </div>
       </section>
 
-      {/* Footer copyright spacer */}
       <footer className="py-2 text-center text-[10px] text-slate-400">
         &copy; {new Date().getFullYear()} RentIt. All rights reserved.
       </footer>
@@ -347,7 +389,6 @@ export default function SignupPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="relative w-full max-w-md rounded-[2rem] border border-slate-100 bg-white p-6 shadow-2xl shadow-blue-900/20">
             
-            {/* Close button */}
             <button
               onClick={() => setShowOtpModal(false)}
               className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 cursor-pointer"
@@ -363,11 +404,17 @@ export default function SignupPage() {
               Verify your mobile number
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-slate-500 font-medium">
-              We&apos;ve sent a 6-digit verification code to <span className="font-bold text-slate-800">{phone || "your phone"}</span>. Enter it below to complete registration.
+              We&apos;ve sent a 6-digit verification code to <span className="font-bold text-slate-800">{phone.length > 3 ? phone : "+91 98765 43210"}</span>. Enter it below to complete registration.
             </p>
 
-            <form onSubmit={handleVerifyOtp} className="mt-5 space-y-5">
-              {/* OTP 6-Digit Fields Grid */}
+            {otpErrorMessage && (
+              <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 animate-in fade-in">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                <span>{otpErrorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyOtp} className="mt-4 space-y-5">
               <div className="flex justify-between gap-2">
                 {otp.map((digit, index) => (
                   <input
@@ -378,17 +425,16 @@ export default function SignupPage() {
                     value={digit}
                     onChange={(e) => handleOtpChange(e.target.value, index)}
                     onKeyDown={(e) => handleOtpKeyDown(e, index)}
-                    className="h-11 w-11 rounded-xl border border-slate-200 bg-slate-50 text-center text-base font-bold text-slate-900 outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-500/10"
+                    className="h-12 w-12 rounded-xl border border-slate-200 bg-slate-50 text-center text-lg font-bold text-slate-900 outline-none transition focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-500/10 flex items-center justify-center"
                   />
                 ))}
               </div>
 
-              {/* Action Buttons */}
               <button
                 type="submit"
-                disabled={isVerifying || otp.some((d) => !d)}
+                disabled={isVerifying}
                 className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-white shadow-lg transition duration-300 font-heading tracking-wide cursor-pointer ${
-                  isVerifying || otp.some((d) => !d)
+                  isVerifying
                     ? "bg-slate-300 shadow-none cursor-not-allowed opacity-70"
                     : "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
                 }`}

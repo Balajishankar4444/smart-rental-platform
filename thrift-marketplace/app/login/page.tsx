@@ -15,14 +15,14 @@ import {
   CheckCircle2,
   X,
   Sparkles,
-  Star,
-  Users,
+  AlertCircle,
 } from "lucide-react";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("000000");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -32,6 +32,7 @@ export default function LoginPage() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const [otpError, setOtpError] = useState("");
 
   const [returnUrl, setReturnUrl] = useState<string>("/");
 
@@ -52,27 +53,80 @@ export default function LoginPage() {
     setReturnUrl("/");
   }, [searchParams]);
 
-  const handleLoginSuccess = (submittedEmail?: string) => {
+  const handleLoginSuccess = (submittedEmail: string, userName?: string) => {
     const targetEmail = submittedEmail || email || "user@example.com";
+    const nameToUse = userName || targetEmail.split("@")[0];
+
     localStorage.setItem("isLogin", "1");
-    login(targetEmail);
+    login(targetEmail, nameToUse);
     const finalDestination = returnUrl;
     sessionStorage.removeItem("auth_redirect_url");
     router.push(finalDestination);
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setPendingEmail(email);
-    setShowOtpModal(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Server returned non-JSON response:", text);
+        throw new Error("API route not found or server error occurred.");
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Invalid credentials. Please try again.");
+      }
+
+      setPendingEmail(email);
+      setOtpError("");
+      setShowOtpModal(true);
+
+    } catch (err: any) {
+      setError(err.message || "An error occurred during sign in. Please try again.");
+    }
   };
 
-  const handleQuickLogin = (quickEmail: string) => {
-    localStorage.setItem("isLogin", "1");
-    login(quickEmail, quickEmail === "google.user@example.com" ? "Google User" : "User");
-    const finalDestination = returnUrl;
-    sessionStorage.removeItem("auth_redirect_url");
-    router.push(finalDestination);
+  const handleQuickLogin = async (quickEmail: string) => {
+    try {
+      const response = await fetch("/api/auth/oauth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: quickEmail }),
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("API route not found or server error occurred.");
+      }
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Quick login failed");
+
+      if (data.token) localStorage.setItem("token", data.token);
+      localStorage.setItem("isLogin", "1");
+      login(quickEmail, data.user?.name || "Google User");
+      
+      const finalDestination = returnUrl;
+      sessionStorage.removeItem("auth_redirect_url");
+      router.push(finalDestination);
+    } catch (err: any) {
+      setError(err.message || "Quick login failed");
+    }
   };
 
   const handleOtpChange = (value: string, index: number) => {
@@ -80,6 +134,7 @@ export default function LoginPage() {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
+    setOtpError("");
 
     if (value && index < 5) {
       const nextInput = document.getElementById(`otp-login-input-${index + 1}`);
@@ -94,15 +149,37 @@ export default function LoginPage() {
     }
   };
 
-  const handleVerifyOtp = (e: FormEvent) => {
+  const handleVerifyOtp = async (e: FormEvent) => {
     e.preventDefault();
     setIsVerifying(true);
+    setOtpError("");
 
-    setTimeout(() => {
+    try {
+      const otpCode = otp.join("");
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: pendingEmail, otp: otpCode }),
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Verify OTP route not found. Make sure app/api/auth/verify-otp/route.ts exists.");
+      }
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Incorrect verification code. Please try again.");
+
+      if (data.token) localStorage.setItem("token", data.token);
       setIsVerifying(false);
       setShowOtpModal(false);
-      handleLoginSuccess(pendingEmail);
-    }, 1000);
+      handleLoginSuccess(pendingEmail, data.user?.name);
+    } catch (err: any) {
+      setIsVerifying(false);
+      setOtpError(err.message || "Incorrect verification code. Please try again.");
+    }
   };
 
   return (
@@ -114,7 +191,7 @@ export default function LoginPage() {
         <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
       </div>
 
-      {/* Header - Top-left logo removed, Back to home button made slightly larger */}
+      {/* Header */}
       <header className="relative z-10 mx-auto flex w-full max-w-[1440px] items-center justify-end px-6 py-5 lg:px-12">
         <Link
           href="/"
@@ -125,10 +202,10 @@ export default function LoginPage() {
         </Link>
       </header>
 
-      {/* Main Grid Content - Added engaging trust/feature elements to fill the empty space */}
+      {/* Main Grid Content */}
       <section className="relative z-10 mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:px-12 my-auto py-6">
         
-        {/* Left Side: Filled Empty Space with Interactive Brand Highlights */}
+        {/* Left Side: Brand Highlights */}
         <div className="flex flex-col justify-center space-y-6">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-[#2563EB] font-heading shadow-sm">
             <Sparkles className="h-4 w-4" />
@@ -145,7 +222,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Feature Grid filling former empty layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
             <div className="flex gap-3.5 p-4 rounded-2xl border border-slate-200/80 bg-white/80 shadow-sm backdrop-blur-md">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#2563EB]">
@@ -168,7 +244,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Social Proof Stats */}
           <div className="flex items-center gap-6 pt-2">
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
@@ -183,13 +258,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Side: Centered Login Form Card */}
+        {/* Right Side: Login Form Card */}
         <div className="mx-auto w-full max-w-md">
           <div className="rounded-[1.75rem] border border-slate-200 bg-white/90 p-2.5 shadow-xl shadow-slate-200/70 backdrop-blur-xl">
-            <div className="rounded-[1.4rem] border border-slate-100 bg-white px-6 py-6">
+            <div className="rounded-[1.4rem] border border-slate-100 bg-white px-6 py-6 space-y-4">
               
-              {/* Header Title with Logo next to the name */}
-              <div className="mb-6">
+              <div className="mb-2">
                 <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-[#2563EB] font-heading">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Secure Access
@@ -209,37 +283,36 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <form
-                className="space-y-4"
-                onSubmit={handleSubmit}
-              >
-                {/* Email */}
+              {error && (
+                <div className="flex items-center gap-3 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-xs font-bold text-rose-800 animate-in fade-in duration-200">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate-700 font-heading">
                     Email address
                   </label>
-
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      placeholder="name@example.com"
                       className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-xs font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-500/10"
                     />
                   </div>
                 </div>
 
-                {/* Password */}
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700 font-heading">
-                      Password
+                      Credentials
                     </label>
-
                     <Link
                       href="/forgot-password"
                       className="text-[11px] font-bold text-[#2563EB] hover:underline font-heading"
@@ -250,55 +323,35 @@ export default function LoginPage() {
 
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
                     <input
                       type={showPassword ? "text" : "password"}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-xs font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-500/10 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                      placeholder="••••••••"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-xs font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#2563EB] focus:bg-white focus:ring-2 focus:ring-blue-500/10"
                     />
-
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#2563EB] cursor-pointer"
                       aria-label="Toggle password visibility"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600">
-                    <input
-                      type="checkbox"
-                      className="h-3.5 w-3.5 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]"
-                    />
-                    Remember me
-                  </label>
-                </div>
-
-                {/* Submit Button */}
                 <button
                   type="submit"
                   className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-xs font-bold text-white shadow-lg shadow-blue-500/25 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer font-heading tracking-wide"
                 >
                   Sign In
-                  <span className="transition-transform duration-300 group-hover:translate-x-1">
-                    →
-                  </span>
+                  <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
                 </button>
               </form>
 
-              {/* Divider */}
-              <div className="my-5 flex items-center gap-3">
+              <div className="my-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-heading">
                   or
@@ -306,7 +359,6 @@ export default function LoginPage() {
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
 
-              {/* Google login button */}
               <button
                 type="button"
                 onClick={() => handleQuickLogin("google.user@example.com")}
@@ -315,12 +367,9 @@ export default function LoginPage() {
                 Continue with Google
               </button>
 
-              <p className="mt-5 text-center text-xs font-semibold text-slate-500">
+              <p className="mt-4 text-center text-xs font-semibold text-slate-500">
                 Don&apos;t have an account?{" "}
-                <Link
-                  href="/signup"
-                  className="font-bold text-[#2563EB] hover:underline font-heading"
-                >
+                <Link href="/signup" className="font-bold text-[#2563EB] hover:underline font-heading">
                   Create account
                 </Link>
               </p>
@@ -329,7 +378,6 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Footer copyright spacer */}
       <footer className="py-3 text-center text-[10px] text-slate-400">
         &copy; {new Date().getFullYear()} RentIt. All rights reserved.
       </footer>
@@ -338,7 +386,6 @@ export default function LoginPage() {
       {showOtpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="relative w-full max-w-md rounded-[2rem] border border-slate-100 bg-white p-6 shadow-2xl shadow-blue-900/20">
-            
             <button
               onClick={() => setShowOtpModal(false)}
               className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 cursor-pointer"
@@ -354,8 +401,16 @@ export default function LoginPage() {
               Verify your login
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-slate-500 font-medium">
-              We&apos;ve sent a 6-digit verification code to <span className="font-bold text-slate-800">{pendingEmail || "your email/phone"}</span>. Enter it below to sign in.
+              We&apos;ve sent a 6-digit verification code to <span className="font-bold text-slate-800">{pendingEmail}</span>. Enter it below to sign in.
             </p>
+
+            {/* Styled UI Error Banner Matching Your Theme */}
+            {otpError && (
+              <div className="mt-4 flex items-center gap-3 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-xs font-bold text-rose-800 animate-in fade-in duration-200">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                <span>{otpError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleVerifyOtp} className="mt-5 space-y-5">
               <div className="flex justify-between gap-2">
@@ -390,7 +445,7 @@ export default function LoginPage() {
                   Didn&apos;t receive code?{" "}
                   <button
                     type="button"
-                    onClick={() => alert("New OTP sent!")}
+                    onClick={() => alert("New verification code sent!")}
                     className="font-bold text-[#2563EB] hover:underline font-heading cursor-pointer"
                   >
                     Resend OTP
