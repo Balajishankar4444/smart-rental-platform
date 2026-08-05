@@ -366,12 +366,14 @@ function BookingFlow() {
           <Navbar />
           <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center pt-28 pb-12">
             <h1 className="text-xl font-bold text-slate-900">
-              {bookingRequest ? "This booking is not ready for payment" : "No approved booking"}
+              {bookingRequest && bookingRequest.status !== "pending"
+                ? "This booking is not ready for payment"
+                : "Waiting for owner approval"}
             </h1>
             <p className="text-sm text-slate-500">
-              {bookingRequest
+              {bookingRequest && bookingRequest.status !== "pending"
                 ? BOOKING_REQUEST_LABELS[bookingRequest.status]
-                : "Ask the owner to approve your dates first — you can pay once they accept."}
+                : "The owner has to accept your dates before you can pay. You will see it in notifications."}
             </p>
             <Link
               href="/dashboard/view-booking?tab=notifications"
