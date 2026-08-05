@@ -1,0 +1,59 @@
+[
+  {
+    "id": "prod-2",
+    "title": "DJI Mavic 3 Pro Cine Drone",
+    "category": "Electronics",
+    "subcategory": "Drones",
+    "brand": "DJI",
+    "model": "Mavic 3 Pro Cine",
+    "sku": "DJI-M3P-002",
+    "condition": "Brand New",
+    "shortDescription": "Flagship triple-camera drone featuring Hasselblad optics and Apple ProRes support.",
+    "detailedDescription": "Equipped with a triple-camera system featuring a 4/3 CMOS Hasselblad camera, 70mm medium telephoto, and 166mm telephoto lens. Includes high-capacity intelligent flight batteries and RC Pro controller with high-bright screen.",
+    "media": {
+      "mainThumbnail": "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&q=80&w=1200",
+      "galleryImages": [
+        "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=1200"
+      ],
+      "videos": []
+    },
+    "rentInfo": {
+      "pricePerDay": 65,
+      "securityDeposit": 250,
+      "minimumRentalDays": 1,
+      "maximumRentalDays": 14
+    },
+    "leaseInfo": {
+      "monthlyLeasePrice": 520,
+      "minimumLeaseMonths": 3
+    },
+    "sellInfo": {
+      "purchasePrice": 4299,
+      "allowOutrightPurchase": true
+    },
+    "location": {
+      "city": "Stuttgart",
+      "country": "Germany",
+      "postalCode": "70174",
+      "address": "Rotebühlstraße 45"
+    },
+    "owner": {
+      "id": "user-balaji",
+      "name": "Balaji Shankar",
+      "rating": 4.9,
+      "totalRentals": 120,
+      "responseRateMinutes": 15
+    },
+    "specifications": {
+      "Flight Time": "Up to 43 minutes",
+      "Transmission Range": "15 km (O3+)",
+      "Internal Storage": "1TB SSD",
+      "Weight": "958g"
+    },
+    "rules": {
+      "cancellationPolicy": "Free cancellation up to 48 hours before rental start date.",
+      "requiresKycVerification": true,
+      "insuranceIncluded": true
+    }
+  }
+]

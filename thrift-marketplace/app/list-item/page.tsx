@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useRouter } from "next/navigation"; 
 import { 
   Camera, Laptop, Gamepad2, Smartphone, Projector, Disc, Wrench, 
   Bike, Compass, Car, Music, Armchair, Home, Baby, Watch, Sparkles, 
@@ -180,6 +181,46 @@ function ListItemContent() {
     deliveryCharges: "150",
   });
 
+  const publishListing = async () => {
+    console.log("PUBLISH BUTTON CLICKED");
+  try {
+    const response = await fetch("/api/auth/products", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+  body: JSON.stringify(form),
+  });
+
+  const result = await response.json();
+
+  console.log(result);
+  console.log("ADDING TO MY_LISTINGS");
+  if (response.ok) {
+    const existingListings = JSON.parse(
+  localStorage.getItem("my_listings") || "[]"
+);
+
+const newListing = {
+  ...form,
+  id: `prod_${Date.now()}`
+};
+
+localStorage.setItem(
+  "my_listings",
+  JSON.stringify([...existingListings, newListing])
+); 
+console.log("Saved listing:", newListing);
+setIsSubmitted(true);
+  } else {
+    console.error("Failed to save product");
+  }
+} catch (error) {
+  console.error(error);
+  alert("Something went wrong.");
+}
+};
+
   // Auto-save draft effect
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -198,17 +239,31 @@ function ListItemContent() {
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const newImages: string[] = [];
-      Array.from(files).forEach((file) => {
-        const url = URL.createObjectURL(file);
-        newImages.push(url);
+  const files = e.target.files;
+
+  if (files && files.length > 0) {
+    const readers = Array.from(files).map((file) => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+
+        reader.readAsDataURL(file);
       });
-      setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
-    }
-    e.target.value = "";
-  };
+    });
+
+    Promise.all(readers).then((images) => {
+      setForm(prev => ({
+        ...prev,
+        images: [...prev.images, ...images]
+      }));
+    });
+  }
+
+  e.target.value = "";
+};
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -265,7 +320,7 @@ function ListItemContent() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <button 
-                onClick={() => window.location.href = "/listings/sony-alpha-7iv"}
+                onClick={() => window.location.href = "/dashboard/view-booking"}
                 className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold shadow-lg shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
               >
                 View Listing
@@ -994,7 +1049,7 @@ function ListItemContent() {
                     </button>
                   ) : (
                     <button 
-                      onClick={() => setIsSubmitted(true)}
+                      onClick={publishListing}
                       className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 hover:opacity-95 transition-all cursor-pointer scale-105"
                     >
                       <Sparkles className="w-4 h-4" />
