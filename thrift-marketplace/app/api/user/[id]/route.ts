@@ -3,11 +3,12 @@ import { getUsers, saveUsers } from "@/services/DbService";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const users = getUsers();
-    const filteredUsers = users.filter((u) => u.id !== params.id);
+    const filteredUsers = users.filter((u) => u.id !== id);
 
     if (users.length === filteredUsers.length) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });

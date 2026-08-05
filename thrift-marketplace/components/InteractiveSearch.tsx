@@ -16,7 +16,10 @@ const PLACEHOLDERS = [
 
 const POPULAR_SEARCHES = ["Sony Alpha", "PlayStation 5", "DJI Mini 3", "Camp Tent", "Power Tools"];
 
+const ALL_LOCATIONS = "All Locations";
+
 const INDIAN_CITIES = [
+  ALL_LOCATIONS,
   "Bengaluru, KA", "Mumbai, MH", "Delhi, DL", "Hyderabad, TS", "Chennai, TN",
   "Kolkata, WB", "Pune, MH", "Ahmedabad, GJ", "Jaipur, RJ", "Surat, GJ",
   "Lucknow, UP", "Kanpur, UP", "Nagpur, MH", "Indore, MP", "Thane, MH",
@@ -52,7 +55,7 @@ export const InteractiveSearch = () => {
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
 
-  const [location, setLocation] = useState("Bengaluru, KA");
+  const [location, setLocation] = useState(ALL_LOCATIONS);
   const [locationSearch, setLocationSearch] = useState("");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 

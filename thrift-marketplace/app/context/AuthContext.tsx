@@ -19,6 +19,7 @@ interface AuthContextType {
   authStatus: AuthStatus;
   login: (email: string, name?: string, id?: string) => void;
   signup: (name: string, email: string, id?: string) => void;
+  updateUser: (updates: Partial<Omit<UserProfile, "id">>) => void;
   logout: () => void;
 }
 
@@ -81,6 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     handlePostAuthRedirect();
   };
 
+  // Keeps the session in sync after the profile page saves
+  const updateUser = (updates: Partial<Omit<UserProfile, "id">>) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...updates };
+      localStorage.setItem("rentit_user", JSON.stringify(next));
+      return next;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("rentit_user");
@@ -102,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authStatus,
         login,
         signup,
+        updateUser,
         logout,
       }}
     >

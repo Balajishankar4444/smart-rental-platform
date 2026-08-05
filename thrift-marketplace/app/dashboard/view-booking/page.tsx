@@ -9,7 +9,7 @@ import {
   Package,
   Calendar,
   DollarSign,
-  Search,
+
   Plus,
   CheckCircle2,
   MapPin,
@@ -136,10 +136,31 @@ const rentalMetrics = (rentals: ListingSummary[]) => {
   ];
 };
 
-const hostMetrics = (activeListings: number) => [
-  { label: "Active Listings", value: String(activeListings), icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50/80" },
-  { label: "Monthly Revenue", value: "₹2,890", icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50/80" },
-  { label: "Total Views", value: "1,420", icon: Search, color: "text-indigo-600", bg: "bg-indigo-50/80" },
+// Lending numbers come from the listings themselves and the requests that were paid
+const hostMetrics = (listings: ListingSummary[], earnings: number) => [
+  {
+    label: "Available",
+    value: String(listings.filter((item) => item.status === "active").length),
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50/80",
+  },
+  {
+    label: "Out with renters",
+    value: String(
+      listings.filter((item) => item.status === "in_rent" || item.status === "in_lease").length
+    ),
+    icon: Package,
+    color: "text-blue-600",
+    bg: "bg-blue-50/80",
+  },
+  {
+    label: "Earnings",
+    value: `₹${earnings.toLocaleString("en-IN")}`,
+    icon: DollarSign,
+    color: "text-indigo-600",
+    bg: "bg-indigo-50/80",
+  },
 ];
 
 
@@ -190,6 +211,10 @@ function ViewBookingContent() {
     actionableCount,
     act: actOnRequest,
   } = useBookingRequests();
+
+  const earnings = incoming
+    .filter((request) => request.status === "paid")
+    .reduce((sum, request) => sum + request.totalAmount, 0);
   const [myListings, setMyListings] = useState<ListingSummary[]>([]);
   const [myRentals, setMyRentals] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -340,7 +365,7 @@ function ViewBookingContent() {
 
             {/* Concise Host Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {hostMetrics(myListings.filter((item) => item.status === "active").length).map((metric, idx) => {
+              {hostMetrics(myListings, earnings).map((metric, idx) => {
                 const IconComponent = metric.icon;
                 return (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
