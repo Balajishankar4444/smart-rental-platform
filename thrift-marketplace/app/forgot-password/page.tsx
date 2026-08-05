@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
       setIsVerifying(false);
 
       if (enteredOtpString !== "000000") {
-        setErrorMsg("Invalid verification code.");
+        setErrorMsg("Invalid verification code. Please enter 000000.");
         return;
       }
 
@@ -99,8 +99,8 @@ export default function ForgotPasswordPage() {
     }, 1000);
   };
 
-  // Step 3: Check passwords match and finish -> redirect to login page[cite: 4]
-  const handlePasswordReset = (e: FormEvent) => {
+  // Step 3: Check passwords match, call server API to update password, then redirect to login page
+  const handlePasswordReset = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -109,11 +109,36 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    if (newPassword.length < 8) {
+      setErrorMsg("Password must be at least 8 characters long.");
+      return;
+    }
+
     setIsResetting(true);
-    setTimeout(() => {
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMsg(data.message || "Failed to update password on the server.");
+        setIsResetting(false);
+        return;
+      }
+
+      setTimeout(() => {
+        setIsResetting(false);
+        router.push("/login");
+      }, 1000);
+    } catch (error) {
+      setErrorMsg("Something went wrong while updating your password. Please try again.");
       setIsResetting(false);
-      router.push("/login");
-    }, 1000);
+    }
   };
 
   return (
@@ -254,7 +279,7 @@ export default function ForgotPasswordPage() {
                       Enter verification code
                     </h2>
                     <p className="mt-1 text-xs text-slate-500 font-medium">
-                      We sent a 6-digit code to <span className="font-bold text-slate-800">{email}</span>.
+                      We sent a 6-digit code to <span className="font-bold text-slate-800">{email}</span> (hint: use <span className="text-[#2563EB]">000000</span>).
                     </p>
                   </div>
 
