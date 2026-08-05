@@ -21,13 +21,23 @@ import Link from "next/link";
 import { useAuth } from "@/app/context/AuthContext";
 import {
   fetchListings,
+  listingDailyPrice,
   listingImage,
   listingLocation,
   listingTitle,
+  rentalDays,
   ListingStatus,
   ListingSummary,
   LISTING_STATUS_LABELS,
 } from "@/utils/listings";
+
+const formatDay = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+};
 
 const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -83,47 +93,42 @@ const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", o
 };
 
 // --- Mock Metrics Data ---
-const rentalMetrics = [
-  { label: "Active Rentals", value: "3", icon: Package, color: "text-blue-600", bg: "bg-blue-50/80" },
-  { label: "Upcoming", value: "2", icon: Calendar, color: "text-amber-600", bg: "bg-amber-50/80" },
-  { label: "Total Spend", value: "₹1,240", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50/80" },
-];
+const rentalMetrics = (rentals: ListingSummary[]) => {
+  const totalSpend = rentals.reduce(
+    (sum, item) =>
+      sum + listingDailyPrice(item) * (item.rental ? rentalDays(item.rental) : 0),
+    0
+  );
+
+  return [
+    {
+      label: "Active Rentals",
+      value: String(rentals.filter((item) => item.status === "in_rent").length),
+      icon: Package,
+      color: "text-blue-600",
+      bg: "bg-blue-50/80",
+    },
+    {
+      label: "On Lease",
+      value: String(rentals.filter((item) => item.status === "in_lease").length),
+      icon: Calendar,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50/80",
+    },
+    {
+      label: "Total Spend",
+      value: `₹${totalSpend.toLocaleString("en-IN")}`,
+      icon: DollarSign,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50/80",
+    },
+  ];
+};
 
 const hostMetrics = (activeListings: number) => [
   { label: "Active Listings", value: String(activeListings), icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50/80" },
   { label: "Monthly Revenue", value: "₹2,890", icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50/80" },
   { label: "Total Views", value: "1,420", icon: Search, color: "text-indigo-600", bg: "bg-indigo-50/80" },
-];
-
-const myRentals = [
-  {
-    id: "RENT-8831",
-    name: "Sony Alpha a7 IV Mirrorless Camera",
-    category: "Photography",
-    owner: "Marcus Vance",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces",
-    startDate: "Oct 12",
-    endDate: "Oct 19",
-    status: "Active",
-    statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    totalPrice: "₹245.00",
-    location: "Downtown",
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=200&fit=crop",
-  },
-  {
-    id: "RENT-8902",
-    name: "Thule Rooftop Cargo Box & Crossbars",
-    category: "Travel",
-    owner: "Sarah Jenkins",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=faces",
-    startDate: "Oct 22",
-    endDate: "Oct 29",
-    status: "Upcoming",
-    statusColor: "bg-amber-50 text-amber-700 border-amber-200",
-    totalPrice: "₹140.00",
-    location: "North Suburbs",
-    image: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&h=200&fit=crop",
-  },
 ];
 
 export default function ViewBookingPage() {
@@ -138,6 +143,7 @@ function ViewBookingContent() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"rentals" | "listings">("listings");
   const [myListings, setMyListings] = useState<ListingSummary[]>([]);
+  const [myRentals, setMyRentals] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Custom Delete Modal State
@@ -147,17 +153,22 @@ function ViewBookingContent() {
   useEffect(() => {
     if (!user) return;
 
-    const loadListings = async () => {
+    const loadDashboard = async () => {
       try {
-        setMyListings(await fetchListings({ userId: user.id }));
+        const [listings, rentals] = await Promise.all([
+          fetchListings({ userId: user.id }),
+          fetchListings({ renterId: user.id }),
+        ]);
+        setMyListings(listings);
+        setMyRentals(rentals);
       } catch (err) {
-        console.error("Failed to load listings", err);
+        console.error("Failed to load dashboard", err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadListings();
+    loadDashboard();
   }, [user]);
 
   const promptDeleteListing = (id: string) => {
@@ -202,6 +213,7 @@ function ViewBookingContent() {
       setMyListings((current) =>
         current.map((item) => (item.id === id ? result.data : item))
       );
+      setMyRentals((current) => current.filter((item) => item.id !== id));
     } catch (err) {
       console.error("Failed to mark listing as returned", err);
     }
@@ -365,7 +377,7 @@ function ViewBookingContent() {
 
             {/* Concise Rental Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {rentalMetrics.map((metric, idx) => {
+              {rentalMetrics(myRentals).map((metric, idx) => {
                 const IconComponent = metric.icon;
                 return (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
@@ -381,46 +393,67 @@ function ViewBookingContent() {
               })}
             </div>
 
-            {/* Rentals Grid with uniform dimensions matching Listings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myRentals.map((rental) => (
-                <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col h-[400px]">
-                  <div className="relative h-44 bg-slate-100 shrink-0">
-                    <img src={rental.image} alt={rental.name} className="w-full h-full object-cover" />
-                    <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${rental.statusColor}`}>
-                      {rental.status}
-                    </span>
-                  </div>
+            {myRentals.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-16 text-center">
+                <p className="text-sm font-semibold text-slate-900">No rentals yet</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Items you book show up here while you have them.
+                </p>
+                <Link href="/browse" className="mt-3 inline-block text-sm font-semibold text-blue-600">
+                  Browse listings
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myRentals.map((rental) => {
+                  const days = rental.rental ? rentalDays(rental.rental) : 0;
+                  const total = listingDailyPrice(rental) * days;
 
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                        <span>{rental.category}</span>
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {rental.location}</span>
+                  return (
+                    <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col">
+                      <div className="relative h-44 bg-slate-100 shrink-0">
+                        <img src={listingImage(rental)} alt={listingTitle(rental)} className="w-full h-full object-cover" />
+                        <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[rental.status]}`}>
+                          {LISTING_STATUS_LABELS[rental.status]}
+                        </span>
                       </div>
-                      <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{rental.name}</h3>
 
-                      {/* Owner Info */}
-                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
-                        <img src={rental.avatar} alt={rental.owner} className="w-6 h-6 rounded-full object-cover" />
-                        <span className="text-xs font-medium text-slate-600">Rented from <strong className="text-slate-900">{rental.owner}</strong></span>
+                      <div className="p-5 flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                            <span>{rental.category || "General"}</span>
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(rental)}</span>
+                          </div>
+                          <Link href={`/listings/${rental.id}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600">
+                            {listingTitle(rental)}
+                          </Link>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Period</span>
+                            <span className="font-semibold text-slate-800">
+                              {formatDay(rental.rental?.startDate)} – {formatDay(rental.rental?.endDate)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-slate-400 block text-[10px]">Total ({days}d)</span>
+                            <span className="font-bold text-blue-600">₹{total.toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => markReturned(rental.id)}
+                          className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          Return item
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Period</span>
-                        <span className="font-semibold text-slate-800">{rental.startDate} – {rental.endDate}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-400 block text-[10px]">Total</span>
-                        <span className="font-bold text-blue-600">{rental.totalPrice}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

@@ -88,10 +88,14 @@ export function listingDailyPrice(listing: Pick<ListingSummary, "dailyPrice">) {
 
 export async function fetchListings(params: {
   userId?: string;
+  renterId?: string;
+  excludeUserId?: string;
   status?: ListingStatus | "all";
 }): Promise<ListingSummary[]> {
   const query = new URLSearchParams();
   if (params.userId) query.set("userId", params.userId);
+  if (params.renterId) query.set("renterId", params.renterId);
+  if (params.excludeUserId) query.set("excludeUserId", params.excludeUserId);
   if (params.status) query.set("status", params.status);
 
   const response = await fetch(`/api/auth/products?${query.toString()}`);

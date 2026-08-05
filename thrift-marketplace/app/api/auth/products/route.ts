@@ -62,6 +62,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const userId = searchParams.get('userId');
+    const renterId = searchParams.get('renterId');
+    const excludeUserId = searchParams.get('excludeUserId');
     const status = searchParams.get('status');
 
     if (id) {
@@ -76,6 +78,10 @@ export async function GET(request: Request) {
       // Legacy rows predate ownership and have no owner to show them to
       .filter((product) => Boolean(product.userId))
       .filter((product) => (userId ? product.userId === userId : true))
+      // Owners browse the marketplace without seeing their own gear
+      .filter((product) => (excludeUserId ? product.userId !== excludeUserId : true))
+      // Listings the given user is currently renting
+      .filter((product) => (renterId ? product.rental?.renterId === renterId : true))
       .map(toSummary)
       .filter((product) => {
         if (status === 'all') return true;

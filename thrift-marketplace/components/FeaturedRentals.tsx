@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Eye, Heart } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/app/context/AuthContext";
 import { QuickViewModal, ItemDetail } from "./ui/QuickViewModal";
 import {
   fetchListings,
@@ -39,11 +40,12 @@ export const FeaturedRentals = () => {
   const [items, setItems] = useState<ItemDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { user } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
 
-    fetchListings({ status: "active" })
+    fetchListings({ status: "active", excludeUserId: user?.id })
       .then((listings) => {
         if (!cancelled) setItems(listings.map(toItemDetail));
       })
@@ -55,7 +57,7 @@ export const FeaturedRentals = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   const categories = ["all", ...Array.from(new Set(items.map((item) => item.category.toLowerCase())))];
 

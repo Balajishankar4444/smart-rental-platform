@@ -10,6 +10,7 @@ import {
   Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart
 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/app/context/AuthContext";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -88,6 +89,7 @@ const formatDisplayDate = (dateString: string) => {
 function SearchContent() {
   const searchParams = useSearchParams();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { user } = useAuth();
 
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
@@ -142,7 +144,7 @@ function SearchContent() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchListings({ status: "active" })
+    fetchListings({ status: "active", excludeUserId: user?.id })
       .then((data) => {
         if (!cancelled) setListings(data);
       })
@@ -154,7 +156,7 @@ function SearchContent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
