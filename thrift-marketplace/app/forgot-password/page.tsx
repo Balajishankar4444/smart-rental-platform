@@ -13,6 +13,9 @@ export default function ForgotPasswordPage() {
   // Steps: 'email' -> 'otp' -> 'new-password'
   const [step, setStep] = useState<"email" | "otp" | "new-password">("email");
 
+  // Error Message State for Email step or Password step
+  const [errorMsg, setErrorMsg] = useState("");
+
   // OTP State
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -22,18 +25,37 @@ export default function ForgotPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
-  // Step 1: Submit email and open OTP verification
-  const handleEmailSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // Step 1: Check if email exists in server using your API endpoint, then open OTP verification[cite: 4]
+  const handleEmailSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMsg("");
 
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      // If response fails or the email does not exist in the database, show error[cite: 4]
+      if (!response.ok || data.exists !== true) {
+        setErrorMsg(data.message || "This email address is not registered in our system.");
+        setIsLoading(false);
+        return;
+      }
+
+      // If email exists, proceed to OTP step[cite: 4]
       setIsLoading(false);
       setStep("otp");
-    }, 1000);
+    } catch (error) {
+      setErrorMsg("Something went wrong. Please try again later.");
+      setIsLoading(false);
+    }
   };
 
   // Handle OTP input changes
@@ -57,19 +79,27 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 2: Verify OTP (checks if code equals 000000 or any 6-digit fill)
+  // Step 2: Verify OTP (Validates against "000000" and shows error UI matching theme)
   const handleVerifyOtp = (e: FormEvent) => {
     e.preventDefault();
     setIsVerifying(true);
+    setErrorMsg("");
+
+    const enteredOtpString = otp.join("");
 
     setTimeout(() => {
       setIsVerifying(false);
-      // Move to new password creation step
+
+      if (enteredOtpString !== "000000") {
+        setErrorMsg("Invalid verification code.");
+        return;
+      }
+
       setStep("new-password");
     }, 1000);
   };
 
-  // Step 3: Check passwords match and finish -> redirect to login page
+  // Step 3: Check passwords match and finish -> redirect to login page[cite: 4]
   const handlePasswordReset = (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -174,6 +204,12 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   <form className="space-y-4" onSubmit={handleEmailSubmit}>
+                    {errorMsg && (
+                      <div className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600 border border-red-200">
+                        {errorMsg}
+                      </div>
+                    )}
+
                     <div>
                       <label className="mb-1 block text-[11px] font-bold text-slate-700 font-heading uppercase tracking-wide">
                         Email Address
@@ -198,14 +234,14 @@ export default function ForgotPasswordPage() {
                         isLoading ? "opacity-70 cursor-not-allowed" : ""
                       }`}
                     >
-                      {isLoading ? "Sending OTP..." : "Send OTP"}
+                      {isLoading ? "Checking Email..." : "Send OTP"}
                       <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
                     </button>
                   </form>
                 </>
               )}
 
-              {/* STEP 2: Enter 6-Digit OTP (Default 000000) */}
+              {/* STEP 2: Enter 6-Digit OTP */}
               {step === "otp" && (
                 <>
                   <div className="mb-5">
@@ -218,11 +254,17 @@ export default function ForgotPasswordPage() {
                       Enter verification code
                     </h2>
                     <p className="mt-1 text-xs text-slate-500 font-medium">
-                      We sent a 6-digit code to <span className="font-bold text-slate-800">{email}</span> (hint: use <span className="text-[#2563EB]">000000</span>).
+                      We sent a 6-digit code to <span className="font-bold text-slate-800">{email}</span>.
                     </p>
                   </div>
 
                   <form onSubmit={handleVerifyOtp} className="space-y-5">
+                    {errorMsg && (
+                      <div className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600 border border-red-200">
+                        {errorMsg}
+                      </div>
+                    )}
+
                     <div className="flex justify-between gap-2">
                       {otp.map((digit, index) => (
                         <input
@@ -253,7 +295,10 @@ export default function ForgotPasswordPage() {
                     <div className="text-center">
                       <button
                         type="button"
-                        onClick={() => setStep("email")}
+                        onClick={() => {
+                          setStep("email");
+                          setErrorMsg("");
+                        }}
                         className="text-xs font-bold text-slate-500 hover:text-[#2563EB] font-heading cursor-pointer"
                       >
                         ← Back to email entry
@@ -263,7 +308,7 @@ export default function ForgotPasswordPage() {
                 </>
               )}
 
-              {/* STEP 3: New Password & Re-enter Password matching window */}
+              {/* STEP 3: New Password */}
               {step === "new-password" && (
                 <>
                   <div className="mb-5">
@@ -287,7 +332,6 @@ export default function ForgotPasswordPage() {
                       </div>
                     )}
 
-                    {/* New Password */}
                     <div>
                       <label className="mb-1 block text-[11px] font-bold text-slate-700 font-heading uppercase tracking-wide">
                         New Password
@@ -312,7 +356,6 @@ export default function ForgotPasswordPage() {
                       </div>
                     </div>
 
-                    {/* Confirm Password */}
                     <div>
                       <label className="mb-1 block text-[11px] font-bold text-slate-700 font-heading uppercase tracking-wide">
                         Re-enter Password
