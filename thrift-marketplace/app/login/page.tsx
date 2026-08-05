@@ -53,12 +53,12 @@ export default function LoginPage() {
     setReturnUrl("/");
   }, [searchParams]);
 
-  const handleLoginSuccess = (submittedEmail: string, userName?: string) => {
+  const handleLoginSuccess = (submittedEmail: string, userName?: string, userId?: string) => {
     const targetEmail = submittedEmail || email || "user@example.com";
     const nameToUse = userName || targetEmail.split("@")[0];
 
     localStorage.setItem("isLogin", "1");
-    login(targetEmail, nameToUse);
+    login(targetEmail, nameToUse, userId);
     const finalDestination = returnUrl;
     sessionStorage.removeItem("auth_redirect_url");
     router.push(finalDestination);
@@ -119,7 +119,7 @@ export default function LoginPage() {
 
       if (data.token) localStorage.setItem("token", data.token);
       localStorage.setItem("isLogin", "1");
-      login(quickEmail, data.user?.name || "Google User");
+      login(quickEmail, data.user?.name || "Google User", data.user?.id);
       
       const finalDestination = returnUrl;
       sessionStorage.removeItem("auth_redirect_url");
@@ -181,7 +181,7 @@ export default function LoginPage() {
       if (data.token) localStorage.setItem("token", data.token);
       setIsVerifying(false);
       setShowOtpModal(false);
-      handleLoginSuccess(pendingEmail, data.user?.name);
+      handleLoginSuccess(pendingEmail, data.user?.name, data.user?.id);
     } catch (err: any) {
       setIsVerifying(false);
       setOtpError(err.message || "Incorrect verification code. Please try again.");

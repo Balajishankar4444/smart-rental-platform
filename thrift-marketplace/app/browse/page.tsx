@@ -4,32 +4,24 @@
 import React, { useState, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Search, SlidersHorizontal, MapPin, Star, ShieldCheck, Zap, 
+  Search, SlidersHorizontal, MapPin, ShieldCheck, Zap, 
   Camera, Laptop, Gamepad2, Smartphone, Projector, Wrench, 
   Compass, Music, Armchair, Package, Sparkles, 
-  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown
+  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart
 } from "lucide-react";
+import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/app/context/AuthContext";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-
-// ==========================================
-// MOCK DATA & TYPES
-// ==========================================
-interface ProductListing {
-  id: string;
-  title: string;
-  category: string;
-  dailyPrice: number;
-  rating: number;
-  reviewsCount: number;
-  image: string;
-  city: string;
-  distance: string;
-  verifiedHost: boolean;
-  instantBook: boolean;
-  condition: string;
-}
+import {
+  fetchListings,
+  listingDailyPrice,
+  listingImage,
+  listingLocation,
+  listingTitle,
+  ListingSummary,
+} from "@/utils/listings";
 
 const CATEGORIES = [
   { name: "All Categories", icon: <Package className="w-4 h-4" /> },
@@ -46,13 +38,16 @@ const CATEGORIES = [
 ];
 
 const SORT_OPTIONS = [
-  { id: "recommended", label: "Sort: Recommended" },
+  { id: "recommended", label: "Sort: Newest" },
   { id: "price-low", label: "Price: Low to High" },
   { id: "price-high", label: "Price: High to Low" },
-  { id: "rating", label: "Highest Rated" },
 ];
 
+const ALL_LOCATIONS = "All Locations";
+const MAX_PRICE = 20000;
+
 const INDIAN_CITIES = [
+  ALL_LOCATIONS,
   "Bengaluru, KA", "Mumbai, MH", "Delhi, DL", "Hyderabad, TS", "Chennai, TN",
   "Kolkata, WB", "Pune, MH", "Ahmedabad, GJ", "Jaipur, RJ", "Surat, GJ",
   "Lucknow, UP", "Kanpur, UP", "Nagpur, MH", "Indore, MP", "Thane, MH",
@@ -91,107 +86,23 @@ const formatDisplayDate = (dateString: string) => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-const MOCK_LISTINGS: ProductListing[] = [
-  {
-    id: "sony-alpha-7iv",
-    title: "Sony Alpha 7IV Mirrorless Camera with 24-70mm Lens",
-    category: "Cameras",
-    dailyPrice: 850,
-    rating: 4.9,
-    reviewsCount: 42,
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800",
-    city: "Bengaluru, KA",
-    distance: "1.2 km away",
-    verifiedHost: true,
-    instantBook: true,
-    condition: "Like New",
-  },
-  {
-    id: "macbook-pro-m3",
-    title: "MacBook Pro 16\" M3 Max (32GB RAM, 1TB SSD)",
-    category: "Laptops",
-    dailyPrice: 1200,
-    rating: 5.0,
-    reviewsCount: 28,
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=800",
-    city: "Bengaluru, KA",
-    distance: "2.4 km away",
-    verifiedHost: true,
-    instantBook: true,
-    condition: "Brand New",
-  },
-  {
-    id: "dji-mavic-3-pro",
-    title: "DJI Mavic 3 Pro Drone Fly More Combo",
-    category: "Electronics",
-    dailyPrice: 950,
-    rating: 4.8,
-    reviewsCount: 35,
-    image: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&q=80&w=800",
-    city: "Mumbai, MH",
-    distance: "3.1 km away",
-    verifiedHost: true,
-    instantBook: false,
-    condition: "Excellent",
-  },
-  {
-    id: "playstation-5-bundle",
-    title: "PlayStation 5 Console + 2 Controllers & 4 Games",
-    category: "Gaming Consoles",
-    dailyPrice: 450,
-    rating: 4.9,
-    reviewsCount: 64,
-    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&q=80&w=800",
-    city: "Bengaluru, KA",
-    distance: "0.8 km away",
-    verifiedHost: true,
-    instantBook: true,
-    condition: "Like New",
-  },
-  {
-    id: "4k-laser-projector",
-    title: "Anker Nebula Cosmos Laser 4K Projector + 100\" Screen",
-    category: "Projectors",
-    dailyPrice: 700,
-    rating: 4.7,
-    reviewsCount: 19,
-    image: "https://images.unsplash.com/photo-1535016120720-40c646be5580?auto=format&fit=crop&q=80&w=800",
-    city: "Delhi, DL",
-    distance: "4.5 km away",
-    verifiedHost: false,
-    instantBook: true,
-    condition: "Excellent",
-  },
-  {
-    id: "electric-cargo-bike",
-    title: "Electric Urban Commuter Bicycle with Basket",
-    category: "Sports Equipment",
-    dailyPrice: 600,
-    rating: 4.9,
-    reviewsCount: 51,
-    image: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&q=80&w=800",
-    city: "Chennai, TN",
-    distance: "1.9 km away",
-    verifiedHost: true,
-    instantBook: true,
-    condition: "Like New",
-  },
-];
-
 function SearchContent() {
   const searchParams = useSearchParams();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { user } = useAuth();
 
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [isFocused, setIsFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [priceRange, setPriceRange] = useState(1500);
+  const [priceRange, setPriceRange] = useState(MAX_PRICE);
   const [selectedCondition, setSelectedCondition] = useState("All");
   const [instantBookOnly, setInstantBookOnly] = useState(false);
-  const [verifiedHostOnly, setVerifiedHostOnly] = useState(false);
   const [sortBy, setSortBy] = useState("recommended");
   
-  const [selectedCity, setSelectedCity] = useState(searchParams.get("location") || "Bengaluru, KA");
+  const [selectedCity, setSelectedCity] = useState(searchParams.get("location") || ALL_LOCATIONS);
+  const [listings, setListings] = useState<ListingSummary[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(true);
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 
@@ -229,6 +140,23 @@ function SearchContent() {
     }, 3200);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchListings({ status: "active", excludeUserId: user?.id })
+      .then((data) => {
+        if (!cancelled) setListings(data);
+      })
+      .catch((err) => console.error("Failed to load listings", err))
+      .finally(() => {
+        if (!cancelled) setIsLoadingListings(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -313,24 +241,32 @@ function SearchContent() {
     }
   };
 
-  // Filter listings based on criteria
-  const filteredListings = MOCK_LISTINGS.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All Categories" || item.category === selectedCategory;
-    const matchesCity = item.city === selectedCity;
-    const matchesPrice = item.dailyPrice <= priceRange;
-    const matchesCondition = selectedCondition === "All" || item.condition === selectedCondition;
-    const matchesInstant = !instantBookOnly || item.instantBook;
-    const matchesVerified = !verifiedHostOnly || item.verifiedHost;
+  // Filter the active listings coming from the API
+  const query = searchQuery.trim().toLowerCase();
+  const cityName = selectedCity.split(",")[0].trim().toLowerCase();
 
-    return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesCondition && matchesInstant && matchesVerified;
-  }).sort((a, b) => {
-    if (sortBy === "price-low") return a.dailyPrice - b.dailyPrice;
-    if (sortBy === "price-high") return b.dailyPrice - a.dailyPrice;
-    if (sortBy === "rating") return b.rating - a.rating;
-    return 0;
-  });
+  const filteredListings = listings
+    .filter((item) => {
+      const matchesSearch =
+        !query ||
+        [listingTitle(item), item.category, item.brand, item.description]
+          .filter(Boolean)
+          .some((field) => field.toLowerCase().includes(query));
+      const matchesCategory = selectedCategory === "All Categories" || item.category === selectedCategory;
+      const matchesCity =
+        selectedCity === ALL_LOCATIONS ||
+        listingLocation(item).toLowerCase().includes(cityName);
+      const matchesPrice = priceRange >= MAX_PRICE || listingDailyPrice(item) <= priceRange;
+      const matchesCondition = selectedCondition === "All" || item.condition === selectedCondition;
+      const matchesInstant = !instantBookOnly || item.instantBooking;
+
+      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesCondition && matchesInstant;
+    })
+    .sort((a, b) => {
+      if (sortBy === "price-low") return listingDailyPrice(a) - listingDailyPrice(b);
+      if (sortBy === "price-high") return listingDailyPrice(b) - listingDailyPrice(a);
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-slate-900 selection:bg-[#2563EB] selection:text-white">
@@ -621,10 +557,10 @@ function SearchContent() {
               <button 
                 onClick={() => {
                   setSelectedCategory("All Categories");
-                  setPriceRange(1500);
+                  setPriceRange(MAX_PRICE);
                   setSelectedCondition("All");
                   setInstantBookOnly(false);
-                  setVerifiedHostOnly(false);
+                  setSelectedCity(ALL_LOCATIONS);
                   setSearchQuery("");
                 }}
                 className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
@@ -642,15 +578,15 @@ function SearchContent() {
               <input 
                 type="range" 
                 min="200" 
-                max="2000" 
-                step="50"
+                max={MAX_PRICE}
+                step="100"
                 value={priceRange}
                 onChange={(e) => setPriceRange(Number(e.target.value))}
                 className="w-full accent-[#2563EB] cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
                 <span>₹200</span>
-                <span>₹2,000+</span>
+                <span>₹20,000+</span>
               </div>
             </div>
 
@@ -689,17 +625,6 @@ function SearchContent() {
                 />
               </label>
 
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-[#2563EB]" /> Verified Host
-                </span>
-                <input 
-                  type="checkbox" 
-                  checked={verifiedHostOnly}
-                  onChange={(e) => setVerifiedHostOnly(e.target.checked)}
-                  className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB] cursor-pointer"
-                />
-              </label>
             </div>
           </div>
 
@@ -707,11 +632,16 @@ function SearchContent() {
           <div className="lg:col-span-9 space-y-6">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-slate-600">
-                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> verified items available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span>
+                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> active items available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span>
               </p>
             </div>
 
-            {filteredListings.length === 0 ? (
+            {isLoadingListings ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
+                <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm font-medium text-slate-500">Loading listings...</p>
+              </div>
+            ) : filteredListings.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm space-y-4">
                 <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mx-auto shadow-inner">
                   <Search className="w-8 h-8" />
@@ -723,10 +653,10 @@ function SearchContent() {
                 <button 
                   onClick={() => {
                     setSelectedCategory("All Categories");
-                    setPriceRange(1500);
+                    setPriceRange(MAX_PRICE);
                     setSelectedCondition("All");
                     setInstantBookOnly(false);
-                    setVerifiedHostOnly(false);
+                    setSelectedCity(ALL_LOCATIONS);
                     setSearchQuery("");
                   }}
                   className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold text-sm shadow-md shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
@@ -743,25 +673,40 @@ function SearchContent() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.2 }}
-                    onClick={() => window.location.href = `/listings/${item.id}`}
+                    onClick={() => { window.location.href = `/listings/${item.id}`; }}
                     className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group"
                   >
                     <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                       <img 
-                        src={item.image} 
-                        alt={item.title} 
+                        src={listingImage(item)} 
+                        alt={listingTitle(item)} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute top-3 left-3 flex flex-col gap-1">
-                        {item.instantBook && (
+                        {item.instantBooking && (
                           <span className="bg-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
                             <Zap className="w-3 h-3 fill-current" /> Instant Book
                           </span>
                         )}
                       </div>
                       <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-[#2563EB]" /> {item.distance}
+                        <MapPin className="w-3 h-3 text-[#2563EB]" /> {listingLocation(item)}
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(item.id);
+                        }}
+                        aria-label={isFavorite(item.id) ? "Remove from favorites" : "Add to favorites"}
+                        aria-pressed={isFavorite(item.id)}
+                        className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md cursor-pointer"
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${
+                            isFavorite(item.id) ? "fill-red-500 text-red-500" : "text-slate-600"
+                          }`}
+                        />
+                      </button>
                     </div>
 
                     <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
@@ -770,21 +715,19 @@ function SearchContent() {
                           <span className="text-[11px] font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
                             {item.category}
                           </span>
-                          <div className="flex items-center gap-1 text-xs font-bold text-slate-800">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                            <span>{item.rating}</span>
-                            <span className="text-slate-400 font-normal">({item.reviewsCount})</span>
-                          </div>
+                          <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Available
+                          </span>
                         </div>
 
                         <h3 className="font-bold text-slate-900 text-base line-clamp-2 group-hover:text-[#2563EB] transition-colors">
-                          {item.title}
+                          {listingTitle(item)}
                         </h3>
                       </div>
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                         <div>
-                          <span className="text-lg font-extrabold text-[#2563EB]">₹{item.dailyPrice}</span>
+                          <span className="text-lg font-extrabold text-[#2563EB]">₹{listingDailyPrice(item)}</span>
                           <span className="text-xs text-slate-500"> / day</span>
                         </div>
                         <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">

@@ -1,7 +1,7 @@
 // app/dashboard/view-booking/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -9,15 +9,53 @@ import {
   Package,
   Calendar,
   DollarSign,
-  Search,
+
   Plus,
   CheckCircle2,
   MapPin,
   Trash2,
   AlertCircle,
+  Bell,
+  Clock,
   X
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
+import { useBookingRequests } from "@/hooks/useBookingRequests";
+import {
+  BOOKING_REQUEST_LABELS,
+  BookingRequest,
+  formatDeadline,
+} from "@/utils/bookingRequests";
+import {
+  fetchListings,
+  listingDailyPrice,
+  listingImage,
+  listingLocation,
+  listingTitle,
+  rentalDays,
+  ListingStatus,
+  ListingSummary,
+  LISTING_STATUS_LABELS,
+} from "@/utils/listings";
+
+const formatDay = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+};
+
+type DashboardTab = "listings" | "rentals" | "notifications";
+
+const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
+  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  in_rent: "bg-blue-50 text-blue-700 border-blue-200",
+  in_lease: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  deleted: "bg-slate-100 text-slate-600 border-slate-200",
+};
 
 // --- Ripple Button Component ---
 interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -66,60 +104,119 @@ const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", o
 };
 
 // --- Mock Metrics Data ---
-const rentalMetrics = [
-  { label: "Active Rentals", value: "3", icon: Package, color: "text-blue-600", bg: "bg-blue-50/80" },
-  { label: "Upcoming", value: "2", icon: Calendar, color: "text-amber-600", bg: "bg-amber-50/80" },
-  { label: "Total Spend", value: "₹1,240", icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50/80" },
-];
+const rentalMetrics = (rentals: ListingSummary[]) => {
+  const totalSpend = rentals.reduce(
+    (sum, item) =>
+      sum + listingDailyPrice(item) * (item.rental ? rentalDays(item.rental) : 0),
+    0
+  );
 
-const hostMetrics = [
-  { label: "Active Listings", value: "5", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50/80" },
-  { label: "Monthly Revenue", value: "₹2,890", icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50/80" },
-  { label: "Total Views", value: "1,420", icon: Search, color: "text-indigo-600", bg: "bg-indigo-50/80" },
-];
+  return [
+    {
+      label: "Active Rentals",
+      value: String(rentals.filter((item) => item.status === "in_rent").length),
+      icon: Package,
+      color: "text-blue-600",
+      bg: "bg-blue-50/80",
+    },
+    {
+      label: "On Lease",
+      value: String(rentals.filter((item) => item.status === "in_lease").length),
+      icon: Calendar,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50/80",
+    },
+    {
+      label: "Total Spend",
+      value: `₹${totalSpend.toLocaleString("en-IN")}`,
+      icon: DollarSign,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50/80",
+    },
+  ];
+};
 
-const myRentals = [
+// Lending numbers come from the listings themselves and the requests that were paid
+const hostMetrics = (listings: ListingSummary[], earnings: number) => [
   {
-    id: "RENT-8831",
-    name: "Sony Alpha a7 IV Mirrorless Camera",
-    category: "Photography",
-    owner: "Marcus Vance",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces",
-    startDate: "Oct 12",
-    endDate: "Oct 19",
-    status: "Active",
-    statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    totalPrice: "₹245.00",
-    location: "Downtown",
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=200&fit=crop",
+    label: "Available",
+    value: String(listings.filter((item) => item.status === "active").length),
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50/80",
   },
   {
-    id: "RENT-8902",
-    name: "Thule Rooftop Cargo Box & Crossbars",
-    category: "Travel",
-    owner: "Sarah Jenkins",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=faces",
-    startDate: "Oct 22",
-    endDate: "Oct 29",
-    status: "Upcoming",
-    statusColor: "bg-amber-50 text-amber-700 border-amber-200",
-    totalPrice: "₹140.00",
-    location: "North Suburbs",
-    image: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&h=200&fit=crop",
+    label: "Out with renters",
+    value: String(
+      listings.filter((item) => item.status === "in_rent" || item.status === "in_lease").length
+    ),
+    icon: Package,
+    color: "text-blue-600",
+    bg: "bg-blue-50/80",
+  },
+  {
+    label: "Earnings",
+    value: `₹${earnings.toLocaleString("en-IN")}`,
+    icon: DollarSign,
+    color: "text-indigo-600",
+    bg: "bg-indigo-50/80",
   },
 ];
+
+
+function RequestSummary({ request, caption }: { request: BookingRequest; caption: string }) {
+  return (
+    <div className="flex gap-3">
+      {request.listingImage ? (
+        <img
+          src={request.listingImage}
+          alt={request.listingTitle}
+          className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0"
+        />
+      ) : (
+        <div className="w-14 h-14 rounded-xl bg-slate-100 shrink-0" />
+      )}
+      <div className="min-w-0">
+        <p className="text-[11px] text-slate-400">{caption}</p>
+        <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
+        <p className="text-[11px] text-slate-500">
+          {formatDay(request.startDate)} – {formatDay(request.endDate)} · {request.days}d · ₹
+          {request.totalAmount.toLocaleString("en-IN")}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function ViewBookingPage() {
   return (
     <ProtectedRoute>
-      <ViewBookingContent />
+      <Suspense fallback={<div className="min-h-screen bg-slate-50/50" />}>
+        <ViewBookingContent />
+      </Suspense>
     </ProtectedRoute>
   );
 }
 
 function ViewBookingContent() {
-  const [activeTab, setActiveTab] = useState<"rentals" | "listings">("listings");
-  const [myListings, setMyListings] = useState<any[]>([]);
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<DashboardTab>(
+    tabParam === "rentals" || tabParam === "notifications" ? tabParam : "listings"
+  );
+  const {
+    incoming,
+    outgoing,
+    actionableCount,
+    act: actOnRequest,
+  } = useBookingRequests();
+
+  const earnings = incoming
+    .filter((request) => request.status === "paid")
+    .reduce((sum, request) => sum + request.totalAmount, 0);
+  const [myListings, setMyListings] = useState<ListingSummary[]>([]);
+  const [myRentals, setMyRentals] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Custom Delete Modal State
@@ -127,85 +224,72 @@ function ViewBookingContent() {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadListings = async () => {
+    if (!user) return;
+
+    const loadDashboard = async () => {
       try {
-        const response = await fetch("/product.json");
-        const products = await response.json();
-
-        const savedListings = JSON.parse(
-          localStorage.getItem("my_listings") || "[]"
-        );
-
-        const deletedIds = JSON.parse(
-          localStorage.getItem("deleted_listings") || "[]"
-        );
-
-        const filteredProducts = products.filter(
-          (item: any, index: number) => !deletedIds.includes(item.id || index)
-        );
-
-        const combinedListings = [
-          ...filteredProducts,
-          ...savedListings
-        ].filter(
-          (item, index, self) =>
-            index === self.findIndex((t, i) => (t.id ? t.id === item.id : i === index))
-        );
-
-        setMyListings(combinedListings);
+        const [listings, rentals] = await Promise.all([
+          fetchListings({ userId: user.id }),
+          fetchListings({ renterId: user.id }),
+        ]);
+        setMyListings(listings);
+        setMyRentals(rentals);
       } catch (err) {
-        console.error("Failed to load listings", err);
+        console.error("Failed to load dashboard", err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadListings();
-  }, []);
+    loadDashboard();
+  }, [user]);
 
   const promptDeleteListing = (id: string) => {
     setSelectedListingId(id);
     setDeleteModalOpen(true);
   };
 
-  const confirmDeleteListing = () => {
-    if (!selectedListingId) return;
+  const confirmDeleteListing = async () => {
+    if (!selectedListingId || !user) return;
 
-    const updated = myListings.filter(
-      (item, index) => (item.id ? item.id !== selectedListingId : index.toString() !== selectedListingId)
-    );
+    try {
+      const response = await fetch(
+        `/api/auth/products?id=${encodeURIComponent(selectedListingId)}&userId=${encodeURIComponent(user.id)}`,
+        { method: "DELETE" }
+      );
 
-    setMyListings(updated);
+      if (!response.ok) throw new Error("Delete request failed");
 
-    // remove from saved listings
-    const savedListings = JSON.parse(
-      localStorage.getItem("my_listings") || "[]"
-    );
+      setMyListings((current) => current.filter((item) => item.id !== selectedListingId));
+    } catch (err) {
+      console.error("Failed to delete listing", err);
+    } finally {
+      setDeleteModalOpen(false);
+      setSelectedListingId(null);
+    }
+  };
 
-    const updatedSaved = savedListings.filter(
-      (item: any) => item.id !== selectedListingId
-    );
+  // Ends an ongoing rental; the listing becomes available again on its own
+  const markReturned = async (id: string) => {
+    if (!user) return;
 
-    localStorage.setItem(
-      "my_listings",
-      JSON.stringify(updatedSaved)
-    );
+    try {
+      const response = await fetch("/api/auth/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, userId: user.id, action: "return" }),
+      });
 
-    // store deleted product.json ids
-    const deletedIds = JSON.parse(
-      localStorage.getItem("deleted_listings") || "[]"
-    );
+      if (!response.ok) throw new Error("Return failed");
 
-    localStorage.setItem(
-      "deleted_listings",
-      JSON.stringify([
-        ...deletedIds,
-        selectedListingId
-      ])
-    );
-
-    setDeleteModalOpen(false);
-    setSelectedListingId(null);
+      const result = await response.json();
+      setMyListings((current) =>
+        current.map((item) => (item.id === id ? result.data : item))
+      );
+      setMyRentals((current) => current.filter((item) => item.id !== id));
+    } catch (err) {
+      console.error("Failed to mark listing as returned", err);
+    }
   };
 
   return (
@@ -234,7 +318,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My Listings ({myListings.length})
+              My Lendings ({myListings.length})
             </button>
             <button
               onClick={() => setActiveTab("rentals")}
@@ -245,6 +329,21 @@ function ViewBookingContent() {
               }`}
             >
               My Rentals ({myRentals.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={`relative px-4 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
+                activeTab === "notifications"
+                  ? "bg-white text-blue-600 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Notifications ({incoming.length + outgoing.length})
+              {actionableCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                  {actionableCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -266,7 +365,7 @@ function ViewBookingContent() {
 
             {/* Concise Host Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {hostMetrics.map((metric, idx) => {
+              {hostMetrics(myListings, earnings).map((metric, idx) => {
                 const IconComponent = metric.icon;
                 return (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
@@ -305,17 +404,13 @@ function ViewBookingContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myListings.map((listing, index) => {
-                  const coverImage =
-                    listing.media?.mainThumbnail ||
-                    listing.images?.[listing.primaryImageIndex || 0] ||
-                    "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300";
+                {myListings.map((listing) => {
                   return (
-                    <div key={listing.id || index} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col h-[400px]">
+                    <div key={listing.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col h-[400px]">
                       <div className="relative h-44 bg-slate-100 shrink-0">
-                        <img src={coverImage} alt={listing.title || listing.productName || "Untitled Product"} className="w-full h-full object-cover" />
-                        <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          Active
+                        <img src={listingImage(listing)} alt={listingTitle(listing)} className="w-full h-full object-cover" />
+                        <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[listing.status] || STATUS_BADGE_STYLES.active}`}>
+                          {LISTING_STATUS_LABELS[listing.status] || "Active"}
                         </span>
                       </div>
 
@@ -323,23 +418,28 @@ function ViewBookingContent() {
                         <div>
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                             <span>{listing.category || "General"}</span>
-                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listing.city || "Stuttgart"}</span>
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(listing)}</span>
                           </div>
-                          <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{listing.title || listing.productName || "Untitled Product"}</h3>
-                          <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{
-                            listing.rentInfo?.pricePerDay ||
-                            listing.dailyPrice ||
-                            0
-                          } <span className="text-[11px] font-normal text-slate-500">/ day</span></div>
+                          <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{listingTitle(listing)}</h3>
+                          <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 0} <span className="text-[11px] font-normal text-slate-500">/ day</span></div>
                         </div>
 
                         {/* Minimal Actions */}
                         <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                          <RippleButton className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center">
-                            Edit
-                          </RippleButton>
+                          {listing.status === "in_rent" || listing.status === "in_lease" ? (
+                            <RippleButton
+                              onClick={() => markReturned(listing.id)}
+                              className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
+                            >
+                              Mark returned
+                            </RippleButton>
+                          ) : (
+                            <span className="flex-1 px-3 py-2 text-center text-xs font-semibold text-slate-500">
+                              Available for rent
+                            </span>
+                          )}
                           <RippleButton 
-                            onClick={() => promptDeleteListing(listing.id || index.toString())}
+                            onClick={() => promptDeleteListing(listing.id)}
                             className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center"
                             title="Delete"
                           >
@@ -365,7 +465,7 @@ function ViewBookingContent() {
 
             {/* Concise Rental Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {rentalMetrics.map((metric, idx) => {
+              {rentalMetrics(myRentals).map((metric, idx) => {
                 const IconComponent = metric.icon;
                 return (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
@@ -381,45 +481,167 @@ function ViewBookingContent() {
               })}
             </div>
 
-            {/* Rentals Grid with uniform dimensions matching Listings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myRentals.map((rental) => (
-                <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col h-[400px]">
-                  <div className="relative h-44 bg-slate-100 shrink-0">
-                    <img src={rental.image} alt={rental.name} className="w-full h-full object-cover" />
-                    <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${rental.statusColor}`}>
-                      {rental.status}
-                    </span>
-                  </div>
+            {myRentals.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-16 text-center">
+                <p className="text-sm font-semibold text-slate-900">No rentals yet</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Items you book show up here while you have them.
+                </p>
+                <Link href="/browse" className="mt-3 inline-block text-sm font-semibold text-blue-600">
+                  Browse listings
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myRentals.map((rental) => {
+                  const days = rental.rental ? rentalDays(rental.rental) : 0;
+                  const total = listingDailyPrice(rental) * days;
 
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                        <span>{rental.category}</span>
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {rental.location}</span>
+                  return (
+                    <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col">
+                      <div className="relative h-44 bg-slate-100 shrink-0">
+                        <img src={listingImage(rental)} alt={listingTitle(rental)} className="w-full h-full object-cover" />
+                        <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[rental.status]}`}>
+                          {LISTING_STATUS_LABELS[rental.status]}
+                        </span>
                       </div>
-                      <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{rental.name}</h3>
 
-                      {/* Owner Info */}
-                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
-                        <img src={rental.avatar} alt={rental.owner} className="w-6 h-6 rounded-full object-cover" />
-                        <span className="text-xs font-medium text-slate-600">Rented from <strong className="text-slate-900">{rental.owner}</strong></span>
+                      <div className="p-5 flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                            <span>{rental.category || "General"}</span>
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(rental)}</span>
+                          </div>
+                          <Link href={`/listings/${rental.id}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600">
+                            {listingTitle(rental)}
+                          </Link>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Period</span>
+                            <span className="font-semibold text-slate-800">
+                              {formatDay(rental.rental?.startDate)} – {formatDay(rental.rental?.endDate)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-slate-400 block text-[10px]">Total ({days}d)</span>
+                            <span className="font-bold text-blue-600">₹{total.toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => markReturned(rental.id)}
+                          className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          Return item
+                        </button>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Period</span>
-                        <span className="font-semibold text-slate-800">{rental.startDate} – {rental.endDate}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-400 block text-[10px]">Total</span>
-                        <span className="font-bold text-blue-600">{rental.totalPrice}</span>
-                      </div>
-                    </div>
+
+        {/* --- TAB 3: NOTIFICATIONS --- */}
+        {activeTab === "notifications" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Notifications</h2>
+              <p className="text-xs text-slate-500">
+                Rental requests on your gear, and updates on the items you asked to rent.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-blue-600" /> Requests for your gear
+                </h3>
+
+                {incoming.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">
+                    No one has asked to rent your listings yet.
                   </div>
-                </div>
-              ))}
+                ) : (
+                  incoming.map((request) => (
+                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
+                      <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
+
+                      {request.status === "pending" ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => actOnRequest(request.id, "approve")}
+                            className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                          >
+                            Approve dates
+                          </button>
+                          <button
+                            onClick={() => actOnRequest(request.id, "decline")}
+                            className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] font-semibold text-slate-500">
+                          {BOOKING_REQUEST_LABELS[request.status]}
+                          {request.status === "approved" &&
+                            ` · pay by ${formatDeadline(request.paymentDeadline)}`}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-600" /> Your rental requests
+                </h3>
+
+                {outgoing.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">
+                    You have not requested any rental dates yet.
+                  </div>
+                ) : (
+                  outgoing.map((request) => (
+                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
+                      <RequestSummary request={request} caption="You requested" />
+
+                      <p className="text-[11px] font-semibold text-slate-500">
+                        {BOOKING_REQUEST_LABELS[request.status]}
+                      </p>
+
+                      {request.status === "approved" && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold text-amber-600">
+                            Pay before {formatDeadline(request.paymentDeadline)} or the approval lapses.
+                          </p>
+                          <Link
+                            href={`/booking?requestId=${request.id}`}
+                            className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
+                          >
+                            Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
+                          </Link>
+                        </div>
+                      )}
+
+                      {(request.status === "pending" || request.status === "approved") && (
+                        <button
+                          onClick={() => actOnRequest(request.id, "cancel")}
+                          className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          Cancel request
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}

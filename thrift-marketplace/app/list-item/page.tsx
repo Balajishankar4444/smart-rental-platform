@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useAuth } from "@/app/context/AuthContext";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -121,6 +122,7 @@ export default function ListItemPage() {
 }
 
 function ListItemContent() {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -183,37 +185,27 @@ function ListItemContent() {
 
   const publishListing = async () => {
     console.log("PUBLISH BUTTON CLICKED");
+  if (!user) {
+    alert("Please sign in again before publishing your listing.");
+    return;
+  }
   try {
     const response = await fetch("/api/auth/products", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-  body: JSON.stringify(form),
+  body: JSON.stringify({ ...form, userId: user.id }),
   });
 
   const result = await response.json();
 
-  console.log(result);
-  console.log("ADDING TO MY_LISTINGS");
   if (response.ok) {
-    const existingListings = JSON.parse(
-  localStorage.getItem("my_listings") || "[]"
-);
-
-const newListing = {
-  ...form,
-  id: `prod_${Date.now()}`
-};
-
-localStorage.setItem(
-  "my_listings",
-  JSON.stringify([...existingListings, newListing])
-); 
-console.log("Saved listing:", newListing);
-setIsSubmitted(true);
+    localStorage.removeItem("rentit_listing_draft");
+    setIsSubmitted(true);
   } else {
-    console.error("Failed to save product");
+    console.error("Failed to save product", result);
+    alert(result?.error || "Failed to save product");
   }
 } catch (error) {
   console.error(error);

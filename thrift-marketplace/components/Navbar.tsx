@@ -17,9 +17,11 @@ import {
   LogOut,
   ChevronDown,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 import { RippleButton } from "./ui/RippleButton";
 import { useAuth } from "@/app/context/AuthContext";
+import { useBookingRequests } from "@/hooks/useBookingRequests";
 
 const NAV_LINKS = [
   { name: "Home", href: "/#hero", id: "hero" },
@@ -43,6 +45,7 @@ export const Navbar = () => {
 
   // Global Auth Context
   const { user, isLoggedIn, logout, isLoading } = useAuth();
+  const { actionableCount } = useBookingRequests();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -193,6 +196,19 @@ export const Navbar = () => {
             {!isLoading &&
               (isLoggedIn && user ? (
                 /* ================= LOGGED IN STATE ================= */
+                <>
+                <Link
+                  href="/dashboard/view-booking?tab=notifications"
+                  aria-label="Notifications"
+                  className="relative hidden sm:flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/90 bg-white shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  <Bell className="h-4 w-4 text-gray-700" />
+                  {actionableCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                      {actionableCount}
+                    </span>
+                  )}
+                </Link>
                 <div className="relative hidden sm:block" ref={dropdownRef}>
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -309,6 +325,7 @@ export const Navbar = () => {
                     </div>
                   )}
                 </div>
+                </>
               ) : (
                 /* ================= LOGGED OUT STATE ================= */
                 <Link

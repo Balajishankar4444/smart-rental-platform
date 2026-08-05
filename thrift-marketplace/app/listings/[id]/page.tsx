@@ -23,7 +23,10 @@ import {
   Send,
   Lock,
 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
+import { useFavorites } from "@/hooks/useFavorites";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
@@ -158,7 +161,94 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
   },
 };
 
-const DEFAULT_PRODUCT = MOCK_PRODUCTS["sony-alpha-7iv"];
+// A listing row as persisted by /api/auth/products
+interface StoredListing {
+  id: string;
+  productName?: string;
+  category?: string;
+  brand?: string;
+  model?: string;
+  condition?: string;
+  age?: string;
+  dailyPrice?: string;
+  weeklyPrice?: string;
+  monthlyPrice?: string;
+  securityDeposit?: string;
+  lateReturnFee?: string;
+  images?: string[];
+  city?: string;
+  state?: string;
+  address?: string;
+  instantBooking?: boolean;
+  description?: string;
+  usageInstructions?: string;
+  weight?: string;
+  color?: string;
+  dimensions?: string;
+  warranty?: boolean;
+  pickupTime?: string;
+  deliveryAvailable?: boolean;
+  accessoriesIncluded?: string;
+}
+
+// Maps a stored listing (created through /list-item) onto the detail page shape
+function toProductDetail(listing: StoredListing): ProductDetail {
+  const images: string[] = listing.images?.length
+    ? listing.images
+    : ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200"];
+
+  return {
+    id: listing.id,
+    title: listing.productName || "Untitled listing",
+    category: listing.category || "General",
+    brand: listing.brand || "—",
+    model: listing.model || "—",
+    condition: listing.condition || "—",
+    age: listing.age || "—",
+    dailyPrice: Number(listing.dailyPrice) || 0,
+    weeklyPrice: Number(listing.weeklyPrice) || 0,
+    monthlyPrice: Number(listing.monthlyPrice) || 0,
+    securityDeposit: Number(listing.securityDeposit) || 0,
+    platformProtection: 99,
+    lateFee: Number(listing.lateReturnFee) || 0,
+    rating: 0,
+    reviewsCount: 0,
+    images,
+    city: listing.city || "",
+    area: listing.address || "",
+    distance: [listing.city, listing.state].filter(Boolean).join(", "),
+    verifiedHost: false,
+    instantBook: Boolean(listing.instantBooking),
+    rentalCount: 0,
+    viewsCount: 0,
+    wishlistCount: 0,
+    shortDescription: listing.description || "",
+    fullDescription: listing.usageInstructions || listing.description || "",
+    owner: {
+      name: "Listing owner",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+      rating: 0,
+      rentalsCompleted: 0,
+      responseTime: "—",
+      memberSince: "—",
+      languages: [],
+      verified: false,
+    },
+    specs: {
+      weight: listing.weight || "—",
+      color: listing.color || "—",
+      power: listing.dimensions || "—",
+      warranty: listing.warranty ? "Active" : "None",
+      pickup: listing.pickupTime || "—",
+      delivery: listing.deliveryAvailable ? "Available" : "Pickup only",
+    },
+    included: listing.accessoriesIncluded
+      ? String(listing.accessoriesIncluded).split(",").map((part: string) => part.trim()).filter(Boolean)
+      : [],
+    reviews: [],
+  };
+}
+
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -185,24 +275,26 @@ export default function ProductDetailPage() {
   const searchParams = useSearchParams();
   const rawId = params?.id;
   const productId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const product = (productId && MOCK_PRODUCTS[productId]) || DEFAULT_PRODUCT;
+  const mockProduct = (productId && MOCK_PRODUCTS[productId]) || null;
+  const [product, setProduct] = useState<ProductDetail | null>(mockProduct);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(!mockProduct);
 
   // States
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [wishlistCount, setWishlistCount] = useState(product.wishlistCount);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [messageSent, setMessageSent] = useState(false);
-  const [reviewsState, setReviewsState] = useState<Review[]>(product.reviews);
+  const [reviewsState, setReviewsState] = useState<Review[]>(mockProduct?.reviews ?? []);
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
 
-  // Proper Authentication State Management
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+  // Authentication state comes from the auth session, not a stray storage flag
+  const { user, authStatus } = useAuth();
+  const isAuthenticated = Boolean(user);
+  const isCheckingAuth = authStatus === "loading";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "2026-08-05");
@@ -212,22 +304,24 @@ export default function ProductDetailPage() {
   const [currentYear, setCurrentYear] = useState(2026);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Check authentication status on mount and when storage changes
   useEffect(() => {
-    const checkAuthStatus = () => {
-      const loggedInFlag = localStorage.getItem("isLoggedIn") === "true";
-      // Alternatively, check for an auth token or session cookie if available:
-      // const token = localStorage.getItem("auth_token");
-      setIsAuthenticated(loggedInFlag);
-      setIsCheckingAuth(false);
+    if (!productId || mockProduct) return;
+    let cancelled = false;
+
+    fetch(`/api/auth/products?id=${encodeURIComponent(productId)}`)
+      .then((response) => response.json())
+      .then((result) => {
+        if (!cancelled && result?.data) setProduct(toProductDetail(result.data));
+      })
+      .catch((err) => console.error("Failed to load listing", err))
+      .finally(() => {
+        if (!cancelled) setIsLoadingProduct(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-
-    checkAuthStatus();
-
-    // Listen for storage changes across tabs/components
-    window.addEventListener("storage", checkAuthStatus);
-    return () => window.removeEventListener("storage", checkAuthStatus);
-  }, []);
+  }, [productId, mockProduct]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -239,14 +333,18 @@ export default function ProductDetailPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [requestError, setRequestError] = useState("");
+
+  const isWishlisted = productId ? isFavorite(productId) : false;
+
   const handleWishlistToggle = () => {
-    if (isWishlisted) {
-      setIsWishlisted(false);
-      setWishlistCount((prev) => prev - 1);
-    } else {
-      setIsWishlisted(true);
-      setWishlistCount((prev) => prev + 1);
+    if (!isAuthenticated) {
+      setIsLoginModalOpen(true);
+      return;
     }
+    if (productId) toggleFavorite(productId);
   };
 
   const handleCopyLink = () => {
@@ -271,15 +369,17 @@ export default function ProductDetailPage() {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Rental days are inclusive of both the pickup and the return day
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return diffDays > 0 ? diffDays : 1;
   };
 
   const rentalDays = calculateDays();
-  const rentalCost = rentalDays * product.dailyPrice;
+  const rentalCost = rentalDays * (product?.dailyPrice ?? 0);
   const platformFee = Math.round(rentalCost * 0.08);
   const taxes = Math.round((rentalCost + platformFee) * 0.18);
-  const grandTotal = rentalCost + product.securityDeposit + product.platformProtection + platformFee + taxes;
+  const grandTotal =
+    rentalCost + (product?.securityDeposit ?? 0) + (product?.platformProtection ?? 0) + platformFee + taxes;
 
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month, 1).getDay();
@@ -325,24 +425,75 @@ export default function ProductDetailPage() {
   // ==========================================
   // AUTHENTICATION & BOOKING CHECK HANDLER
   // ==========================================
-  const handleProceedToBook = () => {
-    // Re-verify auth state directly from storage for absolute accuracy
-    const verifiedLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
-    if (!verifiedLoggedIn) {
-      setIsAuthenticated(false);
-      // Save current booking destination so the system can redirect back after login
-      localStorage.setItem("redirectAfterLogin", `/booking?productId=${productId}&startDate=${startDate}&endDate=${endDate}`);
+  // Renting starts as a date request; the owner approves before any payment
+  const handleProceedToBook = async () => {
+    if (!isAuthenticated || !user) {
       setIsLoginModalOpen(true);
-    } else {
-      setIsAuthenticated(true);
-      router.push(`/booking?productId=${productId}&startDate=${startDate}&endDate=${endDate}`);
+      return;
+    }
+
+    setRequestError("");
+    setIsRequesting(true);
+
+    try {
+      const response = await fetch("/api/auth/booking-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: productId,
+          renterId: user.id,
+          renterName: user.name,
+          startDate,
+          endDate,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "Could not send the request");
+      }
+
+      setRequestSent(true);
+    } catch (err) {
+      setRequestError(err instanceof Error ? err.message : "Could not send the request");
+    } finally {
+      setIsRequesting(false);
     }
   };
 
   const handleNavigateToLoginPage = () => {
-    router.push("/login");
+    router.push(`/login?redirect=${encodeURIComponent(bookingUrl)}`);
   };
+
+  if (isLoadingProduct) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <h1 className="text-xl font-bold text-slate-900">Listing not available</h1>
+          <p className="text-sm text-slate-500">This item may have been removed by its owner.</p>
+          <Link href="/browse" className="text-sm font-semibold text-[#2563EB]">
+            Browse active listings
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-slate-900 selection:bg-[#2563EB] selection:text-white">
@@ -589,13 +740,32 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <button
-              onClick={handleProceedToBook}
-              disabled={isCheckingAuth}
-              className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current" /> Proceed to Book
-            </button>
+            {requestSent ? (
+              <div className="space-y-2 text-center">
+                <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2.5 px-3">
+                  Request sent. The owner has to approve these dates before you pay.
+                </p>
+                <Link
+                  href="/dashboard/view-booking?tab=notifications"
+                  className="block text-xs font-semibold text-[#2563EB]"
+                >
+                  Track it in notifications
+                </Link>
+              </div>
+            ) : (
+              <button
+                onClick={handleProceedToBook}
+                disabled={isCheckingAuth || isRequesting}
+                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                {isRequesting ? "Sending request..." : "Request these dates"}
+              </button>
+            )}
+
+            {requestError && (
+              <p className="text-[11px] font-semibold text-red-600 text-center">{requestError}</p>
+            )}
           </div>
         </div>
 

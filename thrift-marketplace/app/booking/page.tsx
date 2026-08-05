@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { Suspense, useState, useRef, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { 
   Calendar as CalendarIcon, 
@@ -32,17 +32,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import Link from "next/link"; // Added Link import
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
+import {
+  BOOKING_REQUEST_LABELS,
+  BookingRequest,
+  fetchBookingRequests,
+} from "@/utils/bookingRequests";
+import {
+  listingDailyPrice,
+  listingImage,
+  listingLocation,
+  listingTitle,
+  ListingSummary,
+} from "@/utils/listings";
 
-const PRODUCT = {
-  name: "Sony Alpha a7 IV Mirrorless Camera + 24-70mm Lens",
-  image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80",
-  pricePerDay: 800,
-  securityDeposit: 1500,
-  platformFee: 100,
-  deliveryFeeCharge: 250,
-  pickupAddress: "Store #42, Brigade Road, Ashok Nagar, Bengaluru, Karnataka 560025",
-  openingHours: "Mon - Sat: 9:00 AM - 8:00 PM (Sun: 10:00 AM - 4:00 PM)",
-};
+const PLATFORM_FEE = 100;
+const DELIVERY_FEE = 250;
+const OPENING_HOURS = "Mon - Sat: 9:00 AM - 8:00 PM (Sun: 10:00 AM - 4:00 PM)";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
@@ -75,19 +82,26 @@ interface Booking {
   bookingDate: string;
 }
 
-export default function Home() {
+function BookingFlow() {
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const requestId = searchParams.get("requestId");
+  const [bookingRequest, setBookingRequest] = useState<BookingRequest | null>(null);
+  const [listing, setListing] = useState<ListingSummary | null>(null);
+  const [isLoadingListing, setIsLoadingListing] = useState(Boolean(requestId));
+  const [bookingError, setBookingError] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
 
   // Step 1: Dates
-  const [startDate, setStartDate] = useState("2026-08-13");
-  const [endDate, setEndDate] = useState("2026-08-20"); 
+  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");
+  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
   // Calendar View State
-  const [currentMonth, setCurrentMonth] = useState(7); // August
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
 
   // Step 2: Fulfillment
   const [fulfillmentType, setFulfillmentType] = useState<"pickup" | "home">("home");
@@ -114,21 +128,7 @@ export default function Home() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   
   // Dashboard / Booked Items List State
-  const [bookedItems, setBookedItems] = useState<Booking[]>([
-    {
-      id: "RNT-849201",
-      productName: "Sony Alpha a7 IV Mirrorless Camera + 24-70mm Lens",
-      productImage: PRODUCT.image,
-      startDate: "2026-08-13",
-      endDate: "2026-08-20",
-      duration: 8,
-      fulfillmentType: "home",
-      address: "#123, 4th Cross, Koramangala, Bengaluru, Karnataka - 560034",
-      grandTotal: 8370,
-      status: "Active",
-      bookingDate: "2026-08-03"
-    }
-  ]);
+  const [bookedItems, setBookedItems] = useState<Booking[]>([]);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [selectedBookingDetails, setSelectedBookingDetails] = useState<Booking | null>(null);
 
@@ -142,6 +142,41 @@ export default function Home() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Payment always follows an owner-approved request, so that drives the page
+  useEffect(() => {
+    if (!requestId || !user) return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const requests = await fetchBookingRequests(user.id);
+        const match = requests.find((item) => item.id === requestId) || null;
+        if (cancelled) return;
+
+        setBookingRequest(match);
+        if (!match) return;
+
+        setStartDate(match.startDate);
+        setEndDate(match.endDate);
+
+        const response = await fetch(`/api/auth/products?id=${encodeURIComponent(match.listingId)}`);
+        const result = await response.json();
+        if (!cancelled && result?.success) setListing(result.data as ListingSummary);
+      } catch (err) {
+        console.error("Failed to load booking request", err);
+      } finally {
+        if (!cancelled) setIsLoadingListing(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId, user]);
 
   // Save bookings to localStorage whenever they change
   useEffect(() => {
@@ -160,13 +195,24 @@ export default function Home() {
     return diffDays > 0 ? diffDays : 1;
   };
 
+  const product = {
+    name: listing ? listingTitle(listing) : "",
+    image: listing ? listingImage(listing) : "",
+    pricePerDay: listing ? listingDailyPrice(listing) : 0,
+    securityDeposit: Number(listing?.securityDeposit) || 0,
+    platformFee: PLATFORM_FEE,
+    deliveryFeeCharge: DELIVERY_FEE,
+    pickupAddress: listing ? listingLocation(listing) : "",
+    openingHours: OPENING_HOURS,
+  };
+
   const duration = calculateDuration();
-  const rentalCost = duration * PRODUCT.pricePerDay;
-  const deliveryFee = fulfillmentType === "home" ? PRODUCT.deliveryFeeCharge : 0;
+  const rentalCost = duration * product.pricePerDay;
+  const deliveryFee = fulfillmentType === "home" ? product.deliveryFeeCharge : 0;
   const discountAmount = appliedCoupon ? Math.round((rentalCost * appliedCoupon.discountPercent) / 100) : 0;
-  const subtotalBeforeTax = rentalCost + PRODUCT.platformFee + deliveryFee - discountAmount;
+  const subtotalBeforeTax = rentalCost + product.platformFee + deliveryFee - discountAmount;
   const taxes = Math.round(subtotalBeforeTax * 0.18);
-  const grandTotal = subtotalBeforeTax + taxes + PRODUCT.securityDeposit;
+  const grandTotal = subtotalBeforeTax + taxes + product.securityDeposit;
 
   const goToStep = (step: number) => {
     setDirection(step > currentStep ? 1 : -1);
@@ -247,24 +293,41 @@ export default function Home() {
     }, 400);
   };
 
-  const handleCompleteOrder = () => {
+  const handleCompleteOrder = async () => {
+    if (!listing || !user || !bookingRequest) return;
+
     setIsConfirming(true);
-    setTimeout(() => {
-      setIsConfirming(false);
+    setBookingError("");
+
+    try {
+      // Paying an approved request is what starts the rental
+      const response = await fetch("/api/auth/booking-requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: bookingRequest.id, userId: user.id, action: "pay" }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "Payment failed");
+      }
+
+      setBookingRequest(result.data as BookingRequest);
+      if (result.listing) setListing(result.listing as ListingSummary);
       setIsConfirmed(true);
 
       // Add to booked items dashboard state & localStorage
       const newBooking: Booking = {
         id: `RNT-${Math.floor(100000 + Math.random() * 900000)}`,
-        productName: PRODUCT.name,
-        productImage: PRODUCT.image,
+        productName: product.name,
+        productImage: product.image,
         startDate: startDate,
         endDate: endDate,
         duration: duration,
         fulfillmentType: fulfillmentType,
         address: fulfillmentType === "home" 
           ? `${deliveryDetails.address}, ${deliveryDetails.city}, ${deliveryDetails.state} - ${deliveryDetails.pincode}` 
-          : PRODUCT.pickupAddress,
+          : product.pickupAddress,
         grandTotal: grandTotal,
         status: "Active",
         bookingDate: new Date().toISOString().split("T")[0]
@@ -275,8 +338,56 @@ export default function Home() {
         localStorage.setItem("user_bookings", JSON.stringify(updated));
         return updated;
       });
-    }, 1200);
+    } catch (err) {
+      setBookingError(err instanceof Error ? err.message : "Booking failed");
+    } finally {
+      setIsConfirming(false);
+    }
   };
+
+  if (isLoadingListing) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
+          <Navbar />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+          </div>
+          <Footer />
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  if (!isConfirmed && (!bookingRequest || bookingRequest.status !== "approved" || !listing)) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
+          <Navbar />
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center pt-28 pb-12">
+            <h1 className="text-xl font-bold text-slate-900">
+              {bookingRequest && bookingRequest.status !== "pending"
+                ? "This booking is not ready for payment"
+                : "Waiting for owner approval"}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {bookingRequest && bookingRequest.status !== "pending"
+                ? BOOKING_REQUEST_LABELS[bookingRequest.status]
+                : "The owner has to accept your dates before you can pay. You will see it in notifications."}
+            </p>
+            <Link
+              href="/dashboard/view-booking?tab=notifications"
+              className="text-sm font-semibold text-[#2563EB]"
+            >
+              Go to notifications
+            </Link>
+          </div>
+          <Footer />
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
     <div className="relative min-h-screen bg-[#FAFAFA] text-[#111827] selection:bg-blue-600 selection:text-white">
@@ -437,7 +548,7 @@ export default function Home() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
                     <div className="bg-[#FAFAFA] p-4 rounded-2xl border border-[#E2E8F0]">
                       <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Rate</span>
-                      <span className="text-lg font-extrabold text-[#0F172A] mt-1 block">₹{PRODUCT.pricePerDay}/day</span>
+                      <span className="text-lg font-extrabold text-[#0F172A] mt-1 block">₹{product.pricePerDay}/day</span>
                     </div>
                     <div className="bg-[#FAFAFA] p-4 rounded-2xl border border-[#E2E8F0]">
                       <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Duration</span>
@@ -486,14 +597,14 @@ export default function Home() {
                         <MapPin className="w-5 h-5 text-[#2563EB] flex-shrink-0 mt-0.5" />
                         <div>
                           <h4 className="font-extrabold text-sm text-[#0F172A]">Pickup Address</h4>
-                          <p className="text-xs text-gray-600 mt-1">{PRODUCT.pickupAddress}</p>
+                          <p className="text-xs text-gray-600 mt-1">{product.pickupAddress}</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3 pt-3 border-t border-gray-200">
                         <Clock className="w-5 h-5 text-[#2563EB] flex-shrink-0 mt-0.5" />
                         <div>
                           <h4 className="font-extrabold text-sm text-[#0F172A]">Opening Hours</h4>
-                          <p className="text-xs text-gray-600 mt-1">{PRODUCT.openingHours}</p>
+                          <p className="text-xs text-gray-600 mt-1">{product.openingHours}</p>
                         </div>
                       </div>
                       <div className="bg-blue-50 p-4 rounded-xl text-xs text-blue-800 font-medium">
@@ -550,10 +661,10 @@ export default function Home() {
                   </div>
 
                   <div className="flex items-center space-x-4 bg-[#FAFAFA] p-4 rounded-2xl border border-[#E2E8F0]">
-                    <img src={PRODUCT.image} alt="" className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
+                    <img src={product.image} alt="" className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
                     <div>
-                      <h3 className="font-extrabold font-heading text-base text-[#0F172A]">{PRODUCT.name}</h3>
-                      <p className="text-xs text-[#2563EB] font-bold mt-1">₹800 / day • {startDate} to {endDate}</p>
+                      <h3 className="font-extrabold font-heading text-base text-[#0F172A]">{product.name}</h3>
+                      <p className="text-xs text-[#2563EB] font-bold mt-1">₹{product.pricePerDay} / day • {startDate} to {endDate}</p>
                     </div>
                   </div>
 
@@ -584,8 +695,8 @@ export default function Home() {
 
                   <div className="space-y-3 text-xs bg-[#FAFAFA] p-5 rounded-2xl border border-[#E2E8F0]">
                     <div className="flex justify-between text-gray-600"><span>Rental Cost ({duration} Days)</span><span className="font-semibold text-gray-900">₹{rentalCost}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>Security Deposit (Refundable)</span><span className="font-semibold text-gray-900">₹{PRODUCT.securityDeposit}</span></div>
-                    <div className="flex justify-between text-gray-600"><span>Platform Fee</span><span className="font-semibold text-gray-900">₹{PRODUCT.platformFee}</span></div>
+                    <div className="flex justify-between text-gray-600"><span>Security Deposit (Refundable)</span><span className="font-semibold text-gray-900">₹{product.securityDeposit}</span></div>
+                    <div className="flex justify-between text-gray-600"><span>Platform Fee</span><span className="font-semibold text-gray-900">₹{product.platformFee}</span></div>
                     <div className="flex justify-between text-gray-600"><span>Delivery Fee ({fulfillmentType === "home" ? "Home Delivery" : "Store Pickup"})</span><span className="font-semibold text-gray-900">₹{deliveryFee}</span></div>
                     {appliedCoupon && <div className="flex justify-between text-emerald-600 font-bold"><span>Discount ({appliedCoupon.discountPercent}%)</span><span>-₹{discountAmount}</span></div>}
                     <div className="flex justify-between text-gray-600 border-b border-gray-200 pb-3"><span>Taxes (GST 18%)</span><span className="font-semibold text-gray-900">₹{taxes}</span></div>
@@ -638,7 +749,7 @@ export default function Home() {
                       </p>
                       <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
                         <Link 
-                          href="/dashboard/view-booking"
+                          href="/dashboard/view-booking?tab=rentals"
                           className="flex items-center space-x-2 px-6 py-3.5 bg-[#2563EB] hover:bg-blue-700 text-white font-extrabold rounded-xl text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer"
                         >
                           <PackageCheck className="w-4 h-4" />
@@ -761,6 +872,10 @@ export default function Home() {
                         )}
                       </div>
 
+                      {bookingError && (
+                        <p className="pt-4 text-sm font-semibold text-red-600">{bookingError}</p>
+                      )}
+
                       <div className="flex items-center justify-between pt-4">
                         <button onClick={() => goToStep(3)} className="flex items-center space-x-2 px-6 py-3.5 bg-gray-100 font-bold text-gray-700 rounded-2xl hover:bg-gray-200 cursor-pointer">
                           <ArrowLeft className="w-5 h-5" />
@@ -797,7 +912,7 @@ export default function Home() {
                   Rental Summary
                 </h3>
                 <Link 
-                  href="/dashboard/view-booking"
+                  href="/dashboard/view-booking?tab=rentals"
                   className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -806,10 +921,10 @@ export default function Home() {
               </div>
 
               <div className="flex items-center space-x-3">
-                <img src={PRODUCT.image} alt="" className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
+                <img src={product.image} alt="" className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
                 <div className="truncate">
-                  <h4 className="font-extrabold text-xs font-heading text-[#0F172A] truncate">{PRODUCT.name}</h4>
-                  <span className="text-xs text-[#2563EB] font-bold">₹800 / day</span>
+                  <h4 className="font-extrabold text-xs font-heading text-[#0F172A] truncate">{product.name}</h4>
+                  <span className="text-xs text-[#2563EB] font-bold">₹{product.pricePerDay} / day</span>
                 </div>
               </div>
 
@@ -828,7 +943,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between text-gray-500 border-b border-[#E2E8F0] pb-3">
                   <span>Deposit (Refundable)</span>
-                  <span className="font-semibold text-gray-800">₹{PRODUCT.securityDeposit}</span>
+                  <span className="font-semibold text-gray-800">₹{product.securityDeposit}</span>
                 </div>
                 <div className="flex justify-between text-base sm:text-lg font-extrabold pt-2">
                   <span className="text-[#0F172A]">Total Payable</span>
@@ -864,5 +979,13 @@ export default function Home() {
       <Footer />
     </div>
     </ProtectedRoute>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA]" />}>
+      <BookingFlow />
+    </Suspense>
   );
 }
