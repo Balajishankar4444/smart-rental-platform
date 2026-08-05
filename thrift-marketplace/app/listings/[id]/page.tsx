@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
@@ -290,9 +291,10 @@ export default function ProductDetailPage() {
   const [reviewsState, setReviewsState] = useState<Review[]>(mockProduct?.reviews ?? []);
   const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
 
-  // Proper Authentication State Management
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+  // Authentication state comes from the auth session, not a stray storage flag
+  const { user, authStatus } = useAuth();
+  const isAuthenticated = Boolean(user);
+  const isCheckingAuth = authStatus === "loading";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "2026-08-05");
@@ -320,23 +322,6 @@ export default function ProductDetailPage() {
       cancelled = true;
     };
   }, [productId, mockProduct]);
-
-  // Check authentication status on mount and when storage changes
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      const loggedInFlag = localStorage.getItem("isLoggedIn") === "true";
-      // Alternatively, check for an auth token or session cookie if available:
-      // const token = localStorage.getItem("auth_token");
-      setIsAuthenticated(loggedInFlag);
-      setIsCheckingAuth(false);
-    };
-
-    checkAuthStatus();
-
-    // Listen for storage changes across tabs/components
-    window.addEventListener("storage", checkAuthStatus);
-    return () => window.removeEventListener("storage", checkAuthStatus);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -380,7 +365,8 @@ export default function ProductDetailPage() {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Rental days are inclusive of both the pickup and the return day
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return diffDays > 0 ? diffDays : 1;
   };
 
@@ -435,23 +421,18 @@ export default function ProductDetailPage() {
   // ==========================================
   // AUTHENTICATION & BOOKING CHECK HANDLER
   // ==========================================
-  const handleProceedToBook = () => {
-    // Re-verify auth state directly from storage for absolute accuracy
-    const verifiedLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const bookingUrl = `/booking?productId=${productId}&startDate=${startDate}&endDate=${endDate}`;
 
-    if (!verifiedLoggedIn) {
-      setIsAuthenticated(false);
-      // Save current booking destination so the system can redirect back after login
-      localStorage.setItem("redirectAfterLogin", `/booking?productId=${productId}&startDate=${startDate}&endDate=${endDate}`);
+  const handleProceedToBook = () => {
+    if (!isAuthenticated) {
       setIsLoginModalOpen(true);
-    } else {
-      setIsAuthenticated(true);
-      router.push(`/booking?productId=${productId}&startDate=${startDate}&endDate=${endDate}`);
+      return;
     }
+    router.push(bookingUrl);
   };
 
   const handleNavigateToLoginPage = () => {
-    router.push("/login");
+    router.push(`/login?redirect=${encodeURIComponent(bookingUrl)}`);
   };
 
   if (isLoadingProduct) {

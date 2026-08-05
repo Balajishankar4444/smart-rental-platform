@@ -648,7 +648,7 @@ function BookingFlow() {
                     <img src={product.image} alt="" className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
                     <div>
                       <h3 className="font-extrabold font-heading text-base text-[#0F172A]">{product.name}</h3>
-                      <p className="text-xs text-[#2563EB] font-bold mt-1">₹800 / day • {startDate} to {endDate}</p>
+                      <p className="text-xs text-[#2563EB] font-bold mt-1">₹{product.pricePerDay} / day • {startDate} to {endDate}</p>
                     </div>
                   </div>
 
@@ -908,7 +908,7 @@ function BookingFlow() {
                 <img src={product.image} alt="" className="w-14 h-14 object-cover rounded-xl flex-shrink-0" />
                 <div className="truncate">
                   <h4 className="font-extrabold text-xs font-heading text-[#0F172A] truncate">{product.name}</h4>
-                  <span className="text-xs text-[#2563EB] font-bold">₹800 / day</span>
+                  <span className="text-xs text-[#2563EB] font-bold">₹{product.pricePerDay} / day</span>
                 </div>
               </div>
 

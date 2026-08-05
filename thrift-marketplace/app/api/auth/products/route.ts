@@ -73,6 +73,8 @@ export async function GET(request: Request) {
     }
 
     const data = products
+      // Legacy rows predate ownership and have no owner to show them to
+      .filter((product) => Boolean(product.userId))
       .filter((product) => (userId ? product.userId === userId : true))
       .map(toSummary)
       .filter((product) => {
