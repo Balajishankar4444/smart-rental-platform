@@ -1,30 +1,36 @@
 import { NextResponse } from "next/server";
+import { getUsers } from "@/services/DbService";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email, password } = body;
+    const { email, password } = await request.json();
 
-    // TODO: Add your actual database validation here
     if (!email || !password) {
       return NextResponse.json(
-        { success: false, message: "Email and password are required." },
-        { status: 400 }
+        { message: "Email and password are required." },
+        { status: 400 } // Ensures response.ok is false
       );
     }
 
-    // Simulate successful login check (replace with real auth logic)
+    const users = getUsers();
+    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+    // If user doesn't exist or password doesn't match, return 401 Unauthorized
+    if (!user || user.password !== password) {
+      return NextResponse.json(
+        { message: "Invalid email or password." },
+        { status: 401 } // Ensures response.ok is false and triggers frontend catch/error block
+      );
+    }
+
+    // Only if credentials match successfully:
+    return NextResponse.json({
+      success: true,
+      message: "Credentials verified. Proceed to OTP.",
+    });
+  } catch (error) {
     return NextResponse.json(
-      { 
-        success: true, 
-        message: "Login successful. Please verify OTP.",
-        user: { email, name: email.split("@")[0] } 
-      },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: "Internal server error." },
+      { message: "Internal server error during login." },
       { status: 500 }
     );
   }

@@ -151,17 +151,20 @@ export default function LoginPage() {
 
   const handleVerifyOtp = async (e: FormEvent) => {
     e.preventDefault();
-    setIsVerifying(true);
     setOtpError("");
 
+    const enteredOtpString = otp.join("");
+    setOtp(["", "", "", "", "", ""]);
+
+    setIsVerifying(true);
+
     try {
-      const otpCode = otp.join("");
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: pendingEmail, otp: otpCode }),
+        body: JSON.stringify({ email: pendingEmail, otp: enteredOtpString }),
       });
 
       const contentType = response.headers.get("content-type");
@@ -170,7 +173,10 @@ export default function LoginPage() {
       }
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Incorrect verification code. Please try again.");
+      if (!response.ok) {
+        setIsVerifying(false);
+        throw new Error(data.message || "Incorrect verification code. Please try again.");
+      }
 
       if (data.token) localStorage.setItem("token", data.token);
       setIsVerifying(false);
@@ -404,7 +410,6 @@ export default function LoginPage() {
               We&apos;ve sent a 6-digit verification code to <span className="font-bold text-slate-800">{pendingEmail}</span>. Enter it below to sign in.
             </p>
 
-            {/* Styled UI Error Banner Matching Your Theme */}
             {otpError && (
               <div className="mt-4 flex items-center gap-3 rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-xs font-bold text-rose-800 animate-in fade-in duration-200">
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
@@ -430,9 +435,9 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={isVerifying || otp.some((d) => !d)}
+                disabled={isVerifying}
                 className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-white shadow-lg transition duration-300 font-heading tracking-wide cursor-pointer ${
-                  isVerifying || otp.some((d) => !d)
+                  isVerifying
                     ? "bg-slate-300 shadow-none cursor-not-allowed opacity-75"
                     : "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
                 }`}

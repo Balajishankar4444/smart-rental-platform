@@ -123,7 +123,7 @@ export default function SignupPage() {
     setOtp(["", "", "", "", "", ""]);
 
     if (enteredOtpString !== "000000") {
-      setOtpErrorMessage("Invalid OTP code. Please use 000000.");
+      setOtpErrorMessage("Invalid OTP code.");
       return;
     }
 
@@ -172,13 +172,39 @@ export default function SignupPage() {
     }
   };
 
-  const handleGoogleSignup = () => {
-    localStorage.setItem("isLogin", "1");
-    login("google.user@example.com", "Google User");
+  const handleGoogleSignup = async () => {
+    try {
+      const response = await fetch("/api/auth/oauth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: "google.user@example.com", fullName: "Google User" }),
+      });
 
-    const finalDestination = returnUrl;
-    sessionStorage.removeItem("auth_redirect_url");
-    router.push(finalDestination);
+      const contentType = response.headers.get("content-type");
+      let data: any = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || "Google signup failed");
+      }
+
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      
+      localStorage.setItem("isLogin", "1");
+      login(data.user?.email || "google.user@example.com", data.user?.name || "Google User");
+
+      const finalDestination = returnUrl;
+      sessionStorage.removeItem("auth_redirect_url");
+      router.push(finalDestination);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Google signup failed");
+    }
   };
 
   return (

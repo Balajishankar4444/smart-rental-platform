@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
     if (!email || !otp) {
       return NextResponse.json(
-        { message: "Email and OTP code are required." },
+        { message: "Enter OTP" },
         { status: 400 }
       );
     }
