@@ -34,6 +34,7 @@ export default function SignupPage() {
   // Error States
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
   // OTP Modal State
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -60,11 +61,34 @@ export default function SignupPage() {
     setReturnUrl("/");
   }, [searchParams]);
 
-  // Handle Form Submission: Trigger OTP popup
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // Handle Form Submission: Check if email exists first, then trigger OTP popup if clear
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
     setOtpErrorMessage(null);
+    setIsCheckingEmail(true);
+
+    try {
+      const checkResponse = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const contentType = checkResponse.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const checkResult = await checkResponse.json();
+        if (!checkResponse.ok || checkResult.exists) {
+          setIsCheckingEmail(false);
+          setErrorMessage(checkResult.message || "This email address is already registered.");
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Check-email route bypassed or unavailable:", err);
+    }
+
+    setIsCheckingEmail(false);
     setShowOtpModal(true);
   };
 
@@ -76,7 +100,6 @@ export default function SignupPage() {
     setOtp(newOtp);
     if (otpErrorMessage) setOtpErrorMessage(null);
 
-    // Auto-focus next input field if typing forward
     if (value && index < 5) {
       const nextInput = document.getElementById(`otp-input-${index + 1}`);
       nextInput?.focus();
@@ -97,8 +120,6 @@ export default function SignupPage() {
     setOtpErrorMessage(null);
 
     const enteredOtpString = otp.join("");
-
-    // Empty out the OTP digit boxes immediately when Verify is pressed
     setOtp(["", "", "", "", "", ""]);
 
     if (enteredOtpString !== "000000") {
@@ -122,11 +143,15 @@ export default function SignupPage() {
         }),
       });
 
-      const result = await response.json();
+      const contentType = response.headers.get("content-type");
+      let result: any = {};
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      }
 
       setIsVerifying(false);
 
-      if (!result.success) {
+      if (!response.ok || (result && result.success === false)) {
         setShowOtpModal(false);
         setErrorMessage(result.message || "Registration failed.");
         return;
@@ -239,9 +264,16 @@ export default function SignupPage() {
               </div>
 
               {errorMessage && (
-                <div className="mb-3 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 animate-in fade-in">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
-                  <span>{errorMessage}</span>
+                <div className="mb-3 flex items-center justify-between gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                    <span>{errorMessage}</span>
+                  </div>
+                  {errorMessage.includes("already registered") && (
+                    <Link href="/login" className="font-bold underline text-rose-900 shrink-0">
+                      Log in
+                    </Link>
+                  )}
                 </div>
               )}
 
@@ -346,10 +378,15 @@ export default function SignupPage() {
 
                 <button
                   type="submit"
-                  className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-xs font-bold text-white shadow-lg shadow-blue-500/25 transition duration-300 font-heading tracking-wide hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer mt-1"
+                  disabled={isCheckingEmail}
+                  className={`group flex h-11 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-white shadow-lg transition duration-300 font-heading tracking-wide cursor-pointer mt-1 ${
+                    isCheckingEmail
+                      ? "bg-slate-300 shadow-none cursor-not-allowed opacity-70"
+                      : "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                  }`}
                 >
-                  Create Account
-                  <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                  {isCheckingEmail ? "Checking availability..." : "Create Account"}
+                  {!isCheckingEmail && <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>}
                 </button>
               </form>
 
