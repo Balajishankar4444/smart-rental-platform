@@ -1,3 +1,4 @@
+// thrift-marketplace/components/FeaturedRentals.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -26,9 +27,9 @@ function toItemDetail(listing: ListingSummary): ItemDetail {
     reviews: 0,
     location: listingLocation(listing),
     distance: listing.condition || "",
-    owner: listing.brand || "Verified lender",
+    owner: listing.ownerName || "Verified lender",
     ownerBadge: listing.instantBooking ? "Instant Booking" : "Request to Book",
-    ownerImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+    ownerImage: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
     image: listingImage(listing),
     verified: Boolean(listing.instantBooking),
   };

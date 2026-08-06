@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const users = getUsers();
 
     const attachOwner = (item: any) => {
-      const owner = users.find((u) => u.id === item.userId);
+      const owner = users.find((u) => u.id === item.userId || u.email === item.userId);
       return {
         ...item,
         ownerName: owner?.fullName || "Verified lender",
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       }
 
       const detailedProduct = withStatus(product);
-      const owner = users.find((u) => u.id === detailedProduct.userId);
+      const owner = users.find((u) => u.id === detailedProduct.userId || u.email === detailedProduct.userId);
       
       const payload = {
         ...detailedProduct,
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     writeProducts(products);
 
     const summary = toSummary(productWithMeta);
-    const owner = users.find((u) => u.id === summary.userId);
+    const owner = users.find((u) => u.id === summary.userId || u.email === summary.userId);
     const data = {
       ...summary,
       ownerName: owner?.fullName || "Verified lender",
@@ -180,7 +180,7 @@ export async function PATCH(request: Request) {
     writeProducts(products);
 
     const summary = toSummary(product);
-    const owner = users.find((u) => u.id === summary.userId);
+    const owner = users.find((u) => u.id === summary.userId || u.email === summary.userId);
     const data = {
       ...summary,
       ownerName: owner?.fullName || "Verified lender",
@@ -222,7 +222,7 @@ export async function DELETE(request: Request) {
     writeProducts(products);
 
     const summary = toSummary(product);
-    const owner = users.find((u) => u.id === summary.userId);
+    const owner = users.find((u) => u.id === summary.userId || u.email === summary.userId);
     const data = {
       ...summary,
       ownerName: owner?.fullName || "Verified lender",
