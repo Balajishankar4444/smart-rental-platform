@@ -203,3 +203,5 @@ export const FeaturedRentals = () => {
     </section>
   );
 };
+
+export default FeaturedRentals;

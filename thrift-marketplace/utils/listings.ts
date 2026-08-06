@@ -65,6 +65,8 @@ export interface ListingSummary {
   state: string;
   instantBooking: boolean;
   createdAt: string;
+  ownerName: string;
+  ownerAvatar: string;
 }
 
 const FALLBACK_IMAGE =

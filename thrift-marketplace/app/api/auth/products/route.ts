@@ -1,6 +1,7 @@
-// app/api/products/route.ts
+// app/api/auth/products/route.ts
 import { NextResponse } from 'next/server';
 import { deriveListingStatus } from '@/utils/listings';
+import { getUsers } from '@/services/DbService';
 import {
   readProducts,
   writeProducts,
@@ -9,12 +10,20 @@ import {
   StoredProduct,
 } from '@/lib/productStore';
 
-// GET: Retrieve listings, optionally scoped to an owner and/or a status.
-// `id` returns a single listing with its full image gallery.
-// Without a status filter, removed listings are hidden; `status=all` returns everything.
 export async function GET(request: Request) {
   try {
     const products = readProducts();
+    const users = getUsers();
+
+    const attachOwner = (item: any) => {
+      const owner = users.find((u) => u.id === item.userId);
+      return {
+        ...item,
+        ownerName: owner?.fullName || "Verified lender",
+        ownerAvatar: owner?.avatar || "",
+      };
+    };
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const userId = searchParams.get('userId');
@@ -27,18 +36,26 @@ export async function GET(request: Request) {
       if (!product) {
         return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, data: withStatus(product) }, { status: 200 });
+
+      const detailedProduct = withStatus(product);
+      const owner = users.find((u) => u.id === detailedProduct.userId);
+      
+      const payload = {
+        ...detailedProduct,
+        ownerName: owner?.fullName || "Verified lender",
+        ownerAvatar: owner?.avatar || "",
+      };
+
+      return NextResponse.json({ success: true, data: payload }, { status: 200 });
     }
 
     const data = products
-      // Legacy rows predate ownership and have no owner to show them to
       .filter((product) => Boolean(product.userId))
       .filter((product) => (userId ? product.userId === userId : true))
-      // Owners browse the marketplace without seeing their own gear
       .filter((product) => (excludeUserId ? product.userId !== excludeUserId : true))
-      // Listings the given user is currently renting
       .filter((product) => (renterId ? product.rental?.renterId === renterId : true))
       .map(toSummary)
+      .map(attachOwner)
       .filter((product) => {
         if (status === 'all') return true;
         if (status) return product.status === status;
@@ -55,10 +72,8 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Append a new product listing to the JSON file
 export async function POST(request: Request) {
   try {
-    // Parse incoming request body from the frontend
     const newProduct = await request.json();
 
     if (!newProduct.userId) {
@@ -69,8 +84,8 @@ export async function POST(request: Request) {
     }
 
     const products = readProducts();
+    const users = getUsers();
 
-    // A freshly created listing is available: no rental, not removed
     const productWithMeta: StoredProduct = {
       id: `prod_${Date.now()}`,
       ...newProduct,
@@ -82,11 +97,19 @@ export async function POST(request: Request) {
     products.push(productWithMeta);
     writeProducts(products);
 
+    const summary = toSummary(productWithMeta);
+    const owner = users.find((u) => u.id === summary.userId);
+    const data = {
+      ...summary,
+      ownerName: owner?.fullName || "Verified lender",
+      ownerAvatar: owner?.avatar || "",
+    };
+
     return NextResponse.json(
       {
         success: true,
         message: 'Product successfully added to JSON file',
-        data: toSummary(productWithMeta),
+        data,
       },
       { status: 201 }
     );
@@ -99,8 +122,6 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Record a booking or a return. The resulting status (in_rent / in_lease / active)
-// follows from the rental itself, so no caller can set a status directly.
 export async function PATCH(request: Request) {
   try {
     const { id, action, renterId, startDate, endDate, userId } = await request.json();
@@ -113,6 +134,7 @@ export async function PATCH(request: Request) {
     }
 
     const products = readProducts();
+    const users = getUsers();
     const product = products.find((item) => item.id === id);
 
     if (!product || product.deletedAt) {
@@ -157,7 +179,15 @@ export async function PATCH(request: Request) {
     product.updatedAt = new Date().toISOString();
     writeProducts(products);
 
-    return NextResponse.json({ success: true, data: toSummary(product) }, { status: 200 });
+    const summary = toSummary(product);
+    const owner = users.find((u) => u.id === summary.userId);
+    const data = {
+      ...summary,
+      ownerName: owner?.fullName || "Verified lender",
+      ownerAvatar: owner?.avatar || "",
+    };
+
+    return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
     console.error('Error updating listing rental:', error);
     return NextResponse.json(
@@ -167,7 +197,6 @@ export async function PATCH(request: Request) {
   }
 }
 
-// DELETE: Soft-delete a listing so the backend keeps its history
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -182,6 +211,7 @@ export async function DELETE(request: Request) {
     }
 
     const products = readProducts();
+    const users = getUsers();
     const product = products.find((item) => item.id === id && item.userId === userId);
 
     if (!product) {
@@ -191,7 +221,15 @@ export async function DELETE(request: Request) {
     product.deletedAt = new Date().toISOString();
     writeProducts(products);
 
-    return NextResponse.json({ success: true, data: toSummary(product) }, { status: 200 });
+    const summary = toSummary(product);
+    const owner = users.find((u) => u.id === summary.userId);
+    const data = {
+      ...summary,
+      ownerName: owner?.fullName || "Verified lender",
+      ownerAvatar: owner?.avatar || "",
+    };
+
+    return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
     console.error('Error deleting product:', error);
     return NextResponse.json(

@@ -164,6 +164,9 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
 // A listing row as persisted by /api/auth/products
 interface StoredListing {
   id: string;
+  userId?: string;
+  ownerName?: string;
+  ownerAvatar?: string;
   productName?: string;
   category?: string;
   brand?: string;
@@ -225,8 +228,8 @@ function toProductDetail(listing: StoredListing): ProductDetail {
     shortDescription: listing.description || "",
     fullDescription: listing.usageInstructions || listing.description || "",
     owner: {
-      name: "Listing owner",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+      name: listing.ownerName || "Listing owner",
+      avatar: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
       rating: 0,
       rentalsCompleted: 0,
       responseTime: "—",
