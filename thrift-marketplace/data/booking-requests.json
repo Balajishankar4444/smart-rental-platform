@@ -88,5 +88,23 @@
     "decidedAt": "2026-08-06T22:03:56.700Z",
     "paymentDeadline": "2026-08-07T22:03:56.700Z",
     "paidAt": null
+  },
+  {
+    "id": "req_1786058257801",
+    "listingId": "prod_dup_5",
+    "listingTitle": "Duplicate Camera E",
+    "listingImage": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800",
+    "ownerId": "user-1785894082016",
+    "renterId": "user-1785899853432",
+    "renterName": "King maki",
+    "startDate": "2026-08-05",
+    "endDate": "2026-08-08",
+    "days": 3,
+    "totalAmount": 2460,
+    "status": "pending",
+    "createdAt": "2026-08-06T23:17:37.801Z",
+    "decidedAt": null,
+    "paymentDeadline": null,
+    "paidAt": null
   }
 ]
