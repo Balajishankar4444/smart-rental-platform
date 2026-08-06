@@ -1,3 +1,4 @@
+// app/context/AuthContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
@@ -30,6 +31,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // Keeps the session in sync after the profile page saves
+  const updateUser = (updates: Partial<Omit<UserProfile, "id">>) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...updates };
+      localStorage.setItem("rentit_user", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Pull the saved avatar/name from the backend into the session
+  const hydrateProfile = (id: string) => {
+    fetch(`/api/auth/profile?userId=${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((result) => {
+        const profile = result?.data;
+        if (!profile) return;
+        updateUser({
+          ...(profile.avatar ? { avatar: profile.avatar } : {}),
+          ...(profile.fullName ? { name: profile.fullName } : {}),
+        });
+      })
+      .catch((err) => console.error("Failed to hydrate profile", err));
+  };
+
   // Read saved user session from localStorage when page loads
   useEffect(() => {
     const savedUser = localStorage.getItem("rentit_user");
@@ -37,7 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const parsed = JSON.parse(savedUser) as UserProfile;
         // Sessions stored before user ids existed fall back to the email
-        setUser({ ...parsed, id: parsed.id || parsed.email });
+        const restoredId = parsed.id || parsed.email;
+        setUser({ ...parsed, id: restoredId });
+        hydrateProfile(restoredId);
       } catch (error) {
         console.error("Failed to parse stored user data:", error);
       }
@@ -57,8 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = (email: string, name?: string, id?: string) => {
+    const resolvedId = id || email;
     const userData: UserProfile = {
-      id: id || email,
+      id: resolvedId,
       name: name || email.split("@")[0] || "User",
       email,
       avatar:
@@ -66,12 +95,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setUser(userData);
     localStorage.setItem("rentit_user", JSON.stringify(userData));
+    hydrateProfile(resolvedId);
     handlePostAuthRedirect();
   };
 
   const signup = (name: string, email: string, id?: string) => {
+    const resolvedId = id || email;
     const userData: UserProfile = {
-      id: id || email,
+      id: resolvedId,
       name,
       email,
       avatar:
@@ -79,17 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setUser(userData);
     localStorage.setItem("rentit_user", JSON.stringify(userData));
+    hydrateProfile(resolvedId);
     handlePostAuthRedirect();
-  };
-
-  // Keeps the session in sync after the profile page saves
-  const updateUser = (updates: Partial<Omit<UserProfile, "id">>) => {
-    setUser((current) => {
-      if (!current) return current;
-      const next = { ...current, ...updates };
-      localStorage.setItem("rentit_user", JSON.stringify(next));
-      return next;
-    });
   };
 
   const logout = () => {
