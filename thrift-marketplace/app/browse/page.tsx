@@ -5,8 +5,9 @@ import React, { useState, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, SlidersHorizontal, MapPin, ShieldCheck, Zap, 
-  Compass, Music, Armchair, Package, Sparkles, 
-  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart
+  Package, Sparkles, 
+  Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart,
+  BedDouble, DoorClosed, Building2, GraduationCap, Briefcase, Backpack, Users, Dog
 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/app/context/AuthContext";
@@ -24,10 +25,15 @@ import {
 } from "@/utils/listings";
 
 const CATEGORIES = [
-  { name: "All Categories", icon: <Package className="w-4 h-4" /> },
-  { name: "Shared Room", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Private Room", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Apartment", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "All Categories", icon: (isSelected: boolean) => <Package className={`w-4 h-4 ${isSelected ? "text-white" : ""}`} /> },
+  { name: "Shared Rooms", icon: (isSelected: boolean) => <BedDouble className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Private Rooms", icon: (isSelected: boolean) => <DoorClosed className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Apartments", icon: (isSelected: boolean) => <Building2 className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Student Housing", icon: (isSelected: boolean) => <GraduationCap className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Business Stays", icon: (isSelected: boolean) => <Briefcase className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Backpacker Rooms", icon: (isSelected: boolean) => <Backpack className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Family Stays", icon: (isSelected: boolean) => <Users className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
+  { name: "Pet Friendly", icon: (isSelected: boolean) => <Dog className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
 ];
 
 const SORT_OPTIONS = [
@@ -46,7 +52,7 @@ const GERMAN_CITIES = [
   "Bremen", "Dresden", "Hanover", "Nuremberg", "Heidelberg",  
 ];
 
-const POPULAR_SEARCHES = ["Private Room", "Shared Room", "Apartment", "Berlin", "Munich"];  
+const POPULAR_SEARCHES = ["Private Rooms", "Shared Rooms", "Apartments", "Berlin", "Munich"];  
 const PLACEHOLDERS = [  
   "Where do you want to stay?",  
   "Search rooms in Berlin...",  
@@ -99,7 +105,9 @@ function SearchContent() {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [isFocused, setIsFocused] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [selectedCategory, setSelectedCategory] = useState(
+    searchParams.get("category") || "All Categories"
+  );
   const [priceRange, setPriceRange] = useState(MAX_PRICE);
   const [maxDistance, setMaxDistance] = useState(50); // km
   const [minGuests, setMinGuests] = useState(0);
@@ -133,11 +141,13 @@ function SearchContent() {
     const loc = searchParams.get("location");
     const start = searchParams.get("startDate");
     const end = searchParams.get("endDate");
+    const cat = searchParams.get("category");
 
     if (q !== null) setSearchQuery(q);
     if (loc) setSelectedCity(loc);
     if (start) setStartDate(start);
     if (end) setEndDate(end);
+    if (cat) setSelectedCategory(cat);
   }, [searchParams]);
 
   useEffect(() => {
@@ -549,7 +559,7 @@ function SearchContent() {
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
-                {cat.icon}
+                {cat.icon(isSelected)}
                 <span>{cat.name}</span>
               </button>
             );
