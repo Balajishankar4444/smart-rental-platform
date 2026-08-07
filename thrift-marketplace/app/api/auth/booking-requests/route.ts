@@ -71,7 +71,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const product = readProducts().find((item) => item.id === listingId); 
+    const db = dbService.readDb();  
+const product = db.listings.find((item) => item.id === listingId);
 
     if (!product || product.deletedAt) {  
   return NextResponse.json(  
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
   );  
 }  
 
-    const requests = readRequests();
+    const requests = db.bookingRequests || [];
 
     const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>  
   new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);  
@@ -112,9 +113,7 @@ if (conflict) {
     { success: false, error: 'Those dates are already requested' },  
     { status: 409 }  
   );  
-}
-
-    const datesTaken = requests  
+} 
 
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
