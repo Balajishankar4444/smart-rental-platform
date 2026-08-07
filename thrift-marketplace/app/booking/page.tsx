@@ -7,10 +7,18 @@ import { Footer } from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
-import { ListingSummary, listingDailyPrice, listingImage, listingTitle, rentalDays } from "@/utils/listings";
+import { ListingSummary, listingDailyPrice, listingImage, listingTitle } from "@/utils/listings";
 import { BookingRequest } from "@/utils/bookingRequests";
 import { AlertCircle, ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+
+const nightsBetween = (start?: string, end?: string) => {  
+  if (!start || !end) return 1;  
+  const s = new Date(start).getTime();  
+  const e = new Date(end).getTime();  
+  if (Number.isNaN(s) || Number.isNaN(e)) return 1;  
+  return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));  
+};
 
 export default function BookingPage() {
   return (
@@ -134,6 +142,20 @@ function BookingContent() {
   const isConfirmed = success || bookingRequest?.status === "paid";
   const isValidToPay = !isConfirmed && bookingRequest?.status === "approved" && listing && !bookingError;
 
+  // Compute duration and costs directly from dates and listing price to handle stale records properly
+  const nights = bookingRequest  
+    ? Math.max(  
+        1,  
+        Math.ceil(  
+          (new Date(bookingRequest.endDate).getTime() -  
+            new Date(bookingRequest.startDate).getTime()) /  
+            (1000 * 60 * 60 * 24)  
+        )  
+      )  
+    : 0;  
+  const perDay = listing ? listingDailyPrice(listing) : 0;  
+  const computedTotal = perDay * nights;
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 flex flex-col font-sans">
       <Navbar />
@@ -213,10 +235,10 @@ function BookingContent() {
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-slate-900 truncate">{listingTitle(listing)}</h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {bookingRequest.startDate} to {bookingRequest.endDate} ({bookingRequest.days} days)
+                        {bookingRequest.startDate} to {bookingRequest.endDate} ({nights} days)
                       </p>
                       <p className="text-xs font-bold text-blue-600 mt-1">
-                        ₹{listingDailyPrice(listing)} <span className="font-normal text-slate-500">/ day</span>
+                        ₹{perDay} <span className="font-normal text-slate-500">/ day</span>
                       </p>
                     </div>
                   </div>
@@ -226,8 +248,8 @@ function BookingContent() {
                 {bookingRequest && (
                   <div className="space-y-2.5 text-xs text-slate-600 border-t border-b border-slate-100 py-4">
                     <div className="flex justify-between">
-                      <span>Rental Fee ({bookingRequest.days} days)</span>
-                      <span className="font-semibold text-slate-900">₹{bookingRequest.totalAmount.toLocaleString("en-IN")}</span>
+                      <span>Rental Fee ({nights} days)</span>
+                      <span className="font-semibold text-slate-900">₹{computedTotal.toLocaleString("en-IN")}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Platform & Insurance Fee</span>
@@ -235,7 +257,7 @@ function BookingContent() {
                     </div>
                     <div className="flex justify-between pt-2 border-t border-slate-100 text-sm font-bold text-slate-900">
                       <span>Total Payable</span>
-                      <span className="text-blue-600">₹{bookingRequest.totalAmount.toLocaleString("en-IN")}</span>
+                      <span className="text-blue-600">₹{computedTotal.toLocaleString("en-IN")}</span>
                     </div>
                   </div>
                 )}
@@ -258,7 +280,7 @@ function BookingContent() {
                       Processing payment...
                     </>
                   ) : (
-                    `Pay ₹${bookingRequest?.totalAmount.toLocaleString("en-IN")} Now`
+                    `Pay ₹${computedTotal.toLocaleString("en-IN")} Now`
                   )}
                 </button>
               </>
