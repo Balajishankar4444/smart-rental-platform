@@ -1,7 +1,7 @@
 // app/api/auth/booking-requests/route.ts
 import { NextResponse } from 'next/server';
 import { dbService } from '@/services/DbService';
-import { deriveListingStatus, listingTitle, rentalDays } from '@/utils/listings';
+import { deriveListingStatus, listingTitle, rentalDays, datesOverlap } from '@/utils/listings';
 import {
   BookingRequest,
   deriveRequestStatus,
@@ -72,23 +72,64 @@ export async function POST(request: Request) {
     }
 
     const db = dbService.readDb();
-    const product = db.listings.find((item) => item.id === listingId);
+    const product = readProducts().find((item) => item.id === listingId); 
 
-    if (!product || deriveListingStatus(product) !== 'active') {
-      return NextResponse.json(
-        { success: false, error: 'Listing is not available for booking' },
-        { status: 409 }
-      );
-    }
+    if (!product || product.deletedAt) {  
+  return NextResponse.json(  
+    { success: false, error: 'Listing is not available for booking' },  
+    { status: 409 }  
+  );  
+}
 
-    if (product.userId === renterId) {
-      return NextResponse.json(
-        { success: false, error: 'You cannot rent your own listing' },
-        { status: 400 }
-      );
-    }
+    if (product.userId === renterId) {  
+  return NextResponse.json(  
+    { success: false, error: 'You cannot rent your own listing' },  
+    { status: 400 }  
+  );  
+}  
 
-    const requests = db.bookingRequests || [];
+    const requests = readRequests();
+
+    const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>  
+  new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);  
+  
+// block only if the requested dates overlap the confirmed rental  
+if (product.rental && overlaps(startDate, endDate, product.rental.startDate, product.rental.endDate)) {  
+  return NextResponse.json(  
+    { success: false, error: 'Those dates are already booked' },  
+    { status: 409 }  
+  );  
+}  
+  
+// block only if the requested dates overlap another live request for this listing  
+const conflict = requests.some(  
+  (item) =>  
+    item.listingId === listingId &&  
+    (item.status === 'pending' || item.status === 'approved' || item.status === 'paid') &&  
+    overlaps(startDate, endDate, item.startDate, item.endDate)  
+);  
+if (conflict) {  
+  return NextResponse.json(  
+    { success: false, error: 'Those dates are already requested' },  
+    { status: 409 }  
+  );  
+}
+
+    const datesTaken = requests  
+  .map(withDerivedStatus)  
+  .some(  
+    (item) =>  
+      item.listingId === listingId &&  
+      (item.status === 'pending' || item.status === 'approved' || item.status === 'paid') &&  
+      datesOverlap(startDate, endDate, item.startDate, item.endDate)  
+  );  
+  
+if (datesTaken) {  
+  return NextResponse.json(  
+    { success: false, error: 'Those dates are already booked. Please choose different dates.' },  
+    { status: 409 }  
+  );  
+}
 
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
@@ -218,12 +259,28 @@ export async function PATCH(request: Request) {
 
       const product = db.listings.find((item) => item.id === bookingRequest.listingId);
 
-      if (!product || deriveListingStatus(product) !== 'active') {
-        return NextResponse.json(
-          { success: false, error: 'Listing is no longer available' },
-          { status: 409 }
-        );
-      }
+      if (!product || product.deletedAt) {  
+  return NextResponse.json(  
+    { success: false, error: 'Listing is no longer available' },  
+    { status: 409 }  
+  );  
+}  
+  
+// Someone else may have paid for overlapping dates while this sat approved  
+const alreadyPaid = requests.some(  
+  (item) =>  
+    item.id !== bookingRequest.id &&  
+    item.listingId === bookingRequest.listingId &&  
+    item.status === 'paid' &&  
+    datesOverlap(bookingRequest.startDate, bookingRequest.endDate, item.startDate, item.endDate)  
+);  
+  
+if (alreadyPaid) {  
+  return NextResponse.json(  
+    { success: false, error: 'Those dates were just booked by someone else' },  
+    { status: 409 }  
+  );  
+}
 
       product.rental = {
         renterId: bookingRequest.renterId,

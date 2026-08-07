@@ -15,13 +15,14 @@ import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CITIES } from "@/data/cities";
-import {
-  fetchListings,
-  listingDailyPrice,
-  listingImage,
-  listingLocation,
-  listingTitle,
-  ListingSummary,
+import {  
+  fetchListings,  
+  listingDailyPrice,  
+  listingImage,  
+  listingLocation,  
+  listingTitle,  
+  datesOverlap,  
+  ListingSummary,  
 } from "@/utils/listings";
 
 const CATEGORIES = [
@@ -155,7 +156,7 @@ function SearchContent() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchListings({ status: "active", excludeUserId: user?.id })
+    fetchListings({ excludeUserId: user?.id })
       .then((data) => {
         if (!cancelled) setListings(data);
       })
@@ -286,7 +287,11 @@ function SearchContent() {
       const matchesDistance =
         selectedCity === ALL_LOCATIONS || km === null || km <= maxDistance;
 
-      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesDistance;
+      const matchesDates =  
+  !startDate || !endDate || !item.rental ||  
+  !datesOverlap(startDate, endDate, item.rental.startDate, item.rental.endDate); 
+  
+return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesDates;
     })
     .sort((a, b) => {
       if (sortBy === "price-low") return listingDailyPrice(a) - listingDailyPrice(b);

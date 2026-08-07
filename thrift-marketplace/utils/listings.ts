@@ -74,6 +74,10 @@ export function deriveListingStatus(listing: ListingSummary): ListingStatus {
   return "active";
 }
 
+export function datesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string) {  
+  return aStart < bEnd && bStart < aEnd;  
+}
+
 export function rentalDays(startDate?: string, endDate?: string): number {
   if (!startDate || !endDate) return 1;
   const start = new Date(startDate).getTime();
