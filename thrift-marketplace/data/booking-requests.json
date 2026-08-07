@@ -1,5 +1,24 @@
 [
   {
+    "id": "req_1786128400385",
+    "listingId": "prod_1786124495663",
+    "listingTitle": "Untitled listing",
+    "listingImage": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
+    "ownerId": "user-1785899853432",
+    "renterId": "user-1785894082016",
+    "renterName": "1",
+    "startDate": "2026-08-19",
+    "endDate": "2026-08-25",
+    "days": 1,
+    "totalAmount": 850,
+    "status": "pending",
+    "createdAt": "2026-08-07T18:46:40.384Z",
+    "decidedAt": null,
+    "approvalDeadline": "2026-08-08T18:46:40.384Z",
+    "paymentDeadline": null,
+    "paidAt": null
+  },
+  {
     "id": "req_1786125043561",
     "listingId": "prod_1786124495663",
     "listingTitle": "Untitled listing",
@@ -87,11 +106,11 @@
     "endDate": "2026-08-21",
     "days": 1,
     "totalAmount": 850,
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-08-07T17:28:54.161Z",
-    "decidedAt": null,
+    "decidedAt": "2026-08-07T18:32:29.148Z",
     "approvalDeadline": "2026-08-08T17:28:54.161Z",
-    "paymentDeadline": null,
+    "paymentDeadline": "2026-08-08T18:32:29.148Z",
     "paidAt": null
   },
   {

@@ -22,6 +22,7 @@ import {
 import { RippleButton } from "./ui/RippleButton";
 import { useAuth } from "@/app/context/AuthContext";
 import { useBookingRequests } from "@/hooks/useBookingRequests";
+import { deriveRequestStatus } from "@/utils/bookingRequests";
 
 const NAV_LINKS = [
   { name: "Home", href: "/#hero", id: "hero" },
@@ -39,13 +40,23 @@ export const Navbar = () => {
   const searchParams = useSearchParams();
   const isHome = pathname === "/";
 
-  // Dynamically compute the current page URL with query parameters for login redirection[cite: 2]
   const currentUrl =
     pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
 
-  // Global Auth Context
   const { user, isLoggedIn, logout, isLoading } = useAuth();
-  const { actionableCount } = useBookingRequests();
+  
+  // Fetch incoming/outgoing requests and 'now' to compute the badge globally
+  const { incoming, outgoing, now } = useBookingRequests();
+
+  const pendingIncomingCount = incoming.filter(
+    (req) => deriveRequestStatus(req, now) === "pending"
+  ).length;
+
+  const approvedOutgoingCount = outgoing.filter(
+    (req) => deriveRequestStatus(req, now) === "approved"
+  ).length;
+
+  const actionableCount = pendingIncomingCount + approvedOutgoingCount;
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -61,7 +72,6 @@ export const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Intersection Observer to detect current section on homepage
   useEffect(() => {
     if (!isHome) {
       setActiveSection("");
@@ -100,7 +110,6 @@ export const Navbar = () => {
     }
   }, [mobileMenuOpen]);
 
-  // Handle clicking outside profile dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -129,7 +138,6 @@ export const Navbar = () => {
     (link) => isHome || link.name !== "Home"
   );
 
-  // Routes configuration (listingPath updated to point to view-booking dashboard)[cite: 2]
   const profilePath = "/profile/demo";
   const listingPath = "/dashboard/view-booking";
   const settingPath = "/setting";
@@ -144,7 +152,6 @@ export const Navbar = () => {
         }`}
       >
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 lg:px-12">
-          {/* Animated Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <motion.div
               whileHover={{ rotate: 15, scale: 1.1 }}
@@ -158,7 +165,6 @@ export const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Nav Links */}
           <nav className="hidden items-center gap-7 lg:flex">
             {filteredNavLinks.map((link) => {
               const isActive = activeSection === link.name;
@@ -190,11 +196,9 @@ export const Navbar = () => {
             })}
           </nav>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-4">
             {!isLoading &&
               (isLoggedIn && user ? (
-                /* ================= LOGGED IN STATE ================= */
                 <>
                 <Link
                   href="/dashboard/view-booking?tab=notifications"
@@ -235,10 +239,8 @@ export const Navbar = () => {
                     />
                   </button>
 
-                  {/* Profile Dropdown */}
                   {isProfileOpen && (
                     <div className="absolute right-0 mt-2.5 w-64 origin-top-right rounded-3xl border border-gray-100 bg-white/95 p-2.5 shadow-2xl shadow-blue-900/10 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 z-50">
-                      {/* User Header Info Card */}
                       <div className="flex items-center gap-3 rounded-2xl bg-gray-50/80 px-3 py-3 border border-gray-100/60 mb-1.5">
                         <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 shadow-xs">
                           <img
@@ -265,7 +267,6 @@ export const Navbar = () => {
                         </div>
                       </div>
 
-                      {/* Navigation Options */}
                       <div className="space-y-0.5 border-t border-gray-100/80 pt-2 pb-1">
                         <Link
                           href={profilePath}
@@ -309,7 +310,6 @@ export const Navbar = () => {
                         </Link>
                       </div>
 
-                      {/* Sign Out Section */}
                       <div className="border-t border-gray-100/80 pt-1.5 mt-1">
                         <button
                           onClick={handleSignOut}
@@ -326,7 +326,6 @@ export const Navbar = () => {
                 </div>
                 </>
               ) : (
-                /* ================= LOGGED OUT STATE ================= */
                 <Link
                   href={`/login?redirect=${encodeURIComponent(currentUrl)}`}
                   className="hidden sm:inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-bold text-gray-700 hover:text-[#2563EB] transition"
@@ -335,7 +334,6 @@ export const Navbar = () => {
                 </Link>
               ))}
 
-            {/* Become a Host Button */}
             {!isLoading && (
               <RippleButton
                 onClick={handleStartEarningRedirect}
@@ -346,7 +344,6 @@ export const Navbar = () => {
               </RippleButton>
             )}
 
-            {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-100 text-gray-800 lg:hidden focus:outline-none cursor-pointer"
@@ -362,7 +359,6 @@ export const Navbar = () => {
         </div>
       </header>
 
-      {/* Fullscreen Mobile Navigation Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
