@@ -1,52 +1,49 @@
 // app/api/auth/booking-requests/route.ts
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { dbService } from '@/services/DbService';
 import { deriveListingStatus, listingTitle, rentalDays } from '@/utils/listings';
-import { readProducts, writeProducts, toSummary, StoredProduct } from '@/lib/productStore';
 import {
-  BookingRequest,
   deriveRequestStatus,
   paymentDeadlineFor,
 } from '@/utils/bookingRequests';
 
-const dataFilePath = path.join(process.cwd(), 'data', 'booking-requests.json');
-
-function readRequests(): BookingRequest[] {
-  const dir = path.dirname(dataFilePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(dataFilePath)) fs.writeFileSync(dataFilePath, '[]', 'utf8');
-
-  const parsed = JSON.parse(fs.readFileSync(dataFilePath, 'utf8') || '[]');
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-function writeRequests(requests: BookingRequest[]) {
-  fs.writeFileSync(dataFilePath, JSON.stringify(requests, null, 2), 'utf8');
-}
-
-// Expiry is time-based, so it is applied on every read rather than stored
-function withDerivedStatus(request: BookingRequest): BookingRequest {
+// Helper to apply derived status
+function withDerivedStatus(request: any): any {
   return { ...request, status: deriveRequestStatus(request) };
 }
 
-function coverImage(product: StoredProduct) {
+function coverImage(product: any) {
   return product.images?.[product.primaryImageIndex || 0] || '';
 }
 
 // GET: every request where the user is the owner or the renter, newest first
 export async function GET(request: Request) {
   try {
-    const userId = new URL(request.url).searchParams.get('userId');
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const listingId = searchParams.get('listingId');
+    const renterId = searchParams.get('renterId');
 
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
+    if (!userId && !listingId && !renterId) {
+      return NextResponse.json({ success: false, error: 'userId, listingId or renterId is required' }, { status: 400 });
     }
 
-    const data = readRequests()
-      .filter((item) => item.ownerId === userId || item.renterId === userId)
+    const db = dbService.readDb();
+    let requests = db.bookingRequests || [];
+
+    if (userId) {
+      requests = requests.filter((item: any) => item.ownerId === userId || item.renterId === userId);
+    }
+    if (listingId) {
+      requests = requests.filter((item: any) => item.listingId === listingId);
+    }
+    if (renterId) {
+      requests = requests.filter((item: any) => item.renterId === renterId);
+    }
+
+    const data = requests
       .map(withDerivedStatus)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
@@ -70,7 +67,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const product = readProducts().find((item) => item.id === listingId);
+    const db = dbService.readDb();
+    const product = db.listings.find((item) => item.id === listingId);
 
     if (!product || deriveListingStatus(product) !== 'active') {
       return NextResponse.json(
@@ -86,11 +84,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const requests = readRequests();
+    const requests = db.bookingRequests || [];
     const alreadyOpen = requests
       .map(withDerivedStatus)
       .some(
-        (item) =>
+        (item: any) =>
           item.listingId === listingId &&
           item.renterId === renterId &&
           (item.status === 'pending' || item.status === 'approved')
@@ -106,7 +104,7 @@ export async function POST(request: Request) {
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
 
-    const bookingRequest: BookingRequest = {
+    const bookingRequest = {
       id: `req_${Date.now()}`,
       listingId,
       listingTitle: listingTitle({ productName: String(product.productName || '') }),
@@ -125,8 +123,11 @@ export async function POST(request: Request) {
       paidAt: null,
     };
 
-    requests.push(bookingRequest);
-    writeRequests(requests);
+    if (!Array.isArray(db.bookingRequests)) {
+      db.bookingRequests = [];
+    }
+    db.bookingRequests.unshift(bookingRequest);
+    dbService.writeDb(db);
 
     return NextResponse.json({ success: true, data: bookingRequest }, { status: 201 });
   } catch (error) {
@@ -150,8 +151,9 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const requests = readRequests();
-    const bookingRequest = requests.find((item) => item.id === id);
+    const db = dbService.readDb();
+    const requests = db.bookingRequests || [];
+    const bookingRequest = requests.find((item: any) => item.id === id);
 
     if (!bookingRequest) {
       return NextResponse.json({ success: false, error: 'Request not found' }, { status: 404 });
@@ -223,9 +225,7 @@ export async function PATCH(request: Request) {
         );
       }
 
-      // Payment is what actually starts the rental, so the listing flips here
-      const products = readProducts();
-      const product = products.find((item) => item.id === bookingRequest.listingId);
+      const product = db.listings.find((item) => item.id === bookingRequest.listingId);
 
       if (!product || deriveListingStatus(product) !== 'active') {
         return NextResponse.json(
@@ -240,20 +240,19 @@ export async function PATCH(request: Request) {
         endDate: bookingRequest.endDate,
         bookedAt: new Date().toISOString(),
       };
-      writeProducts(products);
 
       bookingRequest.status = 'paid';
       bookingRequest.paidAt = new Date().toISOString();
 
-      writeRequests(requests);
+      dbService.writeDb(db);
 
       return NextResponse.json(
-        { success: true, data: bookingRequest, listing: toSummary(product) },
+        { success: true, data: bookingRequest },
         { status: 200 }
       );
     }
 
-    writeRequests(requests);
+    dbService.writeDb(db);
 
     return NextResponse.json({ success: true, data: bookingRequest }, { status: 200 });
   } catch (error) {

@@ -1,22 +1,42 @@
 // app/api/auth/products/route.ts
 import { NextResponse } from 'next/server';
+import { dbService } from '@/services/DbService';
 import { deriveListingStatus } from '@/utils/listings';
-import { getUsers } from '@/services/DbService';
-import {
-  readProducts,
-  writeProducts,
-  toSummary,
-  withStatus,
-  StoredProduct,
-} from '@/lib/productStore';
+
+// Helper to calculate or derive listing status
+function withStatus(product: any) {
+  return {
+    ...product,
+    status: deriveListingStatus(product),
+  };
+}
+
+function toSummary(product: any) {
+  const detailed = withStatus(product);
+  return {
+    id: detailed.id,
+    userId: detailed.userId,
+    productName: detailed.productName,
+    category: detailed.category,
+    brand: detailed.brand,
+    dailyPrice: detailed.dailyPrice,
+    images: detailed.images,
+    primaryImageIndex: detailed.primaryImageIndex || 0,
+    city: detailed.city,
+    status: detailed.status,
+    rental: detailed.rental,
+    createdAt: detailed.createdAt,
+  };
+}
 
 export async function GET(request: Request) {
   try {
-    const products = readProducts();
-    const users = getUsers();
+    const db = dbService.readDb();
+    const products = db.listings || [];
+    const users = db.users || [];
 
     const attachOwner = (item: any) => {
-      const owner = users.find((u) => u.id === item.userId || u.email === item.userId);
+      const owner = users.find((u: any) => u.id === item.userId || u.email === item.userId);
       return {
         ...item,
         ownerName: owner?.fullName || "Verified lender",
@@ -32,13 +52,13 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
 
     if (id) {
-      const product = products.find((item) => item.id === id);
+      const product = products.find((item: any) => item.id === id);
       if (!product) {
         return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
       }
 
       const detailedProduct = withStatus(product);
-      const owner = users.find((u) => u.id === detailedProduct.userId || u.email === detailedProduct.userId);
+      const owner = users.find((u: any) => u.id === detailedProduct.userId || u.email === detailedProduct.userId);
       
       const payload = {
         ...detailedProduct,
@@ -50,13 +70,13 @@ export async function GET(request: Request) {
     }
 
     const data = products
-      .filter((product) => Boolean(product.userId))
-      .filter((product) => (userId ? product.userId === userId : true))
-      .filter((product) => (excludeUserId ? product.userId !== excludeUserId : true))
-      .filter((product) => (renterId ? product.rental?.renterId === renterId : true))
+      .filter((product: any) => Boolean(product.userId))
+      .filter((product: any) => (userId ? product.userId === userId : true))
+      .filter((product: any) => (excludeUserId ? product.userId !== excludeUserId : true))
+      .filter((product: any) => (renterId ? product.rental?.renterId === renterId : true))
       .map(toSummary)
       .map(attachOwner)
-      .filter((product) => {
+      .filter((product: any) => {
         if (status === 'all') return true;
         if (status) return product.status === status;
         return product.status !== 'deleted';
@@ -64,7 +84,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
-    console.error('Error reading products file:', error);
+    console.error('Error reading products from database:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch products' },
       { status: 500 }
@@ -83,10 +103,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const products = readProducts();
-    const users = getUsers();
+    const db = dbService.readDb();
+    const users = db.users || [];
 
-    const productWithMeta: StoredProduct = {
+    const productWithMeta = {
       id: `prod_${Date.now()}`,
       ...newProduct,
       rental: null,
@@ -94,11 +114,10 @@ export async function POST(request: Request) {
       createdAt: newProduct.createdAt || new Date().toISOString(),
     };
 
-    products.push(productWithMeta);
-    writeProducts(products);
+    dbService.saveListing(productWithMeta);
 
     const summary = toSummary(productWithMeta);
-    const owner = users.find((u) => u.id === summary.userId || u.email === summary.userId);
+    const owner = users.find((u: any) => u.id === summary.userId || u.email === summary.userId);
     const data = {
       ...summary,
       ownerName: owner?.fullName || "Verified lender",
@@ -108,13 +127,13 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Product successfully added to JSON file',
+        message: 'Product successfully added to database',
         data,
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error writing product to JSON file:', error);
+    console.error('Error writing product to database:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to save product listing' },
       { status: 500 }
@@ -133,9 +152,8 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const products = readProducts();
-    const users = getUsers();
-    const product = products.find((item) => item.id === id);
+    const db = dbService.readDb();
+    const product = db.listings.find((item: any) => item.id === id);
 
     if (!product || product.deletedAt) {
       return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
@@ -177,10 +195,11 @@ export async function PATCH(request: Request) {
     }
 
     product.updatedAt = new Date().toISOString();
-    writeProducts(products);
+    dbService.saveListing(product);
 
+    const users = db.users || [];
     const summary = toSummary(product);
-    const owner = users.find((u) => u.id === summary.userId || u.email === summary.userId);
+    const owner = users.find((u: any) => u.id === summary.userId || u.email === summary.userId);
     const data = {
       ...summary,
       ownerName: owner?.fullName || "Verified lender",
@@ -210,19 +229,19 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const products = readProducts();
-    const users = getUsers();
-    const product = products.find((item) => item.id === id && item.userId === userId);
+    const db = dbService.readDb();
+    const product = db.listings.find((item: any) => item.id === id && item.userId === userId);
 
     if (!product) {
       return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
     }
 
     product.deletedAt = new Date().toISOString();
-    writeProducts(products);
+    dbService.saveListing(product);
 
+    const users = db.users || [];
     const summary = toSummary(product);
-    const owner = users.find((u) => u.id === summary.userId || u.email === summary.userId);
+    const owner = users.find((u: any) => u.id === summary.userId || u.email === summary.userId);
     const data = {
       ...summary,
       ownerName: owner?.fullName || "Verified lender",

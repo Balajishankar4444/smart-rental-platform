@@ -72,6 +72,20 @@ interface ProductDetail {
   wishlistCount: number;
   shortDescription: string;
   fullDescription: string;
+  propertyType: string;
+  numGuests: string | number;
+  numBeds: string | number;
+  availableFrom: string;
+  availableTo: string;
+  amenities: Record<string, boolean>;
+  houseRules: {
+    checkIn: string;
+    checkOut: string;
+    quietHours: string;
+    smoking: boolean;
+    pets: boolean;
+    visitors: boolean;
+  };
   owner: {
     name: string;
     avatar: string;
@@ -127,6 +141,20 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
     wishlistCount: 94,
     shortDescription: "Professional full-frame mirrorless camera equipped with a versatile 24-70mm f/2.8 zoom lens. Ideal for weddings, commercial shoots, and cinematic videography.",
     fullDescription: "The Sony Alpha 7 IV redefines full-frame performance with breathtaking 33MP image quality, 4K 60p recording, and industry-leading real-time autofocus.",
+    propertyType: "Private Room",
+    numGuests: 2,
+    numBeds: 1,
+    availableFrom: "2026-08-01",
+    availableTo: "2026-12-31",
+    amenities: { wifi: true, kitchen: true, ac: true, workspace: true },
+    houseRules: {
+      checkIn: "2:00 PM",
+      checkOut: "11:00 AM",
+      quietHours: "10 PM - 7 AM",
+      smoking: false,
+      pets: false,
+      visitors: true,
+    },
     owner: {
       name: "Aarav Sharma",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
@@ -192,6 +220,18 @@ interface StoredListing {
   pickupTime?: string;
   deliveryAvailable?: boolean;
   accessoriesIncluded?: string;
+  propertyType?: string;
+  numGuests?: string | number;
+  numBeds?: string | number;
+  availableFrom?: string;
+  availableTo?: string;
+  amenities?: Record<string, boolean>;
+  checkInTime?: string;
+  checkOutTime?: string;
+  quietHours?: string;
+  smokingAllowed?: boolean;
+  petsAllowed?: boolean;
+  visitorsAllowed?: boolean;
 }
 
 // Maps a stored listing (created through /list-item) onto the detail page shape
@@ -227,6 +267,20 @@ function toProductDetail(listing: StoredListing): ProductDetail {
     wishlistCount: 0,
     shortDescription: listing.description || "",
     fullDescription: listing.usageInstructions || listing.description || "",
+    propertyType: listing.propertyType || "Private Room",
+    numGuests: listing.numGuests || "—",
+    numBeds: listing.numBeds || "—",
+    availableFrom: listing.availableFrom || "",
+    availableTo: listing.availableTo || "",
+    amenities: listing.amenities || {},
+    houseRules: {
+      checkIn: listing.checkInTime || "—",
+      checkOut: listing.checkOutTime || "—",
+      quietHours: listing.quietHours || "—",
+      smoking: Boolean(listing.smokingAllowed),
+      pets: Boolean(listing.petsAllowed),
+      visitors: Boolean(listing.visitorsAllowed),
+    },
     owner: {
       name: listing.ownerName || "Listing owner",
       avatar: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
@@ -555,7 +609,7 @@ export default function ProductDetailPage() {
         ========================================== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Left: Gallery & Summary Details */}
+          {/* Left: Gallery & Room Details / Amenities / House Rules */}
           <div className="lg:col-span-7 space-y-6">
             
             {/* Compact Image Gallery Grid */}
@@ -588,16 +642,82 @@ export default function ProductDetailPage() {
               ))}
             </div>
 
-            {/* Concise Description Card */}
-            <div className="bg-white rounded-2xl p-5 shadow-xs border border-slate-200/80 space-y-3">
-              <h3 className="text-sm font-bold font-heading text-slate-900">Quick Overview</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {product.shortDescription}
-              </p>
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-                {product.included.map((item, i) => (
-                  <span key={i} className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg">
-                    ✓ {item}
+            {/* Room Overview Card — styled like the list-item preview */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
+                  {product.propertyType}
+                </span>
+                <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
+                </span>
+              </div>
+              
+              <p className="text-xs text-gray-600 leading-relaxed">{product.shortDescription}</p>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100 text-center">
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Guests</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.numGuests} Max</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Beds</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.numBeds} Bed(s)</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Location</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.city}</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Check-in</span>
+                  <span className="text-xs font-bold text-blue-600 mt-0.5 block">{product.houseRules.checkIn}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Amenities Card */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-3">
+              <h3 className="text-sm font-bold font-heading text-slate-900">Amenities</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(product.amenities || {})
+                  .filter(([, on]) => on)
+                  .map(([key]) => (
+                    <span key={key} className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg capitalize">
+                      ✓ {key.replace(/([A-Z])/g, " $1")}
+                    </span>
+                  ))}
+              </div>
+            </div>
+
+            {/* House Rules Card */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-4">
+              <h3 className="text-sm font-bold font-heading text-slate-900">House Rules</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Check-in</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.checkIn}</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Check-out</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.checkOut}</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Quiet Hours</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.quietHours}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  ["Smoking", product.houseRules.smoking],
+                  ["Pets", product.houseRules.pets],
+                  ["Visitors", product.houseRules.visitors],
+                ].map(([label, allowed]) => (
+                  <span key={label as string}
+                    className={`text-xs font-semibold px-3 py-2 rounded-2xl border text-center ${
+                      allowed ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                              : "bg-red-50 text-red-600 border-red-100"
+                    }`}>
+                    {label} {allowed ? "Allowed" : "Not Allowed"}
                   </span>
                 ))}
               </div>
