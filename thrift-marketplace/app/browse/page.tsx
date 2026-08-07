@@ -43,7 +43,7 @@ const SORT_OPTIONS = [
 ];
 
 const ALL_LOCATIONS = "All Locations";
-const MAX_PRICE = 2000;
+const MAX_PRICE = 20000;
 
 const GERMAN_CITIES = [  
   ALL_LOCATIONS,  
@@ -597,11 +597,11 @@ function SearchContent() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-slate-800">Max Price / Night</label>
-                <span className="text-sm font-extrabold text-[#2563EB]">€{priceRange} / night</span>
+                <span className="text-sm font-extrabold text-[#2563EB]">₹{priceRange} / night</span>
               </div>
               <input 
                 type="range" 
-                min="50" 
+                min="0" 
                 max={MAX_PRICE}
                 step="50"
                 value={priceRange}
@@ -609,8 +609,8 @@ function SearchContent() {
                 className="w-full accent-[#2563EB] cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                <span>€50</span>
-                <span>€2,000+</span>
+                <span>0</span>
+                <span>₹20,000</span>
               </div>
             </div>
 
@@ -765,7 +765,7 @@ function SearchContent() {
 
                         <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                           <div>
-                            <span className="text-lg font-extrabold text-[#2563EB]">€{listingDailyPrice(item)}</span>
+                            <span className="text-lg font-extrabold text-[#2563EB]">₹{listingDailyPrice(item)}</span>
                             <span className="text-xs text-slate-500"> / night</span>
                           </div>
                           <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">
