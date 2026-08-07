@@ -102,18 +102,21 @@ if (product.rental && overlaps(startDate, endDate, product.rental.startDate, pro
 }  
   
 // block only if the requested dates overlap another live request for this listing  
-const conflict = requests.some(  
-  (item) =>  
+// block only if the requested dates overlap another LIVE request for this listing  
+const conflict = requests.some((item) => {  
+  const status = deriveRequestStatus(item); // recompute so lapsed approvals count as expired  
+  return (  
     item.listingId === listingId &&  
-    (item.status === 'pending' || item.status === 'approved' || item.status === 'paid') &&  
+    (status === 'pending' || status === 'approved' || status === 'paid') &&  
     overlaps(startDate, endDate, item.startDate, item.endDate)  
-);  
+  );  
+});  
 if (conflict) {  
   return NextResponse.json(  
     { success: false, error: 'Those dates are already requested' },  
     { status: 409 }  
   );  
-} 
+}
 
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
