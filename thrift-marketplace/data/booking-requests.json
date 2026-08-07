@@ -11,12 +11,12 @@
     "endDate": "2026-08-29",
     "days": 1,
     "totalAmount": 850,
-    "status": "pending",
+    "status": "paid",
     "createdAt": "2026-08-07T21:32:05.695Z",
-    "decidedAt": null,
+    "decidedAt": "2026-08-07T21:47:25.960Z",
     "approvalDeadline": "2026-08-08T21:32:05.695Z",
-    "paymentDeadline": null,
-    "paidAt": null
+    "paymentDeadline": "2026-08-08T21:47:25.960Z",
+    "paidAt": "2026-08-07T21:47:58.043Z"
   },
   {
     "id": "req_1786135851670",

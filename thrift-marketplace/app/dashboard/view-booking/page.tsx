@@ -51,11 +51,10 @@ const formatDay = (value?: string) => {
     : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
 
-const nightsBetween = (start?: string, end?: string) => {  
-  if (!start || !end) return 15;  
+const nightsBetween = (start: string, end: string) => {  
   const s = new Date(start).getTime();  
   const e = new Date(end).getTime();  
-  if (Number.isNaN(s) || Number.isNaN(e)) return 15;  
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;  
   return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));  
 };
 
@@ -445,7 +444,7 @@ function ViewBookingContent() {
                       <div>
                         <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                         <span className="font-semibold text-slate-800">
-                          1st - 15th Aug (15 nights)
+                          7th – 22nd Aug (15 nights)
                         </span>
                       </div>
                       <div className="text-right">
@@ -469,7 +468,9 @@ function ViewBookingContent() {
                   const isRented = listing.status === "rented";
                   const isActive = listing.status === "active";
                   const isCompleted = listing.status === "completed";
-                  const days = 15;
+                  const startDate = listing.rental?.startDate;
+                  const endDate = listing.rental?.endDate;
+                  const days = startDate && endDate ? nightsBetween(startDate, endDate) : 15;
                   const total = listingDailyPrice(listing) * days;
 
                   return (
@@ -503,7 +504,7 @@ function ViewBookingContent() {
                             <div>
                               <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                               <span className="font-semibold text-slate-800">
-                                1st - 15th Aug ({days} nights)
+                                {formatDay(startDate)} – {formatDay(endDate)} ({days} nights) 
                               </span>
                             </div>
                             <div className="text-right">
@@ -605,7 +606,7 @@ function ViewBookingContent() {
                             <div>
                               <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                               <span className="font-semibold text-slate-800">
-                                1st - 15th Aug ({nights} nights)
+                                {formatDay(request.startDate)} – {formatDay(request.endDate)} ({nights} nights) 
                               </span>
                             </div>
                             <div className="text-right">
@@ -655,7 +656,7 @@ function ViewBookingContent() {
                       <div>
                         <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                         <span className="font-semibold text-slate-800">
-                          1st - 15th Aug (15 nights)
+                          7th – 22nd Aug (15 nights)
                         </span>
                       </div>
                       <div className="text-right">
@@ -676,8 +677,10 @@ function ViewBookingContent() {
             ) : myRentals.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {myRentals.map((rental) => {
-                  const days = 15;
-                  const total = listingDailyPrice(rental) * days;
+                  const startDate = rental.rental?.startDate || (rental as any).startDate;
+                  const endDate = rental.rental?.endDate || (rental as any).endDate;
+                  const nights = startDate && endDate ? nightsBetween(startDate, endDate) : 15;  
+                  const total = listingDailyPrice(rental) * nights;
 
                   return (
                     <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
@@ -705,7 +708,7 @@ function ViewBookingContent() {
                           <div>
                             <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                             <span className="font-semibold text-slate-800">
-                              1st - 15th Aug ({days} nights)
+                              {formatDay(startDate)} – {formatDay(endDate)} ({nights} nights) 
                             </span>
                           </div>
                           <div className="text-right">
