@@ -20,29 +20,20 @@ export interface ListingRental {
 export interface ListingSummary {
   id: string;
   userId: string;
-  status?: ListingStatus | string;
-  rental?: ListingRental | null;
   productName: string;
-  propertyType?: string;
-  category: string;
-  subcategory?: string;
+  category?: string;
+  propertyType?: string; // <--- Add this line
   brand?: string;
-  condition?: string;
-  description?: string;
-  primaryImage?: string;
-  images?: string[];
-  dailyPrice: string | number;
-  weeklyPrice?: string | number;
-  monthlyPrice?: string | number;
-  securityDeposit?: string | number;
+  dailyPrice: number;
+  images: string[];
+  primaryImageIndex: number;
   city?: string;
-  state?: string;
-  instantBooking?: boolean;
+  status?: string;
+  rental?: boolean;
   createdAt?: string;
-  ownerName?: string;
-  ownerAvatar?: string;
-  latitude?: string;   // NEW  
-  longitude?: string;
+  latitude?: number;
+  longitude?: number;
+  instantBooking?: boolean;
 }
 
 const FALLBACK_IMAGE =

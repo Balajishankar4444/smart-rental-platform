@@ -21,20 +21,24 @@ export function withStatus(product: StoredProduct) {
   };
 }
 
-export function toSummary(product: StoredProduct) {
-  const detailed = withStatus(product);
+export function toSummary(detailed: Product): ListingSummary {
   return {
     id: detailed.id,
     userId: detailed.userId,
     productName: detailed.productName,
     category: detailed.category,
+    propertyType: detailed.propertyType, // <--- Add this line
     brand: detailed.brand,
     dailyPrice: detailed.dailyPrice,
     images: detailed.images,
-    primaryImageIndex: detailed.primaryImageIndex || 0,
+    primaryImageIndex: detailed.primaryImageIndex,
     city: detailed.city,
     status: detailed.status,
     rental: detailed.rental,
     createdAt: detailed.createdAt,
+    latitude: detailed.latitude,
+    longitude: detailed.longitude,
+    instantBooking: detailed.instantBooking,
   };
+}
 }

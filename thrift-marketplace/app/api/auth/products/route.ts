@@ -18,6 +18,7 @@ function toSummary(product: any) {
     userId: detailed.userId,
     productName: detailed.productName,
     category: detailed.category,
+    propertyType: detailed.propertyType, // <--- Add this line here
     brand: detailed.brand,
     dailyPrice: detailed.dailyPrice,
     images: detailed.images,
