@@ -5,7 +5,6 @@ import React, { useState, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, SlidersHorizontal, MapPin, ShieldCheck, Zap, 
-  Camera, Laptop, Gamepad2, Smartphone, Projector, Wrench, 
   Compass, Music, Armchair, Package, Sparkles, 
   Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart
 } from "lucide-react";
@@ -25,16 +24,9 @@ import {
 
 const CATEGORIES = [
   { name: "All Categories", icon: <Package className="w-4 h-4" /> },
-  { name: "Electronics", icon: <Zap className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cameras", icon: <Camera className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Laptops", icon: <Laptop className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Gaming Consoles", icon: <Gamepad2 className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Mobile Phones", icon: <Smartphone className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Projectors", icon: <Projector className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Tools", icon: <Wrench className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Sports Equipment", icon: <Compass className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Musical Instruments", icon: <Music className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Furniture", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Shared Room", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Private Room", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
+  { name: "Apartment", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
 ];
 
 const SORT_OPTIONS = [
@@ -44,29 +36,22 @@ const SORT_OPTIONS = [
 ];
 
 const ALL_LOCATIONS = "All Locations";
-const MAX_PRICE = 20000;
+const MAX_PRICE = 2000;
 
-const INDIAN_CITIES = [
-  ALL_LOCATIONS,
-  "Bengaluru, KA", "Mumbai, MH", "Delhi, DL", "Hyderabad, TS", "Chennai, TN",
-  "Kolkata, WB", "Pune, MH", "Ahmedabad, GJ", "Jaipur, RJ", "Surat, GJ",
-  "Lucknow, UP", "Kanpur, UP", "Nagpur, MH", "Indore, MP", "Thane, MH",
-  "Bhopal, MP", "Visakhapatnam, AP", "Patna, BR", "Vadodara, GJ", "Ghaziabad, UP",
-  "Ludhiana, PB", "Agra, UP", "Nashik, MH", "Faridabad, HR", "Meerut, UP",
-  "Rajkot, GJ", "Kalyan-Dombivli, MH", "Vasai-Virar, MH", "Varanasi, UP", "Srinagar, JK",
-  "Aurangabad, MH", "Dhanbad, JH", "Amritsar, PB", "Navi Mumbai, MH", "Allahabad (Prayagraj), UP",
-  "Ranchi, JH", "Howrah, WB", "Coimbatore, TN", "Jabalpur, MP", "Gwalior, MP",
-  "Vijayawada, AP", "Jodhpur, RJ", "Madurai, TN", "Raipur, CG", "Kota, RJ",
-  "Guwahati, AS", "Chandigarh, CH", "Solapur, MH", "Hubli-Dharwad, KA", "Mysore, KA",
+const GERMAN_CITIES = [  
+  ALL_LOCATIONS,  
+  "Berlin", "Munich", "Hamburg", "Cologne", "Frankfurt",  
+  "Stuttgart", "Düsseldorf", "Leipzig", "Dortmund", "Essen",  
+  "Bremen", "Dresden", "Hanover", "Nuremberg", "Heidelberg",  
 ];
 
-const POPULAR_SEARCHES = ["Sony Alpha", "PlayStation 5", "DJI Mini 3", "Camp Tent", "Power Tools"];
-const PLACEHOLDERS = [
-  "What do you want to rent?",
-  "Search Sony A7 IV Camera...",
-  "Search PS5 DualSense Consoles...",
-  "Search DJI Mavic 3 Drones...",
-  "Search Ather Electric Scooters...",
+const POPULAR_SEARCHES = ["Private Room", "Shared Room", "Apartment", "Berlin", "Munich"];  
+const PLACEHOLDERS = [  
+  "Where do you want to stay?",  
+  "Search rooms in Berlin...",  
+  "Search apartments in Munich...",  
+  "Search shared rooms...",  
+  "Search private rooms...",  
 ];
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -96,7 +81,6 @@ function SearchContent() {
   const [isFocused, setIsFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [priceRange, setPriceRange] = useState(MAX_PRICE);
-  const [selectedCondition, setSelectedCondition] = useState("All");
   const [instantBookOnly, setInstantBookOnly] = useState(false);
   const [sortBy, setSortBy] = useState("recommended");
   
@@ -176,7 +160,7 @@ function SearchContent() {
 
   const currentSortLabel = SORT_OPTIONS.find((opt) => opt.id === sortBy)?.label || "Sort: Recommended";
 
-  const filteredCities = INDIAN_CITIES.filter((city) =>
+  const filteredCities = GERMAN_CITIES.filter((city) =>
     city.toLowerCase().includes(citySearchQuery.toLowerCase())
   );
 
@@ -249,7 +233,7 @@ function SearchContent() {
     .filter((item) => {
       const matchesSearch =
         !query ||
-        [listingTitle(item), item.category, item.brand, item.description]
+        [listingTitle(item), item.category, item.description]
           .filter(Boolean)
           .some((field) => field && field.toLowerCase().includes(query));
       const matchesCategory = selectedCategory === "All Categories" || item.category === selectedCategory;
@@ -257,10 +241,9 @@ function SearchContent() {
         selectedCity === ALL_LOCATIONS ||
         listingLocation(item).toLowerCase().includes(cityName);
       const matchesPrice = priceRange >= MAX_PRICE || listingDailyPrice(item) <= priceRange;
-      const matchesCondition = selectedCondition === "All" || item.condition === selectedCondition;
       const matchesInstant = !instantBookOnly || item.instantBooking;
 
-      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesCondition && matchesInstant;
+      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant;
     })
     .sort((a, b) => {
       if (sortBy === "price-low") return listingDailyPrice(a) - listingDailyPrice(b);
@@ -289,7 +272,7 @@ function SearchContent() {
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setTimeout(() => setIsFocused(false), 200)}
                   placeholder={PLACEHOLDERS[placeholderIdx]}
-                  aria-label="Search items"
+                  aria-label="Search rooms"
                   className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none"
                 />
                 {searchQuery && (
@@ -354,7 +337,7 @@ function SearchContent() {
                     >
                       <input 
                         type="text"
-                        placeholder="Search city in India..."
+                        placeholder="Search city in Germany..."
                         value={citySearchQuery}
                         onChange={(e) => setCitySearchQuery(e.target.value)}
                         className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#2563EB] mb-2"
@@ -558,7 +541,6 @@ function SearchContent() {
                 onClick={() => {
                   setSelectedCategory("All Categories");
                   setPriceRange(MAX_PRICE);
-                  setSelectedCondition("All");
                   setInstantBookOnly(false);
                   setSelectedCity(ALL_LOCATIONS);
                   setSearchQuery("");
@@ -572,40 +554,21 @@ function SearchContent() {
             {/* Price Range Slider */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-slate-800">Max Daily Price</label>
-                <span className="text-sm font-extrabold text-[#2563EB]">₹{priceRange} / day</span>
+                <label className="text-sm font-bold text-slate-800">Max Price / Night</label>
+                <span className="text-sm font-extrabold text-[#2563EB]">€{priceRange} / night</span>
               </div>
               <input 
                 type="range" 
-                min="200" 
+                min="50" 
                 max={MAX_PRICE}
-                step="100"
+                step="50"
                 value={priceRange}
                 onChange={(e) => setPriceRange(Number(e.target.value))}
                 className="w-full accent-[#2563EB] cursor-pointer"
               />
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                <span>₹200</span>
-                <span>₹20,000+</span>
-              </div>
-            </div>
-
-            {/* Condition Filter */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-800 block">Item Condition</label>
-              <div className="space-y-2">
-                {["All", "Brand New", "Like New", "Excellent"].map((cond) => (
-                  <label key={cond} className="flex items-center gap-3 text-sm font-medium text-slate-700 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="condition"
-                      checked={selectedCondition === cond}
-                      onChange={() => setSelectedCondition(cond)}
-                      className="w-4 h-4 text-[#2563EB] focus:ring-[#2563EB]"
-                    />
-                    <span>{cond}</span>
-                  </label>
-                ))}
+                <span>€50</span>
+                <span>€2,000+</span>
               </div>
             </div>
 
@@ -632,21 +595,21 @@ function SearchContent() {
           <div className="lg:col-span-9 space-y-6">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-slate-600">
-                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> active items available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span>
+                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> rooms available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span>
               </p>
             </div>
 
             {isLoadingListings ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
                 <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500">Loading listings...</p>
+                <p className="text-sm font-medium text-slate-500">Loading rooms...</p>
               </div>
             ) : filteredListings.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm space-y-4">
                 <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mx-auto shadow-inner">
                   <Search className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold font-heading text-slate-900">No matching items found in {selectedCity}</h3>
+                <h3 className="text-xl font-bold font-heading text-slate-900">No matching rooms found in {selectedCity}</h3>
                 <p className="text-sm text-slate-500 max-w-md mx-auto">
                   Try switching your city location or dates using the picker above, adjusting your search filters, or increasing your max price range.
                 </p>
@@ -654,7 +617,6 @@ function SearchContent() {
                   onClick={() => {
                     setSelectedCategory("All Categories");
                     setPriceRange(MAX_PRICE);
-                    setSelectedCondition("All");
                     setInstantBookOnly(false);
                     setSelectedCity(ALL_LOCATIONS);
                     setSearchQuery("");
@@ -727,11 +689,11 @@ function SearchContent() {
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                         <div>
-                          <span className="text-lg font-extrabold text-[#2563EB]">₹{listingDailyPrice(item)}</span>
-                          <span className="text-xs text-slate-500"> / day</span>
+                          <span className="text-lg font-extrabold text-[#2563EB]">€{listingDailyPrice(item)}</span>
+                          <span className="text-xs text-slate-500"> / night</span>
                         </div>
                         <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">
-                          Rent Now
+                          Book Now
                         </span>
                       </div>
                     </div>
