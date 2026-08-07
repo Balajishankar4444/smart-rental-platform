@@ -564,7 +564,7 @@ function ViewBookingContent() {
                       {request.status === "pending" ? (
                         <div className="space-y-2">
                           <p className="text-[11px] font-semibold text-amber-600">
-                            Approve before {formatDeadline(request.approvalDeadline) !== "—" ? formatDeadline(request.approvalDeadline) : "the deadline"} or the request lapses.
+                            Approve before {formatDeadline(request.approvalDeadline)} or the request lapses.
                           </p>
                           <div className="flex gap-2">
                             <button

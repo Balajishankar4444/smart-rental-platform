@@ -5,6 +5,7 @@ import { deriveListingStatus, listingTitle, rentalDays } from '@/utils/listings'
 import {
   deriveRequestStatus,
   paymentDeadlineFor,
+  approvalDeadlineFor,
 } from '@/utils/bookingRequests';
 
 // Helper to apply derived status
@@ -119,6 +120,7 @@ export async function POST(request: Request) {
       status: 'pending',
       createdAt: new Date().toISOString(),
       decidedAt: null,
+      approvalDeadline: approvalDeadlineFor(startDate),
       paymentDeadline: null,
       paidAt: null,
     };
@@ -173,7 +175,7 @@ export async function PATCH(request: Request) {
 
       if (status !== 'pending') {
         return NextResponse.json(
-          { success: false, error: 'This request has already been decided' },
+          { success: false, error: 'This request has already been decided or expired' },
           { status: 409 }
         );
       }

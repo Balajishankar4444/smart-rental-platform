@@ -1,4 +1,4 @@
-"use client";
+// hooks/useBookingRequests.ts
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -9,64 +9,51 @@ import {
   updateBookingRequest,
 } from "@/utils/bookingRequests";
 
-interface RequestsState {
-  userId: string;
-  requests: BookingRequest[];
-}
-
-/** Booking requests where the signed-in user is either the owner or the renter. */
 export function useBookingRequests() {
   const { user } = useAuth();
-  const [loaded, setLoaded] = useState<RequestsState | null>(null);
+  const [requests, setRequests] = useState<BookingRequest[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [reloadToken, setReloadToken] = useState(0);
+  const loadRequests = useCallback(async () => {
+    if (!user) {
+      setRequests([]);
+      return;
+    }
+    setLoading(true);
+    const data = await fetchBookingRequests(user.id);
+    setRequests(data);
+    setLoading(false);
+  }, [user]);
 
   useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  const act = async (requestId: string, action: BookingRequestAction) => {
     if (!user) return;
-
-    let cancelled = false;
-    fetchBookingRequests({ userId: user.id })
-      .then((requests) => {
-        if (!cancelled) setLoaded({ userId: user.id, requests });
-      })
-      .catch((err) => console.error("Failed to load booking requests", err));
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, reloadToken]);
-
-  const refresh = useCallback(() => setReloadToken((token) => token + 1), []);
-
-  const isCurrent = Boolean(user && loaded?.userId === user.id);
-  const requests = useMemo(
-    () => (isCurrent && loaded ? loaded.requests : []),
-    [isCurrent, loaded]
-  );
+    const updated = await updateBookingRequest(requestId, user.id, action);
+    if (updated) {
+      setRequests((prev) =>
+        prev.map((req) => (req.id === requestId ? updated : req))
+      );
+    }
+  };
 
   const incoming = useMemo(
-    () => requests.filter((item) => item.ownerId === user?.id),
+    () => requests.filter((r) => user && r.ownerId === user.id),
     [requests, user]
   );
+
   const outgoing = useMemo(
-    () => requests.filter((item) => item.renterId === user?.id),
+    () => requests.filter((r) => user && r.renterId === user.id),
     [requests, user]
   );
 
-  // Anything the user still has to act on: decide as owner, pay as renter
-  const actionableCount =
-    incoming.filter((item) => item.status === "pending").length +
-    outgoing.filter((item) => item.status === "approved").length;
-
-  const act = useCallback(
-    async (id: string, action: BookingRequestAction) => {
-      if (!user) return null;
-
-      const updated = await updateBookingRequest(id, user.id, action);
-      refresh();
-      return updated;
-    },
-    [user, refresh]
+  const actionableCount = useMemo(
+    () =>
+      incoming.filter((r) => r.status === "pending").length +
+      outgoing.filter((r) => r.status === "approved").length,
+    [incoming, outgoing]
   );
 
   return {
@@ -74,8 +61,8 @@ export function useBookingRequests() {
     incoming,
     outgoing,
     actionableCount,
-    isLoading: Boolean(user) && !isCurrent,
+    loading,
+    refresh: loadRequests,
     act,
-    refresh,
   };
 }
