@@ -53,9 +53,10 @@ type DashboardTab = "listings" | "rentals" | "notifications";
 
 const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  in_rent: "bg-blue-50 text-blue-700 border-blue-200",
-  in_lease: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  deleted: "bg-slate-100 text-slate-600 border-slate-200",
+  rented: "bg-blue-50 text-blue-700 border-blue-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  completed: "bg-purple-50 text-purple-700 border-purple-200",
+  cancelled: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -106,21 +107,25 @@ const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", o
 const rentalMetrics = (rentals: ListingSummary[]) => {
   const totalSpend = rentals.reduce(
     (sum, item) =>
-      sum + listingDailyPrice(item) * (item.rental ? rentalDays(item.rental) : 0),
+      sum +
+      listingDailyPrice(item) *
+        (typeof item.rental === "object" && item.rental !== null
+          ? rentalDays(item.rental.startDate, item.rental.endDate)
+          : 0),
     0
   );
 
   return [
     {
       label: "Active Rentals",
-      value: String(rentals.filter((item) => item.status === "in_rent").length),
+      value: String(rentals.filter((item) => item.status === "rented").length),
       icon: Package,
       color: "text-blue-600",
       bg: "bg-blue-50/80",
     },
     {
-      label: "On Lease",
-      value: String(rentals.filter((item) => item.status === "in_lease").length),
+      label: "Pending",
+      value: String(rentals.filter((item) => item.status === "pending").length),
       icon: Calendar,
       color: "text-indigo-600",
       bg: "bg-indigo-50/80",
@@ -145,9 +150,7 @@ const hostMetrics = (listings: ListingSummary[], earnings: number) => [
   },
   {
     label: "Out with renters",
-    value: String(
-      listings.filter((item) => item.status === "in_rent" || item.status === "in_lease").length
-    ),
+    value: String(listings.filter((item) => item.status === "rented").length),
     icon: Package,
     color: "text-blue-600",
     bg: "bg-blue-50/80",
@@ -399,7 +402,7 @@ function ViewBookingContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {myListings.map((listing) => {
                   return (
-                    <div key={listing.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col h-[400px]">
+                    <div key={listing.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col h-[420px]">
                       <div className="relative h-44 bg-slate-100 shrink-0">
                         <img src={listingImage(listing)} alt={listingTitle(listing)} className="w-full h-full object-cover" />
                         <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[listing.status] || STATUS_BADGE_STYLES.active}`}>
@@ -415,10 +418,16 @@ function ViewBookingContent() {
                           </div>
                           <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{listingTitle(listing)}</h3>
                           <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 0} <span className="text-[11px] font-normal text-slate-500">/ day</span></div>
+
+                          {listing.status === "rented" && typeof listing.rental === "object" && listing.rental !== null && (
+                            <p className="text-[11px] font-semibold text-blue-600 mt-2">
+                              Booked {formatDay(listing.rental.startDate)} – {formatDay(listing.rental.endDate)}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                          {listing.status === "in_rent" || listing.status === "in_lease" ? (
+                          {listing.status === "rented" ? (
                             <RippleButton
                               onClick={() => markReturned(listing.id)}
                               className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
@@ -484,7 +493,8 @@ function ViewBookingContent() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {myRentals.map((rental) => {
-                  const days = rental.rental ? rentalDays(rental.rental) : 0;
+                  const rentalObj = typeof rental.rental === "object" ? rental.rental : null;
+                  const days = rentalObj ? rentalDays(rentalObj.startDate, rentalObj.endDate) : 0;
                   const total = listingDailyPrice(rental) * days;
 
                   return (
@@ -511,7 +521,7 @@ function ViewBookingContent() {
                           <div>
                             <span className="text-slate-400 block text-[10px]">Period</span>
                             <span className="font-semibold text-slate-800">
-                              {formatDay(rental.rental?.startDate)} – {formatDay(rental.rental?.endDate)}
+                              {formatDay(rentalObj?.startDate)} – {formatDay(rentalObj?.endDate)}
                             </span>
                           </div>
                           <div className="text-right">
@@ -581,6 +591,11 @@ function ViewBookingContent() {
                               </button>
                             </div>
                           </div>
+                        ) : liveStatus === "paid" ? (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-emerald-700 text-[11px] font-semibold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span>Booking confirmed · {formatDay(request.startDate)} – {formatDay(request.endDate)}</span>
+                          </div>
                         ) : (
                           <p className="text-[11px] font-semibold text-slate-500">
                             {BOOKING_REQUEST_LABELS[liveStatus]}
@@ -610,34 +625,43 @@ function ViewBookingContent() {
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
                         <RequestSummary request={request} caption="You requested" />
 
-                        <p className="text-[11px] font-semibold text-slate-500">
-                          {BOOKING_REQUEST_LABELS[liveStatus]}
-                          {liveStatus === "pending" &&
-                            request.approvalDeadline &&
-                            ` · host has ${formatCountdown(request.approvalDeadline, now)} to approve`}
-                        </p>
-
-                        {liveStatus === "approved" && (
-                          <div className="space-y-2">
-                            <p className="text-[11px] font-semibold text-amber-600">
-                              Pay within {formatCountdown(request.paymentDeadline, now)} or the approval lapses.
-                            </p>
-                            <Link
-                              href={`/booking?requestId=${request.id}`}
-                              className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
-                            >
-                              Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
-                            </Link>
+                        {liveStatus === "paid" ? (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-emerald-700 text-[11px] font-semibold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span>Booking confirmed · {formatDay(request.startDate)} – {formatDay(request.endDate)}</span>
                           </div>
-                        )}
+                        ) : (
+                          <>
+                            <p className="text-[11px] font-semibold text-slate-500">
+                              {BOOKING_REQUEST_LABELS[liveStatus]}
+                              {liveStatus === "pending" &&
+                                request.approvalDeadline &&
+                                ` · host has ${formatCountdown(request.approvalDeadline, now)} to approve`}
+                            </p>
 
-                        {(liveStatus === "pending" || liveStatus === "approved") && (
-                          <button
-                            onClick={() => actOnRequest(request.id, "cancel")}
-                            className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                          >
-                            Cancel request
-                          </button>
+                            {liveStatus === "approved" && (
+                              <div className="space-y-2">
+                                <p className="text-[11px] font-semibold text-amber-600">
+                                  Pay within {formatCountdown(request.paymentDeadline, now)} or the approval lapses.
+                                </p>
+                                <Link
+                                  href={`/booking?requestId=${request.id}`}
+                                  className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
+                                >
+                                  Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
+                                </Link>
+                              </div>
+                            )}
+
+                            {(liveStatus === "pending" || liveStatus === "approved") && (
+                              <button
+                                onClick={() => actOnRequest(request.id, "cancel")}
+                                className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                              >
+                                Cancel request
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     );

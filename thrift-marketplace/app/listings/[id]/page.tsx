@@ -16,10 +16,7 @@ import {
   Heart,
   Share2,
   MessageSquare,
-  ThumbsUp,
   Maximize2,
-  Eye,
-  Play,
   Send,
   Lock,
 } from "lucide-react";
@@ -43,6 +40,12 @@ interface Review {
   verifiedRental: boolean;
   photos?: string[];
   helpfulCount: number;
+}
+
+interface ListingRental {
+  startDate: string;
+  endDate: string;
+  renterId: string;
 }
 
 interface ProductDetail {
@@ -77,6 +80,7 @@ interface ProductDetail {
   numBeds: string | number;
   availableFrom: string;
   availableTo: string;
+  rental?: ListingRental | null;
   amenities: Record<string, boolean>;
   houseRules: {
     checkIn: string;
@@ -146,6 +150,7 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
     numBeds: 1,
     availableFrom: "2026-08-01",
     availableTo: "2026-12-31",
+    rental: null,
     amenities: { wifi: true, kitchen: true, ac: true, workspace: true },
     houseRules: {
       checkIn: "2:00 PM",
@@ -189,7 +194,6 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
   },
 };
 
-// A listing row as persisted by /api/auth/products
 interface StoredListing {
   id: string;
   userId?: string;
@@ -225,6 +229,7 @@ interface StoredListing {
   numBeds?: string | number;
   availableFrom?: string;
   availableTo?: string;
+  rental?: ListingRental | null;
   amenities?: Record<string, boolean>;
   checkInTime?: string;
   checkOutTime?: string;
@@ -234,7 +239,6 @@ interface StoredListing {
   visitorsAllowed?: boolean;
 }
 
-// Maps a stored listing (created through /list-item) onto the detail page shape
 function toProductDetail(listing: StoredListing): ProductDetail {
   const images: string[] = listing.images?.length
     ? listing.images
@@ -272,6 +276,7 @@ function toProductDetail(listing: StoredListing): ProductDetail {
     numBeds: listing.numBeds || "—",
     availableFrom: listing.availableFrom || "",
     availableTo: listing.availableTo || "",
+    rental: listing.rental || null,
     amenities: listing.amenities || {},
     houseRules: {
       checkIn: listing.checkInTime || "—",
@@ -336,7 +341,6 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductDetail | null>(mockProduct);
   const [isLoadingProduct, setIsLoadingProduct] = useState(!mockProduct);
 
-  // States
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -345,17 +349,16 @@ export default function ProductDetailPage() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [messageSent, setMessageSent] = useState(false);
-  const [reviewsState, setReviewsState] = useState<Review[]>(mockProduct?.reviews ?? []);
-  const [votedReviews, setVotedReviews] = useState<Record<string, boolean>>({});
 
-  // Authentication state comes from the auth session, not a stray storage flag
   const { user, authStatus } = useAuth();
   const isAuthenticated = Boolean(user);
   const isCheckingAuth = authStatus === "loading";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "2026-08-05");
-  const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "2026-08-08");
+  // 1. Initialized to empty strings instead of hardcoded defaults
+  const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");
+  const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
+  
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(7);
   const [currentYear, setCurrentYear] = useState(2026);
@@ -396,6 +399,26 @@ export default function ProductDetailPage() {
 
   const isWishlisted = productId ? isFavorite(productId) : false;
 
+  // Build a Set of blocked dates from product.rental
+  const blockedDates = React.useMemo(() => {
+    const set = new Set<string>();
+    if (product?.rental && typeof product.rental === "object") {
+      const start = new Date(product.rental.startDate);
+      const end = new Date(product.rental.endDate);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        const curr = new Date(start);
+        while (curr <= end) {
+          const year = curr.getFullYear();
+          const month = String(curr.getMonth() + 1).padStart(2, "0");
+          const day = String(curr.getDate()).padStart(2, "0");
+          set.add(`${year}-${month}-${day}`);
+          curr.setDate(curr.getDate() + 1);
+        }
+      }
+    }
+    return set;
+  }, [product]);
+
   const handleWishlistToggle = () => {
     if (!isAuthenticated) {
       setIsLoginModalOpen(true);
@@ -421,14 +444,14 @@ export default function ProductDetailPage() {
     }, 2000);
   };
 
+  // 2. Fixed calculateDays: returns 0 when dates are missing and computes exact nights without +1 offset
   const calculateDays = () => {
-    if (!startDate || !endDate) return 3;
+    if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    // Rental days are inclusive of both the pickup and the return day
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays > 0 ? diffDays : 1;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
   };
 
   const rentalDays = calculateDays();
@@ -436,7 +459,9 @@ export default function ProductDetailPage() {
   const platformFee = Math.round(rentalCost * 0.08);
   const taxes = Math.round((rentalCost + platformFee) * 0.18);
   const grandTotal =
-    rentalCost + (product?.securityDeposit ?? 0) + (product?.platformProtection ?? 0) + platformFee + taxes;
+    rentalDays > 0
+      ? rentalCost + (product?.securityDeposit ?? 0) + (product?.platformProtection ?? 0) + platformFee + taxes
+      : 0;
 
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month, 1).getDay();
@@ -466,6 +491,8 @@ export default function ProductDetailPage() {
   };
 
   const handleDateClick = (dateStr: string) => {
+    if (blockedDates.has(dateStr)) return;
+
     if (!startDate || (startDate && endDate)) {
       setStartDate(dateStr);
       setEndDate("");
@@ -473,21 +500,43 @@ export default function ProductDetailPage() {
       if (dateStr < startDate) {
         setStartDate(dateStr);
       } else {
-        setEndDate(dateStr);
-        setIsCalendarOpen(false);
+        const startObj = new Date(startDate);
+        const endObj = new Date(dateStr);
+        let hasBlockedBetween = false;
+        const curr = new Date(startObj);
+        while (curr <= endObj) {
+          const yr = curr.getFullYear();
+          const mo = String(curr.getMonth() + 1).padStart(2, "0");
+          const da = String(curr.getDate()).padStart(2, "0");
+          if (blockedDates.has(`${yr}-${mo}-${da}`)) {
+            hasBlockedBetween = true;
+            break;
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+
+        if (hasBlockedBetween) {
+          setStartDate(dateStr);
+          setEndDate("");
+        } else {
+          setEndDate(dateStr);
+          setIsCalendarOpen(false);
+        }
       }
     }
   };
 
-  // ==========================================
-  // AUTHENTICATION & BOOKING CHECK HANDLER
-  // ==========================================
   const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
-  // Renting starts as a date request; the owner approves before any payment
+  // 3. Added validation guard to block requests until dates are chosen
   const handleProceedToBook = async () => {
     if (!isAuthenticated || !user) {
       setIsLoginModalOpen(true);
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      setRequestError("Please select your check-in and check-out dates to continue.");
       return;
     }
 
@@ -612,7 +661,6 @@ export default function ProductDetailPage() {
           {/* Left: Gallery & Room Details / Amenities / House Rules */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Compact Image Gallery Grid */}
             <div className="grid grid-cols-4 gap-2 bg-slate-900 p-2 rounded-2xl shadow-md">
               <div className="col-span-4 relative aspect-[16/9] rounded-xl overflow-hidden group">
                 <img
@@ -642,7 +690,6 @@ export default function ProductDetailPage() {
               ))}
             </div>
 
-            {/* Room Overview Card — styled like the list-item preview */}
             <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6">
               <div className="flex items-center justify-between">
                 <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
@@ -675,7 +722,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Amenities Card */}
             <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-3">
               <h3 className="text-sm font-bold font-heading text-slate-900">Amenities</h3>
               <div className="flex flex-wrap gap-2">
@@ -689,7 +735,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* House Rules Card */}
             <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-4">
               <h3 className="text-sm font-bold font-heading text-slate-900">House Rules</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
@@ -706,24 +751,8 @@ export default function ProductDetailPage() {
                   <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.quietHours}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  ["Smoking", product.houseRules.smoking],
-                  ["Pets", product.houseRules.pets],
-                  ["Visitors", product.houseRules.visitors],
-                ].map(([label, allowed]) => (
-                  <span key={label as string}
-                    className={`text-xs font-semibold px-3 py-2 rounded-2xl border text-center ${
-                      allowed ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                              : "bg-red-50 text-red-600 border-red-100"
-                    }`}>
-                    {label} {allowed ? "Allowed" : "Not Allowed"}
-                  </span>
-                ))}
-              </div>
             </div>
 
-            {/* Host Snippet Card */}
             <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img src={product.owner.avatar} alt={product.owner.name} className="w-10 h-10 rounded-full object-cover" />
@@ -741,7 +770,7 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Right: Compact Booking & Cost Calculator Box */}
+          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering */}
           <div className="lg:col-span-5 bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-4 sticky top-20">
             <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
               <div>
@@ -762,12 +791,16 @@ export default function ProductDetailPage() {
               >
                 <div className="flex items-center gap-2 font-bold text-slate-800">
                   <Calendar className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span>{formatDisplayDate(startDate)} → {formatDisplayDate(endDate)}</span>
+                  <span>
+                    {startDate && endDate
+                      ? `${formatDisplayDate(startDate)} → ${formatDisplayDate(endDate)}`
+                      : "Select check-in & check-out"}
+                  </span>
                 </div>
-                <span className="font-extrabold text-[#2563EB]">{rentalDays}d</span>
+                <span className="font-extrabold text-[#2563EB]">{rentalDays > 0 ? `${rentalDays}d` : "—"}</span>
               </div>
 
-              {/* Popup Calendar Dropdown */}
+              {/* Popup Calendar Dropdown with Blocked Date Support */}
               <AnimatePresence>
                 {isCalendarOpen && (
                   <motion.div
@@ -815,17 +848,20 @@ export default function ProductDetailPage() {
                         </span>
                       ))}
                       {getDaysInMonth(currentYear, currentMonth).map((d, i) => {
+                        const isBlocked = blockedDates.has(d.dateStr);
                         const isSelected = d.dateStr === startDate || d.dateStr === endDate;
                         const isInRange = startDate && endDate && d.dateStr > startDate && d.dateStr < endDate;
 
                         return (
                           <button
                             key={i}
-                            disabled={!d.isCurrentMonth}
+                            disabled={!d.isCurrentMonth || isBlocked}
                             onClick={() => handleDateClick(d.dateStr)}
                             className={`py-1 text-[11px] rounded-md transition-all ${
                               !d.isCurrentMonth
                                 ? "text-slate-200 cursor-not-allowed"
+                                : isBlocked
+                                ? "opacity-40 blur-[1px] line-through cursor-not-allowed bg-slate-100 text-slate-400 font-normal"
                                 : isSelected
                                 ? "bg-[#2563EB] text-white font-bold cursor-pointer"
                                 : isInRange
@@ -843,7 +879,7 @@ export default function ProductDetailPage() {
               </AnimatePresence>
             </div>
 
-            {/* Transparent Cost Breakdown */}
+            {/* Cost Breakdown */}
             <div className="space-y-2 pt-1 text-xs">
               <div className="flex justify-between text-slate-600">
                 <span>₹{product.dailyPrice} × {rentalDays} days</span>
@@ -851,11 +887,11 @@ export default function ProductDetailPage() {
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Security Deposit (Refundable)</span>
-                <span className="font-bold text-slate-800">₹{product.securityDeposit}</span>
+                <span className="font-bold text-slate-800">₹{rentalDays > 0 ? product.securityDeposit : 0}</span>
               </div>
               <div className="flex justify-between text-slate-600">
                 <span>Protection Cover & Fees</span>
-                <span className="font-bold text-slate-800">₹{product.platformProtection + platformFee + taxes}</span>
+                <span className="font-bold text-slate-800">₹{rentalDays > 0 ? product.platformProtection + platformFee + taxes : 0}</span>
               </div>
               <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-extrabold text-slate-900">
                 <span>Total Amount Due</span>
@@ -876,10 +912,11 @@ export default function ProductDetailPage() {
                 </Link>
               </div>
             ) : (
+              // 4. Button visually disabled until dates exist
               <button
                 onClick={handleProceedToBook}
-                disabled={isCheckingAuth || isRequesting}
-                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                disabled={isCheckingAuth || isRequesting || !startDate || !endDate}
+                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Zap className="w-3.5 h-3.5 fill-current" />
                 {isRequesting ? "Sending request..." : "Request these dates"}
@@ -894,9 +931,7 @@ export default function ProductDetailPage() {
 
       </main>
 
-      {/* ==========================================
-          LOGIN POPUP MODAL (PROMPTS SIGN IN IF NOT LOGGED IN)
-      ========================================== */}
+      {/* Login Modal */}
       <AnimatePresence>
         {isLoginModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -919,7 +954,7 @@ export default function ProductDetailPage() {
               <div className="space-y-2 py-2">
                 <h3 className="text-base font-bold text-slate-900">Please log in to book</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  You are currently signed out. Click below to sign in so you can complete your reservation. Once logged in, you will be redirected straight back here.
+                  You are currently signed out. Click below to sign in so you can complete your reservation.
                 </p>
               </div>
 
@@ -937,9 +972,7 @@ export default function ProductDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* ==========================================
-          FULLSCREEN IMAGE LIGHTBOX MODAL
-      ========================================== */}
+      {/* Fullscreen Modal */}
       <AnimatePresence>
         {isFullscreenOpen && (
           <motion.div
@@ -951,7 +984,6 @@ export default function ProductDetailPage() {
             <button
               onClick={() => setIsFullscreenOpen(false)}
               className="absolute top-6 right-6 z-50 text-white bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-md transition-colors cursor-pointer"
-              aria-label="Close fullscreen view"
             >
               <X className="w-6 h-6" />
             </button>
@@ -962,26 +994,12 @@ export default function ProductDetailPage() {
                 alt={product.title}
                 className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
               />
-
-              <div className="flex items-center gap-3 mt-4 overflow-x-auto py-2 max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                {product.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIdx(idx)}
-                    className={`w-16 h-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
-                      activeImageIdx === idx ? "border-[#2563EB] scale-105" : "border-transparent opacity-50 hover:opacity-100"
-                    }`}
-                  >
-                    <img src={img} alt="Thumbnail preview" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Modals for Share & Contact */}
+      {/* Share / Contact Modals */}
       <AnimatePresence>
         {isShareModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
