@@ -22,26 +22,33 @@ export interface ListingSummary {
   userId: string;
   productName: string;
   category?: string;
-  propertyType?: string; // <--- Add this line
+  propertyType?: string;
   brand?: string;
   dailyPrice: number;
   images: string[];
-  primaryImageIndex: number;
+  primaryImageIndex?: number;
+  primaryImage?: string;
   city?: string;
+  state?: string;
   status?: string;
-  rental?: boolean;
+  rental?: boolean | ListingRental;
   createdAt?: string;
   latitude?: number;
   longitude?: number;
   instantBooking?: boolean;
+  numGuests?: string | number;
+  petsAllowed?: boolean;
 }
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800";
 
-export function listingImage(listing: Pick<ListingSummary, "primaryImage" | "images">) {
+export function listingImage(listing: Pick<ListingSummary, "primaryImage" | "images" | "primaryImageIndex">) {
   if (listing.primaryImage) return listing.primaryImage;
-  if (Array.isArray(listing.images) && listing.images.length > 0) return listing.images[0];
+  if (Array.isArray(listing.images) && listing.images.length > 0) {
+    const idx = listing.primaryImageIndex ?? 0;
+    return listing.images[idx] || listing.images[0];
+  }
   return FALLBACK_IMAGE;
 }
 
@@ -61,7 +68,7 @@ export function deriveListingStatus(listing: ListingSummary): ListingStatus {
   if (listing.status) {
     return listing.status as ListingStatus;
   }
-  if (listing.rental && listing.rental.renterId) {
+  if (listing.rental && typeof listing.rental === "object" && listing.rental.renterId) {
     return "rented";
   }
   return "active";

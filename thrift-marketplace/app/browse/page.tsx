@@ -1,4 +1,4 @@
-﻿// app/search/page.tsx
+﻿// app/browse/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
@@ -64,7 +64,6 @@ const PLACEHOLDERS = [
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-// Haversine distance in km between two lat/lng points  
 function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {  
   const R = 6371;  
   const dLat = ((lat2 - lat1) * Math.PI) / 180;  
@@ -77,7 +76,6 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));  
 }  
   
-// Look up the searched city's center from data/cities.ts  
 function cityCenter(cityLabel: string) {  
   const name = cityLabel.split(",")[0].trim().toLowerCase();  
   return CITIES.find((c) => c.name.toLowerCase() === name) || null;  
@@ -109,8 +107,7 @@ function SearchContent() {
     searchParams.get("category") || "All Categories"
   );
   const [priceRange, setPriceRange] = useState(MAX_PRICE);
-  const [maxDistance, setMaxDistance] = useState(50); // km
-  const [minGuests, setMinGuests] = useState(0);
+  const [maxDistance, setMaxDistance] = useState(50);
   const [instantBookOnly, setInstantBookOnly] = useState(false);
   const [sortBy, setSortBy] = useState("recommended");
   
@@ -124,18 +121,14 @@ function SearchContent() {
   const [endDate, setEndDate] = useState(searchParams.get("endDate") || "2026-08-08");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  // Calendar View State
-  const [currentMonth, setCurrentMonth] = useState(7); // August
+  const [currentMonth, setCurrentMonth] = useState(7);
   const [currentYear, setCurrentYear] = useState(2026);
 
-  // Custom Dropdown State for Sorting
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
-
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const calendarDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sync state if URL params change externally
   useEffect(() => {
     const q = searchParams.get("q");
     const loc = searchParams.get("location");
@@ -196,7 +189,6 @@ function SearchContent() {
     city.toLowerCase().includes(citySearchQuery.toLowerCase())
   );
 
-  // Generate Days for Calendar Grid
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
@@ -257,7 +249,6 @@ function SearchContent() {
     }
   };
 
-  // Filter the active listings coming from the API
   const query = searchQuery.trim().toLowerCase();
   const cityName = selectedCity.split(",")[0].trim().toLowerCase();
 
@@ -265,15 +256,19 @@ function SearchContent() {
     .filter((item) => {
       const matchesSearch =
         !query ||
-        [listingTitle(item), item.category, item.description]
+        [listingTitle(item), item.category, item.propertyType]
           .filter(Boolean)
           .some((field) => field && field.toLowerCase().includes(query));
       
-      // Matches category against item.category or item.propertyType flexibly (ignoring plural suffix and case)
+      const guests = Number(item.numGuests) || 0;
+      const petsOk = Boolean(item.petsAllowed);
+
       const matchesCategory =  
         selectedCategory === "All Categories" ||  
         [item.category, item.propertyType]  
-          .some((f) => f && f.toLowerCase() === selectedCategory.toLowerCase().replace(/s$/, ''));
+          .some((f) => f && f.toLowerCase() === selectedCategory.toLowerCase().replace(/s$/, '')) ||
+        (selectedCategory === "Family Stays" && guests > 1) ||
+        (selectedCategory === "Pet Friendly" && petsOk);
 
       const matchesCity =
         selectedCity === ALL_LOCATIONS ||
@@ -302,12 +297,10 @@ function SearchContent() {
 
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
         
-        {/* Search Bar Container */}
         <section className="relative z-30 mx-auto max-w-full mb-8">
           <div className="rounded-[28px] glass-panel bg-white/95 p-4 lg:p-5 shadow-2xl shadow-blue-900/10 border border-white/80">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-center">
               
-              {/* 1. Main Search Input */}
               <div className="relative md:col-span-5 flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent focus-within:border-[#2563EB] focus-within:bg-white transition-all">
                 <Search className="h-5 w-5 text-gray-400 shrink-0" />
                 <input
@@ -358,7 +351,6 @@ function SearchContent() {
                 </AnimatePresence>
               </div>
 
-              {/* 2. Location Dropdown */}
               <div className="md:col-span-3 relative" ref={cityDropdownRef}>
                 <div 
                   onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
@@ -409,7 +401,6 @@ function SearchContent() {
                 </AnimatePresence>
               </div>
 
-              {/* 3. Dates Dropdown */}
               <div className="md:col-span-2 relative" ref={calendarDropdownRef}>
                 <div 
                   onClick={() => setIsCalendarOpen(!isCalendarOpen)}
@@ -504,7 +495,6 @@ function SearchContent() {
                 </AnimatePresence>
               </div>
 
-              {/* 4. Sort Component */}
               <div className="md:col-span-2 relative" ref={sortRef}>
                 <div
                   onClick={() => setIsSortOpen(!isSortOpen)}
@@ -551,7 +541,6 @@ function SearchContent() {
           </div>
         </section>
 
-        {/* Horizontal Category Carousel Pill Bar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8">
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.name;
@@ -572,10 +561,8 @@ function SearchContent() {
           })}
         </div>
 
-        {/* Main Content Layout: Filters Sidebar (Col 3) + Listings Grid (Col 9) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* DESKTOP FILTERS SIDEBAR */}
           <div className="hidden lg:block lg:col-span-3 bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80 sticky top-28 space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -597,7 +584,6 @@ function SearchContent() {
               </button>
             </div>
 
-            {/* Price Range Slider */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-slate-800">Max Price / Night</label>
@@ -618,7 +604,6 @@ function SearchContent() {
               </div>
             </div>
 
-            {/* Max Distance Slider */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-bold text-slate-800">Max distance from centre</label>
@@ -634,7 +619,6 @@ function SearchContent() {
               />
             </div>
 
-            {/* Trust & Booking Toggles */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
               <label className="text-sm font-bold text-slate-800 block">Preferences</label>
               
@@ -653,7 +637,6 @@ function SearchContent() {
             </div>
           </div>
 
-          {/* LISTINGS RESULTS GRID (Span 9) */}
           <div className="lg:col-span-9 space-y-6">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-slate-600">
@@ -792,9 +775,9 @@ function SearchContent() {
   );
 }
 
-export default function SearchPage() {
+export default function BrowsePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">Loading search...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">Loading browse...</div>}>
       <SearchContent />
     </Suspense>
   );
