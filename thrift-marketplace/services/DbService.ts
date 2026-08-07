@@ -1,8 +1,11 @@
-// services/DbService.ts
+// thrift-marketplace/services/DbService.ts
 import fs from "fs";
 import path from "path";
+import { ListingRental } from "@/utils/listings";
 
-const DB_PATH = path.join(process.cwd(), "data", "database.json");
+const USERS_PATH = path.join(process.cwd(), "data", "users.json");
+const PRODUCTS_PATH = path.join(process.cwd(), "data", "products.json");
+const BOOKINGS_PATH = path.join(process.cwd(), "data", "booking-requests.json");
 
 export interface StoredListingRecord {
   id: string;
@@ -47,6 +50,10 @@ export interface StoredListingRecord {
   petsAllowed?: boolean;
   visitorsAllowed?: boolean;
   createdAt?: string;
+  rental?: ListingRental | null;
+  deletedAt?: string | null;
+  updatedAt?: string;
+  status?: string;
 }
 
 interface DatabaseSchema {
@@ -56,77 +63,72 @@ interface DatabaseSchema {
 }
 
 class DbService {
-  private ensureDbExists() {
-    if (!fs.existsSync(path.dirname(DB_PATH))) {
-      fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  private readFile<T>(filePath: string, fallback: T): T {
+    try {
+      if (!fs.existsSync(filePath)) return fallback;
+      const content = fs.readFileSync(filePath, "utf-8");
+      return JSON.parse(content) as T;
+    } catch (err) {
+      console.error(`Error reading ${filePath}:`, err);
+      return fallback;
     }
-    if (!fs.existsSync(DB_PATH)) {
-      const initialData: DatabaseSchema = {
-        listings: [],
-        bookingRequests: [],
-        users: [],
-      };
-      fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), "utf-8");
+  }
+
+  private writeFile(filePath: string, data: any): void {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+    } catch (err) {
+      console.error(`Error writing ${filePath}:`, err);
     }
   }
 
   public readDb(): DatabaseSchema {
-    this.ensureDbExists();
-    try {
-      const fileContent = fs.readFileSync(DB_PATH, "utf-8");
-      const parsed = JSON.parse(fileContent);
-      return {
-        listings: Array.isArray(parsed.listings) ? parsed.listings : [],
-        bookingRequests: Array.isArray(parsed.bookingRequests) ? parsed.bookingRequests : [],
-        users: Array.isArray(parsed.users) ? parsed.users : [],
-      };
-    } catch (err) {
-      console.error("Error reading database.json, returning empty state:", err);
-      return { listings: [], bookingRequests: [], users: [] };
-    }
+    return {
+      listings: this.readFile<StoredListingRecord[]>(PRODUCTS_PATH, []),
+      bookingRequests: this.readFile<any[]>(BOOKINGS_PATH, []),
+      users: this.readFile<any[]>(USERS_PATH, []),
+    };
   }
 
   public writeDb(data: DatabaseSchema): void {
-    this.ensureDbExists();
-    try {
-      fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
-    } catch (err) {
-      console.error("Error writing database.json:", err);
-    }
+    this.writeFile(PRODUCTS_PATH, data.listings);
+    this.writeFile(BOOKINGS_PATH, data.bookingRequests);
+    this.writeFile(USERS_PATH, data.users);
   }
 
   public getAllListings(): StoredListingRecord[] {
-    const db = this.readDb();
-    return db.listings;
+    return this.readFile<StoredListingRecord[]>(PRODUCTS_PATH, []);
   }
 
   public getListingById(id: string): StoredListingRecord | null {
-    const db = this.readDb();
-    return db.listings.find((item) => item.id === id) || null;
+    const listings = this.getAllListings();
+    return listings.find((item) => item.id === id) || null;
   }
 
   public saveListing(listing: StoredListingRecord): void {
-    const db = this.readDb();
-    const existingIndex = db.listings.findIndex((item) => item.id === listing.id);
+    const listings = this.getAllListings();
+    const existingIndex = listings.findIndex((item) => item.id === listing.id);
     
     if (existingIndex >= 0) {
-      db.listings[existingIndex] = { ...db.listings[existingIndex], ...listing };
+      listings[existingIndex] = { ...listings[existingIndex], ...listing };
     } else {
-      db.listings.unshift({
+      listings.unshift({
         ...listing,
         createdAt: listing.createdAt || new Date().toISOString(),
       });
     }
 
-    this.writeDb(db);
+    this.writeFile(PRODUCTS_PATH, listings);
   }
 
   public deleteListing(id: string): boolean {
-    const db = this.readDb();
-    const initialLength = db.listings.length;
-    db.listings = db.listings.filter((item) => item.id !== id);
-    if (db.listings.length !== initialLength) {
-      this.writeDb(db);
+    const listings = this.getAllListings();
+    const initialLength = listings.length;
+    const filtered = listings.filter((item) => item.id !== id);
+    if (filtered.length !== initialLength) {
+      this.writeFile(PRODUCTS_PATH, filtered);
       return true;
     }
     return false;
@@ -136,8 +138,7 @@ class DbService {
 export const dbService = new DbService();
 
 export function getUsers() {
-  const db = dbService.readDb();
-  return db.users || [];
+  return dbService.readDb().users;
 }
 
 export function saveUsers(users: any[]) {

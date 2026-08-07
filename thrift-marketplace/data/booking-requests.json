@@ -83,7 +83,7 @@
     "endDate": "2026-08-08",
     "days": 3,
     "totalAmount": 2700,
-    "status": "approved",
+    "status": "cancelled",
     "createdAt": "2026-08-05T12:20:16.977Z",
     "decidedAt": "2026-08-06T22:03:56.700Z",
     "paymentDeadline": "2026-08-07T22:03:56.700Z",
