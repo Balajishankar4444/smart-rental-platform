@@ -1,179 +1,265 @@
-// app/api/auth/products/route.ts
+// app/api/auth/booking-requests/route.ts
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { deriveListingStatus, listingTitle, rentalDays } from '@/utils/listings';
+import { readProducts, writeProducts, toSummary, StoredProduct } from '@/lib/productStore';
+import {
+  BookingRequest,
+  deriveRequestStatus,
+  paymentDeadlineFor,
+} from '@/utils/bookingRequests';
 
-// Define the structure for product listings based on RentIt marketplace architecture
-interface ProductListing {
-  id: string;
-  userId: string;
-  productName: string;
-  category: string;
-  subcategory?: string;
-  brand: string;
-  model?: string;
-  condition: string;
-  age?: string;
-  dailyPrice: number;
-  weeklyPrice?: number;
-  monthlyPrice?: number;
-  securityDeposit: number;
-  lateReturnFee?: number;
-  city: string;
-  state?: string;
-  address?: string;
-  instantBooking: boolean;
-  description: string;
-  usageInstructions?: string;
-  weight?: string;
-  color?: string;
-  dimensions?: string;
-  warranty?: boolean;
-  pickupTime?: string;
-  deliveryAvailable?: boolean;
-  accessoriesIncluded?: string;
-  images: string[];
-  status?: string;
-  createdAt: string;
+const dataFilePath = path.join(process.cwd(), 'data', 'booking-requests.json');
+
+function readRequests(): BookingRequest[] {
+  const dir = path.dirname(dataFilePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dataFilePath)) fs.writeFileSync(dataFilePath, '[]', 'utf8');
+
+  const parsed = JSON.parse(fs.readFileSync(dataFilePath, 'utf8') || '[]');
+  return Array.isArray(parsed) ? parsed : [];
 }
 
-// Path to JSON file storage consistent with the RentIt marketplace architecture
-const DATA_DIR = path.join(process.cwd(), 'data');
-const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
-
-// Ensure data directory and file exist
-function ensureDataStore() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(PRODUCTS_FILE)) {
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify([], null, 2));
-  }
+function writeRequests(requests: BookingRequest[]) {
+  fs.writeFileSync(dataFilePath, JSON.stringify(requests, null, 2), 'utf8');
 }
 
-// Helper to read products from local JSON storage
-function readProducts(): ProductListing[] {
+// Expiry is time-based, so it is applied on every read rather than stored
+function withDerivedStatus(request: BookingRequest): BookingRequest {
+  return { ...request, status: deriveRequestStatus(request) };
+}
+
+function coverImage(product: StoredProduct) {
+  return product.images?.[product.primaryImageIndex || 0] || '';
+}
+
+// GET: every request where the user is the owner or the renter, newest first
+export async function GET(request: Request) {
   try {
-    ensureDataStore();
-    const fileData = fs.readFileSync(PRODUCTS_FILE, 'utf-8');
-    return JSON.parse(fileData);
-  } catch (err) {
-    console.error('Error reading products file:', err);
-    return [];
-  }
-}
+    const userId = new URL(request.url).searchParams.get('userId');
 
-// Helper to write products to local JSON storage
-function writeProducts(products: ProductListing[]) {
-  try {
-    ensureDataStore();
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
-  } catch (err) {
-    console.error('Error writing products file:', err);
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const {
-      userId,
-      productName,
-      category,
-      brand,
-      condition,
-      dailyPrice,
-      securityDeposit,
-      city,
-      description,
-      images,
-    } = body;
-
-    if (!userId || !productName || !category || !dailyPrice || !securityDeposit || !city) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required product listing parameters' },
-        { status: 400 }
-      );
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
     }
 
-    const currentProducts = readProducts();
+    const data = readRequests()
+      .filter((item) => item.ownerId === userId || item.renterId === userId)
+      .map(withDerivedStatus)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-    const newProduct: ProductListing = {
-      id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      userId,
-      productName,
-      category,
-      subcategory: body.subcategory || '',
-      brand: brand || '',
-      model: body.model || '',
-      condition: condition || 'Like New',
-      age: body.age || '',
-      dailyPrice: Number(dailyPrice),
-      weeklyPrice: body.weeklyPrice ? Number(body.weeklyPrice) : undefined,
-      monthlyPrice: body.monthlyPrice ? Number(body.monthlyPrice) : undefined,
-      securityDeposit: Number(securityDeposit),
-      lateReturnFee: body.lateReturnFee ? Number(body.lateReturnFee) : undefined,
-      city,
-      state: body.state || '',
-      address: body.address || '',
-      instantBooking: body.instantBooking ?? true,
-      description,
-      usageInstructions: body.usageInstructions || '',
-      weight: body.weight || '',
-      color: body.color || '',
-      dimensions: body.dimensions || '',
-      warranty: body.warranty ?? true,
-      pickupTime: body.pickupTime || 'Flexible',
-      deliveryAvailable: body.deliveryAvailable ?? true,
-      accessoriesIncluded: body.accessoriesIncluded || '',
-      images: images && images.length > 0 ? images : ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200'],
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
-
-    currentProducts.unshift(newProduct);
-    writeProducts(currentProducts);
-
-    return NextResponse.json({
-      success: true,
-      data: newProduct,
-    });
-  } catch (err) {
-    console.error('Error creating product listing:', err);
+    return NextResponse.json({ success: true, data }, { status: 200 });
+  } catch (error) {
+    console.error('Error reading booking requests:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Failed to fetch booking requests' },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: Request) {
+// POST: a renter asks the owner for a set of dates. No money moves yet.
+export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const category = searchParams.get('category');
-    const city = searchParams.get('city');
+    const { listingId, renterId, renterName, startDate, endDate } = await request.json();
 
-    let filtered = readProducts();
-
-    if (userId) {
-      filtered = filtered.filter((p) => p.userId === userId);
-    }
-    if (category) {
-      filtered = filtered.filter((p) => p.category.toLowerCase() === category.toLowerCase());
-    }
-    if (city) {
-      filtered = filtered.filter((p) => p.city.toLowerCase().includes(city.toLowerCase()));
+    if (!listingId || !renterId || !startDate || !endDate) {
+      return NextResponse.json(
+        { success: false, error: 'listingId, renterId, startDate and endDate are required' },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: filtered,
-    });
-  } catch (err) {
-    console.error('Error fetching product listings:', err);
+    const product = readProducts().find((item) => item.id === listingId);
+
+    if (!product || deriveListingStatus(product) !== 'active') {
+      return NextResponse.json(
+        { success: false, error: 'Listing is not available for booking' },
+        { status: 409 }
+      );
+    }
+
+    if (product.userId === renterId) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot rent your own listing' },
+        { status: 400 }
+      );
+    }
+
+    const requests = readRequests();
+    const alreadyOpen = requests
+      .map(withDerivedStatus)
+      .some(
+        (item) =>
+          item.listingId === listingId &&
+          item.renterId === renterId &&
+          (item.status === 'pending' || item.status === 'approved')
+      );
+
+    if (alreadyOpen) {
+      return NextResponse.json(
+        { success: false, error: 'You already have an open request for this listing' },
+        { status: 409 }
+      );
+    }
+
+    const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
+    const dailyPrice = Number(product.dailyPrice) || 0;
+
+    const bookingRequest: BookingRequest = {
+      id: `req_${Date.now()}`,
+      listingId,
+      listingTitle: listingTitle({ productName: String(product.productName || '') }),
+      listingImage: coverImage(product),
+      ownerId: product.userId,
+      renterId,
+      renterName: renterName || 'A renter',
+      startDate,
+      endDate,
+      days,
+      totalAmount: dailyPrice * days,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      decidedAt: null,
+      paymentDeadline: null,
+      paidAt: null,
+    };
+
+    requests.push(bookingRequest);
+    writeRequests(requests);
+
+    return NextResponse.json({ success: true, data: bookingRequest }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating booking request:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Failed to create booking request' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: owner approves/declines, renter pays or cancels
+export async function PATCH(request: Request) {
+  try {
+    const { id, userId, action } = await request.json();
+
+    if (!id || !userId || !['approve', 'decline', 'pay', 'cancel'].includes(action)) {
+      return NextResponse.json(
+        { success: false, error: 'id, userId and a valid action are required' },
+        { status: 400 }
+      );
+    }
+
+    const requests = readRequests();
+    const bookingRequest = requests.find((item) => item.id === id);
+
+    if (!bookingRequest) {
+      return NextResponse.json({ success: false, error: 'Request not found' }, { status: 404 });
+    }
+
+    const status = deriveRequestStatus(bookingRequest);
+    const isOwner = bookingRequest.ownerId === userId;
+    const isRenter = bookingRequest.renterId === userId;
+
+    if (action === 'approve' || action === 'decline') {
+      if (!isOwner) {
+        return NextResponse.json(
+          { success: false, error: 'Only the owner can decide on this request' },
+          { status: 403 }
+        );
+      }
+
+      if (status !== 'pending') {
+        return NextResponse.json(
+          { success: false, error: 'This request has already been decided' },
+          { status: 409 }
+        );
+      }
+
+      const decidedAt = new Date().toISOString();
+      bookingRequest.decidedAt = decidedAt;
+
+      if (action === 'approve') {
+        bookingRequest.status = 'approved';
+        bookingRequest.paymentDeadline = paymentDeadlineFor(decidedAt, bookingRequest.startDate);
+      } else {
+        bookingRequest.status = 'declined';
+      }
+    } else if (action === 'cancel') {
+      if (!isRenter) {
+        return NextResponse.json(
+          { success: false, error: 'Only the renter can cancel this request' },
+          { status: 403 }
+        );
+      }
+
+      if (status !== 'pending' && status !== 'approved') {
+        return NextResponse.json(
+          { success: false, error: 'This request can no longer be cancelled' },
+          { status: 409 }
+        );
+      }
+
+      bookingRequest.status = 'cancelled';
+    } else {
+      if (!isRenter) {
+        return NextResponse.json(
+          { success: false, error: 'Only the renter can pay for this request' },
+          { status: 403 }
+        );
+      }
+
+      if (status === 'expired') {
+        return NextResponse.json(
+          { success: false, error: 'The payment window has expired' },
+          { status: 409 }
+        );
+      }
+
+      if (status !== 'approved') {
+        return NextResponse.json(
+          { success: false, error: 'This request is not approved for payment' },
+          { status: 409 }
+        );
+      }
+
+      // Payment is what actually starts the rental, so the listing flips here
+      const products = readProducts();
+      const product = products.find((item) => item.id === bookingRequest.listingId);
+
+      if (!product || deriveListingStatus(product) !== 'active') {
+        return NextResponse.json(
+          { success: false, error: 'Listing is no longer available' },
+          { status: 409 }
+        );
+      }
+
+      product.rental = {
+        renterId: bookingRequest.renterId,
+        startDate: bookingRequest.startDate,
+        endDate: bookingRequest.endDate,
+        bookedAt: new Date().toISOString(),
+      };
+      writeProducts(products);
+
+      bookingRequest.status = 'paid';
+      bookingRequest.paidAt = new Date().toISOString();
+
+      writeRequests(requests);
+
+      return NextResponse.json(
+        { success: true, data: bookingRequest, listing: toSummary(product) },
+        { status: 200 }
+      );
+    }
+
+    writeRequests(requests);
+
+    return NextResponse.json({ success: true, data: bookingRequest }, { status: 200 });
+  } catch (error) {
+    console.error('Error updating booking request:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to update booking request' },
       { status: 500 }
     );
   }
