@@ -30,11 +30,11 @@
     "endDate": "2026-08-27",
     "days": 1,
     "totalAmount": 900,
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-08-07T17:33:12.184Z",
-    "decidedAt": null,
+    "decidedAt": "2026-08-07T17:59:31.465Z",
     "approvalDeadline": "2026-08-08T17:33:12.184Z",
-    "paymentDeadline": null,
+    "paymentDeadline": "2026-08-08T17:59:31.465Z",
     "paidAt": null
   },
   {

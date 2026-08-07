@@ -600,21 +600,21 @@ function ViewBookingContent() {
                               </button>
                             </div>
                           </div>
-                        ) : liveStatus === "paid" ? (
-                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 space-y-0.5">
-                            <p className="text-[11px] font-bold text-emerald-700">
-                              ✓ Booking confirmed — payment received
-                            </p>
-                            <p className="text-[11px] text-emerald-600">
-                              {formatDay(request.startDate)} – {formatDay(request.endDate)} · {request.renterName}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-[11px] font-semibold text-slate-500">
-                            {BOOKING_REQUEST_LABELS[liveStatus]}
-                            {liveStatus === "approved" &&
-                              ` · pay by ${formatDeadline(request.paymentDeadline)}`}
-                          </p>
+                        ) : liveStatus === "paid" ? (  
+                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-0.5">  
+                            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">  
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Booking confirmed — payment received  
+                            </p>  
+                            <p className="text-[11px] text-emerald-600">  
+                              {request.renterName} · {formatDay(request.startDate)} – {formatDay(request.endDate)} · ₹{request.totalAmount.toLocaleString("en-IN")}  
+                            </p>  
+                          </div>  
+                        ) : (  
+                          <p className="text-[11px] font-semibold text-slate-500">  
+                            {BOOKING_REQUEST_LABELS[liveStatus]}  
+                            {liveStatus === "approved" &&  
+                              ` · pay by ${formatDeadline(request.paymentDeadline)}`}  
+                          </p>  
                         )}
                       </div>
                     );
@@ -638,16 +638,18 @@ function ViewBookingContent() {
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
                         <RequestSummary request={request} caption="You requested" />
 
-                        {liveStatus === "paid" ? (
-                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 space-y-0.5">
-                            <p className="text-[11px] font-bold text-emerald-700">
-                              ✓ Booking confirmed — payment complete
-                            </p>
-                            <p className="text-[11px] text-emerald-600">
-                              {formatDay(request.startDate)} – {formatDay(request.endDate)}
-                            </p>
-                          </div>
-                        ) : (
+                        {liveStatus === "paid" && (  
+                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-0.5">  
+                            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">  
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Booking confirmed — payment complete  
+                            </p>  
+                            <p className="text-[11px] text-emerald-600">  
+                              {formatDay(request.startDate)} – {formatDay(request.endDate)} · ₹{request.totalAmount.toLocaleString("en-IN")}  
+                            </p>  
+                          </div>  
+                        )}
+
+                        {liveStatus !== "paid" && (
                           <>
                             <p className="text-[11px] font-semibold text-slate-500">
                               {BOOKING_REQUEST_LABELS[liveStatus]}
