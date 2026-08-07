@@ -58,7 +58,6 @@ const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
   deleted: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
-// --- Ripple Button Component ---
 interface RippleButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   className?: string;
@@ -104,7 +103,6 @@ const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", o
   );
 };
 
-// --- Mock Metrics Data ---
 const rentalMetrics = (rentals: ListingSummary[]) => {
   const totalSpend = rentals.reduce(
     (sum, item) =>
@@ -205,18 +203,12 @@ function ViewBookingContent() {
     tabParam === "rentals" || tabParam === "notifications" ? tabParam : "listings"
   );
   
-  // Ticking clock state for live timer countdowns
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const {
     incoming,
     outgoing,
     actionableCount,
     act: actOnRequest,
+    now,
   } = useBookingRequests();
 
   const earnings = incoming
@@ -303,7 +295,6 @@ function ViewBookingContent() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 flex-1 w-full space-y-8">
         
-        {/* Header & Tab Navigation Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/60 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
@@ -353,7 +344,6 @@ function ViewBookingContent() {
           </div>
         </div>
 
-        {/* --- TAB 1: MY LISTINGS --- */}
         {activeTab === "listings" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -457,7 +447,6 @@ function ViewBookingContent() {
           </div>
         )}
 
-        {/* --- TAB 2: MY RENTALS --- */}
         {activeTab === "rentals" && (
           <div className="space-y-6">
             <div>
@@ -546,7 +535,6 @@ function ViewBookingContent() {
           </div>
         )}
 
-        {/* --- TAB 3: NOTIFICATIONS --- */}
         {activeTab === "notifications" && (
           <div className="space-y-6">
             <div>
@@ -575,6 +563,9 @@ function ViewBookingContent() {
 
                         {liveStatus === "pending" ? (
                           <div className="space-y-2">
+                            <p className="text-[11px] font-semibold text-amber-600">
+                              Approve within {formatCountdown(request.approvalDeadline, now)} or it lapses.
+                            </p>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => actOnRequest(request.id, "approve")}
@@ -621,6 +612,9 @@ function ViewBookingContent() {
 
                         <p className="text-[11px] font-semibold text-slate-500">
                           {BOOKING_REQUEST_LABELS[liveStatus]}
+                          {liveStatus === "pending" &&
+                            request.approvalDeadline &&
+                            ` · host has ${formatCountdown(request.approvalDeadline, now)} to approve`}
                         </p>
 
                         {liveStatus === "approved" && (
@@ -656,7 +650,6 @@ function ViewBookingContent() {
 
       </main>
 
-      {/* --- DELETE CONFIRMATION MODAL --- */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xl max-w-sm w-full p-6 space-y-4 relative animate-scaleUp">

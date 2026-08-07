@@ -25,8 +25,8 @@ export interface BookingRequest {
   status: BookingRequestStatus;
   createdAt: string;
   decidedAt?: string | null;
+  approvalDeadline?: string | null; // NEW: host must approve before this
   paymentDeadline?: string | null;
-  approvalDeadline?: string | null;
   paidAt?: string | null;
 }
 
@@ -40,17 +40,20 @@ export const BOOKING_REQUEST_LABELS: Record<BookingRequestStatus, string> = {
 };
 
 export const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
-export const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours for host to approve
 
 export function paymentDeadlineFor(decidedAt: string) {
   const time = new Date(decidedAt).getTime();
   return Number.isNaN(time) ? null : new Date(time + PAYMENT_WINDOW_MS).toISOString();
 }
 
-/** 24-hour window for the host to approve a request from creation. */
-export function approvalDeadlineFor(createdAt: string) {
-  const time = new Date(createdAt).getTime();
-  return Number.isNaN(time) ? null : new Date(time + APPROVAL_WINDOW_MS).toISOString();
+export function approvalDeadlineFor(createdAt: string, startDate: string) {
+  const created = new Date(createdAt).getTime();
+  const start = new Date(startDate).getTime();
+  const fullWindow = created + PAYMENT_WINDOW_MS;
+  if (!Number.isNaN(start) && start > created && start < fullWindow) {
+    return new Date(start).toISOString();
+  }
+  return new Date(fullWindow).toISOString();
 }
 
 export function deriveRequestStatus(
@@ -60,8 +63,10 @@ export function deriveRequestStatus(
   if (request.status === "pending" && request.approvalDeadline) {
     return new Date(request.approvalDeadline).getTime() < now ? "expired" : "pending";
   }
-  if (request.status !== "approved" || !request.paymentDeadline) return request.status;
-  return new Date(request.paymentDeadline).getTime() < now ? "expired" : "approved";
+  if (request.status === "approved" && request.paymentDeadline) {
+    return new Date(request.paymentDeadline).getTime() < now ? "expired" : "approved";
+  }
+  return request.status;
 }
 
 export async function fetchBookingRequests(userId: string): Promise<BookingRequest[]> {
@@ -108,17 +113,12 @@ export function formatDeadline(isoString?: string | null) {
   });
 }
 
-/** Live countdown from now to the deadline, e.g. "23h 14m 09s" or "Expired". */  
-export function formatCountdown(deadline?: string | null, now = Date.now()): string {  
-  if (!deadline) return "";  
-  const remaining = new Date(deadline).getTime() - now;  
-  if (Number.isNaN(remaining)) return "";  
-  if (remaining <= 0) return "Expired";  
-  
-  const totalSeconds = Math.floor(remaining / 1000);  
-  const h = Math.floor(totalSeconds / 3600);  
-  const m = Math.floor((totalSeconds % 3600) / 60);  
-  const s = totalSeconds % 60;  
-  const pad = (n: number) => String(n).padStart(2, "0");  
-  return `${h}h ${pad(m)}m ${pad(s)}s`;  
+export function formatCountdown(deadline?: string | null, now = Date.now()): string {
+  if (!deadline) return "";
+  const diff = new Date(deadline).getTime() - now;
+  if (Number.isNaN(diff) || diff <= 0) return "Expired";
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor((diff % 3_600_000) / 60_000);
+  const s = Math.floor((diff % 60_000) / 1000);
+  return `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
 }

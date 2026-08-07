@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server';
 import { dbService } from '@/services/DbService';
 import { deriveListingStatus, listingTitle, rentalDays } from '@/utils/listings';
 import {
+  BookingRequest,
   deriveRequestStatus,
   paymentDeadlineFor,
   approvalDeadlineFor,
 } from '@/utils/bookingRequests';
 
-// Helper to apply derived status
 function withDerivedStatus(request: any): any {
   return { ...request, status: deriveRequestStatus(request) };
 }
@@ -33,7 +33,6 @@ export async function GET(request: Request) {
     const listings = db.listings || [];
     const validListingIds = new Set(listings.map((item: any) => item.id));
 
-    // Filter out orphaned booking requests where the listing no longer exists
     let requests = (db.bookingRequests || []).filter((item: any) => validListingIds.has(item.listingId));
 
     if (userId) {
@@ -108,8 +107,9 @@ export async function POST(request: Request) {
 
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
+    const createdAt = new Date().toISOString();
 
-    const bookingRequest = {
+    const bookingRequest: BookingRequest = {
       id: `req_${Date.now()}`,
       listingId,
       listingTitle: listingTitle({ productName: String(product.productName || '') }),
@@ -122,9 +122,9 @@ export async function POST(request: Request) {
       days,
       totalAmount: dailyPrice * days,
       status: 'pending',
-      createdAt: new Date().toISOString(),
+      createdAt,
       decidedAt: null,
-      approvalDeadline: approvalDeadlineFor(startDate),
+      approvalDeadline: approvalDeadlineFor(createdAt, startDate),
       paymentDeadline: null,
       paidAt: null,
     };
@@ -165,7 +165,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Request not found' }, { status: 404 });
     }
 
-    // Securely compute status using the latest clock time to enforce expirations server-side
     const status = deriveRequestStatus(bookingRequest);
     const isOwner = bookingRequest.ownerId === userId;
     const isRenter = bookingRequest.renterId === userId;
@@ -211,7 +210,6 @@ export async function PATCH(request: Request) {
 
       bookingRequest.status = 'cancelled';
     } else {
-      // 'pay' action check
       if (!isRenter) {
         return NextResponse.json(
           { success: false, error: 'Only the renter can pay for this request' },
