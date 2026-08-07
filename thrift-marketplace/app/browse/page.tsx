@@ -13,6 +13,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { CITIES } from "@/data/cities";
 import {
   fetchListings,
   listingDailyPrice,
@@ -57,6 +58,25 @@ const PLACEHOLDERS = [
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+// Haversine distance in km between two lat/lng points  
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {  
+  const R = 6371;  
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;  
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;  
+  const a =  
+    Math.sin(dLat / 2) ** 2 +  
+    Math.cos((lat1 * Math.PI) / 180) *  
+      Math.cos((lat2 * Math.PI) / 180) *  
+      Math.sin(dLon / 2) ** 2;  
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));  
+}  
+  
+// Look up the searched city's center from data/cities.ts  
+function cityCenter(cityLabel: string) {  
+  const name = cityLabel.split(",")[0].trim().toLowerCase();  
+  return CITIES.find((c) => c.name.toLowerCase() === name) || null;  
+}
+
 const formatDateString = (year: number, month: number, day: number) => {
   const m = String(month + 1).padStart(2, "0");
   const d = String(day).padStart(2, "0");
@@ -81,6 +101,8 @@ function SearchContent() {
   const [isFocused, setIsFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [priceRange, setPriceRange] = useState(MAX_PRICE);
+  const [maxDistance, setMaxDistance] = useState(50); // km
+  const [minGuests, setMinGuests] = useState(0);
   const [instantBookOnly, setInstantBookOnly] = useState(false);
   const [sortBy, setSortBy] = useState("recommended");
   
@@ -243,7 +265,14 @@ function SearchContent() {
       const matchesPrice = priceRange >= MAX_PRICE || listingDailyPrice(item) <= priceRange;
       const matchesInstant = !instantBookOnly || item.instantBooking;
 
-      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant;
+      const center = cityCenter(selectedCity);
+      const km = center && item.latitude && item.longitude
+        ? distanceKm(center.latitude, center.longitude, Number(item.latitude), Number(item.longitude))
+        : null;
+      const matchesDistance =
+        selectedCity === ALL_LOCATIONS || km === null || km <= maxDistance;
+
+      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesDistance;
     })
     .sort((a, b) => {
       if (sortBy === "price-low") return listingDailyPrice(a) - listingDailyPrice(b);
@@ -541,6 +570,7 @@ function SearchContent() {
                 onClick={() => {
                   setSelectedCategory("All Categories");
                   setPriceRange(MAX_PRICE);
+                  setMaxDistance(50);
                   setInstantBookOnly(false);
                   setSelectedCity(ALL_LOCATIONS);
                   setSearchQuery("");
@@ -570,6 +600,22 @@ function SearchContent() {
                 <span>€50</span>
                 <span>€2,000+</span>
               </div>
+            </div>
+
+            {/* Max Distance Slider */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-slate-800">Max distance from centre</label>
+                <span className="text-sm font-extrabold text-[#2563EB]">{maxDistance} km</span>
+              </div>
+              <input 
+                type="range" 
+                min="1" 
+                max="50" 
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
+                className="w-full accent-[#2563EB] cursor-pointer"
+              />
             </div>
 
             {/* Trust & Booking Toggles */}
@@ -617,6 +663,7 @@ function SearchContent() {
                   onClick={() => {
                     setSelectedCategory("All Categories");
                     setPriceRange(MAX_PRICE);
+                    setMaxDistance(50);
                     setInstantBookOnly(false);
                     setSelectedCity(ALL_LOCATIONS);
                     setSearchQuery("");
@@ -628,77 +675,95 @@ function SearchContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredListings.map((item) => (
-                  <motion.div 
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                    onClick={() => { window.location.href = `/listings/${item.id}`; }}
-                    className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group"
-                  >
-                    <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-                      <img 
-                        src={listingImage(item)} 
-                        alt={listingTitle(item)} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute top-3 left-3 flex flex-col gap-1">
-                        {item.instantBooking && (
-                          <span className="bg-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
-                            <Zap className="w-3 h-3 fill-current" /> Instant Book
-                          </span>
-                        )}
-                      </div>
-                      <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-[#2563EB]" /> {listingLocation(item)}
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(item.id);
-                        }}
-                        aria-label={isFavorite(item.id) ? "Remove from favorites" : "Add to favorites"}
-                        aria-pressed={isFavorite(item.id)}
-                        className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md cursor-pointer"
-                      >
-                        <Heart
-                          className={`w-4 h-4 ${
-                            isFavorite(item.id) ? "fill-red-500 text-red-500" : "text-slate-600"
-                          }`}
+                {filteredListings.map((item) => {
+                  const center = cityCenter(selectedCity);
+                  const km =
+                    center && item.latitude && item.longitude
+                      ? distanceKm(center.latitude, center.longitude, Number(item.latitude), Number(item.longitude))
+                      : null;
+
+                  return (
+                    <motion.div 
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => { window.location.href = `/listings/${item.id}`; }}
+                      className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group"
+                    >
+                      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                        <img 
+                          src={listingImage(item)} 
+                          alt={listingTitle(item)} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                      </button>
-                    </div>
-
-                    <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
-                            {item.category}
-                          </span>
-                          <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                            <ShieldCheck className="w-3.5 h-3.5" /> Available
-                          </span>
+                        <div className="absolute top-3 left-3 flex flex-col gap-1">
+                          {item.instantBooking && (
+                            <span className="bg-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                              <Zap className="w-3 h-3 fill-current" /> Instant Book
+                            </span>
+                          )}
                         </div>
-
-                        <h3 className="font-bold text-slate-900 text-base line-clamp-2 group-hover:text-[#2563EB] transition-colors">
-                          {listingTitle(item)}
-                        </h3>
+                        <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-[#2563EB]" /> {listingLocation(item)}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(item.id);
+                          }}
+                          aria-label={isFavorite(item.id) ? "Remove from favorites" : "Add to favorites"}
+                          aria-pressed={isFavorite(item.id)}
+                          className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md cursor-pointer"
+                        >
+                          <Heart
+                            className={`w-4 h-4 ${
+                              isFavorite(item.id) ? "fill-red-500 text-red-500" : "text-slate-600"
+                            }`}
+                          />
+                        </button>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                        <div>
-                          <span className="text-lg font-extrabold text-[#2563EB]">€{listingDailyPrice(item)}</span>
-                          <span className="text-xs text-slate-500"> / night</span>
+                      <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
+                              {item.category}
+                            </span>
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                              <ShieldCheck className="w-3.5 h-3.5" /> Available
+                            </span>
+                          </div>
+
+                          <h3 className="font-bold text-slate-900 text-base line-clamp-2 group-hover:text-[#2563EB] transition-colors">
+                            {listingTitle(item)}
+                          </h3>
+
+                          <div className="flex items-center gap-1 text-xs text-slate-500">  
+                            <MapPin className="w-3.5 h-3.5 text-[#2563EB]" />  
+                            <span>{item.city}</span>  
+                            {km !== null && (  
+                              <span className="font-semibold text-slate-700 truncate">  
+                                · {km.toFixed(1)} km from {selectedCity.split(",")[0]} centre  
+                              </span>  
+                            )}  
+                          </div>
                         </div>
-                        <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">
-                          Book Now
-                        </span>
+
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <div>
+                            <span className="text-lg font-extrabold text-[#2563EB]">€{listingDailyPrice(item)}</span>
+                            <span className="text-xs text-slate-500"> / night</span>
+                          </div>
+                          <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">
+                            Book Now
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </div>

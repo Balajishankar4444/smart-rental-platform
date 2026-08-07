@@ -40,6 +40,8 @@ export interface ListingSummary {
   createdAt?: string;
   ownerName?: string;
   ownerAvatar?: string;
+  latitude?: string;   // NEW  
+  longitude?: string;
 }
 
 const FALLBACK_IMAGE =
