@@ -4,7 +4,7 @@ import { getUsers, saveUsers } from '@/services/DbService';
 import { User } from '@/types/user';
 
 // The fields the profile screen owns; everything else on the user record is left alone
-const EDITABLE_FIELDS = ['fullName', 'phone', 'bio', 'avatar', 'address', 'city', 'state'] as const;
+const EDITABLE_FIELDS = ['fullName', 'phone', 'bio', 'avatar', 'address', 'city', 'state', 'dob', 'age'] as const;
 
 type EditableField = (typeof EDITABLE_FIELDS)[number];
 
@@ -18,9 +18,11 @@ export interface ProfilePayload {
   address: string;
   city: string;
   state: string;
+  dob: string;
+  age: string;
 }
 
-function toPayload(user: User): ProfilePayload {
+function toPayload(user: User & { dob?: string; age?: string }): ProfilePayload {
   return {
     id: user.id,
     fullName: user.fullName || '',
@@ -31,6 +33,8 @@ function toPayload(user: User): ProfilePayload {
     address: user.address || '',
     city: user.city || '',
     state: user.state || '',
+    dob: user.dob || '',
+    age: user.age || '',
   };
 }
 
@@ -78,7 +82,7 @@ export async function PUT(request: Request) {
       if (typeof body[field] === 'string') updates[field] = body[field];
     }
 
-    let saved: User;
+    let saved: User & { dob?: string; age?: string };
 
     if (existing) {
       Object.assign(existing, updates, { updatedAt: now });
@@ -98,8 +102,10 @@ export async function PUT(request: Request) {
         address: '',
         city: '',
         state: '',
+        dob: '',
+        age: '',
         ...updates,
-      } as User;
+      } as User & { dob?: string; age?: string };
       users.push(saved);
     }
 

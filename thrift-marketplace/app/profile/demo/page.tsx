@@ -6,10 +6,10 @@ import {
   Camera,
   Check,
   Heart,
-  IndianRupee,
-  Package,
   Plus,
-  ShoppingBag,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -31,21 +31,21 @@ import {
 interface ProfileForm {
   fullName: string;
   phone: string;
+  dob: string;
   bio: string;
   avatar: string;
   address: string;
   city: string;
-  state: string;
 }
 
 const EMPTY_FORM: ProfileForm = {
   fullName: "",
   phone: "",
+  dob: "",
   bio: "",
   avatar: "",
   address: "",
   city: "",
-  state: "",
 };
 
 const formatDay = (value?: string) => {
@@ -55,6 +55,163 @@ const formatDay = (value?: string) => {
     ? value
     : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
+
+const calculateAge = (dobString: string): number | null => {
+  if (!dobString) return null;
+  const today = new Date();
+  const birthDate = new Date(dobString);
+  if (Number.isNaN(birthDate.getTime())) return null;
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+};
+
+// Custom Clean Calendar Component matching UI Theme
+function CustomDatePicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (dateStr: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedDate = value ? new Date(value) : null;
+  const [viewDate, setViewDate] = useState<Date>(
+    selectedDate && !Number.isNaN(selectedDate.getTime()) ? selectedDate : new Date(2000, 0, 1)
+  );
+
+  useEffect(() => {
+    if (selectedDate && !Number.isNaN(selectedDate.getTime())) {
+      setViewDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const prevMonth = () => {
+    setViewDate(new Date(year, month - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setViewDate(new Date(year, month + 1, 1));
+  };
+
+  const handleSelectDay = (day: number) => {
+    const paddedMonth = String(month + 1).padStart(2, "0");
+    const paddedDay = String(day).padStart(2, "0");
+    const dateStr = `${year}-${paddedMonth}-${paddedDay}`;
+    onChange(dateStr);
+    setIsOpen(false);
+  };
+
+  const displayValue = selectedDate && !Number.isNaN(selectedDate.getTime())
+    ? selectedDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : "Select date of birth";
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus-within:border-blue-500 transition-all bg-white cursor-pointer flex items-center justify-between"
+      >
+        <span className={value ? "text-slate-900 font-medium" : "text-slate-400"}>
+          {displayValue}
+        </span>
+        <CalendarIcon className="w-4 h-4 text-slate-400" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl border border-slate-200/80 shadow-xl p-4 w-72 animate-fadeIn">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-800">
+              {monthNames[month]} {year}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 mb-2 uppercase">
+            <span>Su</span>
+            <span>Mo</span>
+            <span>Tu</span>
+            <span>We</span>
+            <span>Th</span>
+            <span>Fr</span>
+            <span>Sa</span>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 text-center text-xs">
+            {Array.from({ length: firstDayIndex }).map((_, i) => (
+              <div key={`empty-${i}`} />
+            ))}
+
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const dayNum = i + 1;
+              const paddedMonth = String(month + 1).padStart(2, "0");
+              const paddedDay = String(dayNum).padStart(2, "0");
+              const currentStr = `${year}-${paddedMonth}-${paddedDay}`;
+              const isSelected = value === currentStr;
+
+              return (
+                <button
+                  key={dayNum}
+                  type="button"
+                  onClick={() => handleSelectDay(dayNum)}
+                  className={`h-8 w-8 rounded-xl flex items-center justify-center font-medium transition-colors cursor-pointer mx-auto ${
+                    isSelected
+                      ? "bg-blue-600 text-white font-bold shadow-xs"
+                      : "hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {dayNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProfileContent() {
   const { user, updateUser } = useAuth();
@@ -68,7 +225,6 @@ function ProfileContent() {
   const [savedAt, setSavedAt] = useState(0);
   const [error, setError] = useState("");
 
-  // Saved profile fields come from the backend; name/email fall back to the session
   useEffect(() => {
     if (!user) return;
 
@@ -83,10 +239,10 @@ function ProfileContent() {
           fullName: profile?.fullName || user.name || "",
           avatar: profile?.avatar || user.avatar || "",
           phone: profile?.phone || "",
+          dob: profile?.dob || "",
           bio: profile?.bio || "",
           address: profile?.address || "",
           city: profile?.city || "",
-          state: profile?.state || "",
         });
       })
       .catch((err) => console.error("Failed to load profile", err));
@@ -156,24 +312,13 @@ function ProfileContent() {
     }
   };
 
-  const earnings = incoming
-    .filter((request) => request.status === "paid")
-    .reduce((sum, request) => sum + request.totalAmount, 0);
-  const spend = outgoing
-    .filter((request) => request.status === "paid")
-    .reduce((sum, request) => sum + request.totalAmount, 0);
   const pendingForMe = incoming.filter((request) => request.status === "pending").length;
 
   const recentActivity: BookingRequest[] = [...incoming, ...outgoing]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 5);
 
-  const stats = [
-    { label: "Listings", value: String(listings.length), icon: Package },
-    { label: "Items you rent", value: String(rentals.length), icon: ShoppingBag },
-    { label: "Earned", value: `₹${earnings.toLocaleString("en-IN")}`, icon: IndianRupee },
-    { label: "Spent", value: `₹${spend.toLocaleString("en-IN")}`, icon: IndianRupee },
-  ];
+  const userAge = calculateAge(form.dob);
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans text-slate-900 flex flex-col">
@@ -183,21 +328,8 @@ function ProfileContent() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Your profile</h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            Details renters and owners see, plus a summary of your rental activity.
+            Manage your personal details and view your rental activity summary.
           </p>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4"
-            >
-              <stat.icon className="w-4 h-4 text-blue-600" />
-              <p className="text-lg font-bold mt-2">{stat.value}</p>
-              <p className="text-[11px] text-slate-500">{stat.label}</p>
-            </div>
-          ))}
         </div>
 
         <form
@@ -213,13 +345,15 @@ function ProfileContent() {
                   className="h-16 w-16 rounded-2xl object-cover border border-slate-200"
                 />
               ) : (
-                <div className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-200" />
+                <div className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 font-bold text-lg">
+                  {form.fullName ? form.fullName.charAt(0).toUpperCase() : "?"}
+                </div>
               )}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Change profile photo"
-                className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md cursor-pointer"
+                className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-blue-700 transition-colors"
               >
                 <Camera className="h-3.5 w-3.5" />
               </button>
@@ -233,7 +367,14 @@ function ProfileContent() {
             </div>
 
             <div className="min-w-0">
-              <p className="text-sm font-bold">{form.fullName || user?.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold truncate">{form.fullName || user?.name}</p>
+                {userAge !== null && (
+                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold text-[10px] border border-blue-100">
+                    {userAge} yrs old
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 truncate">{user?.email}</p>
             </div>
           </div>
@@ -246,31 +387,35 @@ function ProfileContent() {
               <input
                 value={form.fullName}
                 onChange={(event) => handleChange("fullName", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                required
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
               />
             </label>
 
             <label className="space-y-1.5">
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                Phone
+                Phone number
               </span>
               <input
                 value={form.phone}
                 onChange={(event) => handleChange("phone", event.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
               />
             </label>
 
-            <label className="space-y-1.5 sm:col-span-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                Pickup address
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 flex items-center justify-between">
+                <span>Date of Birth</span>
+                {userAge !== null && (
+                  <span className="text-blue-600 font-semibold lowercase">
+                    {userAge} years old
+                  </span>
+                )}
               </span>
-              <input
-                value={form.address}
-                onChange={(event) => handleChange("address", event.target.value)}
-                placeholder="Where renters collect your items"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+              <CustomDatePicker
+                value={form.dob}
+                onChange={(dateStr) => handleChange("dob", dateStr)}
               />
             </label>
 
@@ -281,49 +426,51 @@ function ProfileContent() {
               <input
                 value={form.city}
                 onChange={(event) => handleChange("city", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
-              />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                State
-              </span>
-              <input
-                value={form.state}
-                onChange={(event) => handleChange("state", event.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
+                placeholder="e.g. Mumbai"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
               />
             </label>
 
             <label className="space-y-1.5 sm:col-span-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                About you
+                Address
+              </span>
+              <input
+                value={form.address}
+                onChange={(event) => handleChange("address", event.target.value)}
+                placeholder="Where renters collect items or your location"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
+              />
+            </label>
+
+            <label className="space-y-1.5 sm:col-span-2">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                About you / Bio
               </span>
               <textarea
                 value={form.bio}
                 onChange={(event) => handleChange("bio", event.target.value)}
                 rows={3}
-                placeholder="A line or two about the gear you share"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 resize-none"
+                placeholder="A line or two about yourself or the gear you share"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all resize-none"
               />
             </label>
           </div>
 
           {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition-colors cursor-pointer disabled:opacity-50"
+              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
             >
               {isSaving ? "Saving..." : "Save changes"}
             </button>
 
             {savedAt > 0 && !isSaving && (
-              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" /> Saved
+              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 animate-fadeIn">
+                <Check className="w-3.5 h-3.5" /> Saved successfully
               </span>
             )}
           </div>
@@ -335,7 +482,7 @@ function ProfileContent() {
               <h2 className="text-sm font-bold">Rental activity</h2>
               <Link
                 href="/dashboard/view-booking?tab=notifications"
-                className="text-[11px] font-semibold text-blue-600"
+                className="text-[11px] font-semibold text-blue-600 hover:underline"
               >
                 {pendingForMe > 0 ? `${pendingForMe} to review` : "View all"}
               </Link>
@@ -371,7 +518,7 @@ function ProfileContent() {
               <h2 className="text-sm font-bold">Your items</h2>
               <Link
                 href="/dashboard/view-booking"
-                className="text-[11px] font-semibold text-blue-600"
+                className="text-[11px] font-semibold text-blue-600 hover:underline"
               >
                 Manage
               </Link>
@@ -382,7 +529,7 @@ function ProfileContent() {
                 <p className="text-xs text-slate-500">You have not listed anything yet.</p>
                 <Link
                   href="/list-item"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline"
                 >
                   <Plus className="w-3.5 h-3.5" /> List an item
                 </Link>
@@ -409,12 +556,14 @@ function ProfileContent() {
               ))
             )}
 
-            <Link
-              href="/saved"
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 pt-1"
-            >
-              <Heart className="w-3.5 h-3.5" /> Your favorites
-            </Link>
+            <div className="pt-1">
+              <Link
+                href="/saved"
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+              >
+                <Heart className="w-3.5 h-3.5" /> Your favorites
+              </Link>
+            </div>
           </div>
         </div>
       </main>
