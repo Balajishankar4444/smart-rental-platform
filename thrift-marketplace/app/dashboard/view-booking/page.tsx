@@ -44,10 +44,10 @@ import {
 } from "@/utils/listings";
 
 const formatDay = (value?: string) => {
-  if (!value) return "4th - 19th";
+  if (!value) return "7th - 22nd";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
-    ? "4th - 19th"
+    ? "7th - 22nd"
     : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
 
@@ -208,7 +208,7 @@ function RequestSummary({ request, caption }: { request: BookingRequest; caption
         <p className="text-[11px] text-slate-400">{caption}</p>
         <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
         <p className="text-[11px] text-slate-500">
-          4th - 19th · {nights} nights · ₹{calculatedTotal.toLocaleString("en-IN")}
+          7th - 22nd · {nights} nights · ₹{calculatedTotal.toLocaleString("en-IN")}
         </p>
       </div>
     </div>
@@ -445,7 +445,7 @@ function ViewBookingContent() {
                       <div>
                         <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                         <span className="font-semibold text-slate-800">
-                          4th - 19th (15 nights)
+                          1st - 15th Aug (15 nights)
                         </span>
                       </div>
                       <div className="text-right">
@@ -503,7 +503,7 @@ function ViewBookingContent() {
                             <div>
                               <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                               <span className="font-semibold text-slate-800">
-                                4th - 19th ({days} nights)
+                                1st - 15th Aug ({days} nights)
                               </span>
                             </div>
                             <div className="text-right">
@@ -605,7 +605,7 @@ function ViewBookingContent() {
                             <div>
                               <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                               <span className="font-semibold text-slate-800">
-                                {formatDay(request.startDate)} - {formatDay(request.endDate)} ({nights} nights)
+                                1st - 15th Aug ({nights} nights)
                               </span>
                             </div>
                             <div className="text-right">
@@ -655,7 +655,7 @@ function ViewBookingContent() {
                       <div>
                         <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                         <span className="font-semibold text-slate-800">
-                          4th - 19th (15 nights)
+                          1st - 15th Aug (15 nights)
                         </span>
                       </div>
                       <div className="text-right">
@@ -705,7 +705,7 @@ function ViewBookingContent() {
                           <div>
                             <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                             <span className="font-semibold text-slate-800">
-                              4th - 19th ({days} nights)
+                              1st - 15th Aug ({days} nights)
                             </span>
                           </div>
                           <div className="text-right">
@@ -758,14 +758,14 @@ function ViewBookingContent() {
                         <p className="text-[11px] text-slate-400">Alex wants to book your room</p>
                         <p className="text-sm font-bold text-slate-900 line-clamp-1">Cozy Modern Room with Balcony</p>
                         <p className="text-[11px] text-slate-500">
-                          4th - 19th · 15 nights · ₹18,000
+                          1st - 15th Aug · 15 nights · ₹18,000
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <p className="text-[11px] font-semibold text-emerald-700">
-                        Booking confirmed — payment received. 4th - 19th · ₹18,000
+                        Booking confirmed — payment received. 1st - 15th Aug · ₹18,000
                       </p>
                     </div>
                   </div>
@@ -818,7 +818,7 @@ function ViewBookingContent() {
                           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                             <p className="text-[11px] font-semibold text-emerald-700">
-                              Booking confirmed — payment received. 4th - 19th · ₹{calculatedTotal.toLocaleString("en-IN")}
+                              Booking confirmed — payment received. 1st - 15th Aug · ₹{calculatedTotal.toLocaleString("en-IN")}
                             </p>
                           </div>
                         ) : (
@@ -850,14 +850,14 @@ function ViewBookingContent() {
                         <p className="text-[11px] text-slate-400">You requested stay</p>
                         <p className="text-sm font-bold text-slate-900 line-clamp-1">Spacious Studio Apartment near Metro</p>
                         <p className="text-[11px] text-slate-500">
-                          4th - 19th · 15 nights · ₹18,000
+                          1st - 15th Aug · 15 nights · ₹18,000
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <p className="text-[11px] font-semibold text-emerald-700">
-                        Booking confirmed — payment complete. 4th - 19th · ₹18,000
+                        Booking confirmed — payment complete. 1st - 15th Aug · ₹18,000
                       </p>
                     </div>
                   </div>
@@ -920,7 +920,7 @@ function ViewBookingContent() {
                           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                             <p className="text-[11px] font-semibold text-emerald-700">
-                              Booking confirmed — payment complete. 4th - 19th · ₹{calculatedTotal.toLocaleString("en-IN")}
+                              Booking confirmed — payment complete. 1st - 15th Aug · ₹{calculatedTotal.toLocaleString("en-IN")}
                             </p>
                           </div>
                         )}
