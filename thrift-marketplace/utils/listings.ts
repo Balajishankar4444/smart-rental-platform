@@ -23,6 +23,7 @@ export interface ListingSummary {
   status?: ListingStatus | string;
   rental?: ListingRental | null;
   productName: string;
+  propertyType?: string;
   category: string;
   subcategory?: string;
   brand?: string;

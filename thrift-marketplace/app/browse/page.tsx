@@ -1,4 +1,4 @@
-﻿// app/browse/page.tsx
+﻿// app/search/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
@@ -268,10 +268,13 @@ function SearchContent() {
         [listingTitle(item), item.category, item.description]
           .filter(Boolean)
           .some((field) => field && field.toLowerCase().includes(query));
+      
+      // Matches category against item.category or item.propertyType flexibly (ignoring plural suffix and case)
       const matchesCategory =  
         selectedCategory === "All Categories" ||  
         [item.category, item.propertyType]  
           .some((f) => f && f.toLowerCase() === selectedCategory.toLowerCase().replace(/s$/, ''));
+
       const matchesCity =
         selectedCity === ALL_LOCATIONS ||
         listingLocation(item).toLowerCase().includes(cityName);
