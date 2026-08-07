@@ -16,7 +16,9 @@ import {
   AlertCircle,
   Bell,
   Clock,
-  X
+  X,
+  Building2,
+  KeyRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -125,14 +127,14 @@ const rentalMetrics = (rentals: ListingSummary[]) => {
 
   return [
     {
-      label: "Active Rentals",
+      label: "Active Bookings",
       value: String(rentals.filter((item) => item.status === "rented").length),
-      icon: Package,
+      icon: KeyRound,
       color: "text-blue-600",
       bg: "bg-blue-50/80",
     },
     {
-      label: "Pending",
+      label: "Pending Approvals",
       value: String(rentals.filter((item) => item.status === "pending").length),
       icon: Calendar,
       color: "text-indigo-600",
@@ -150,21 +152,21 @@ const rentalMetrics = (rentals: ListingSummary[]) => {
 
 const hostMetrics = (listings: ListingSummary[], earnings: number) => [
   {
-    label: "Available",
+    label: "Available Rooms",
     value: String(listings.filter((item) => item.status === "active").length),
     icon: CheckCircle2,
     color: "text-emerald-600",
     bg: "bg-emerald-50/80",
   },
   {
-    label: "Out with renters",
+    label: "Currently Rented",
     value: String(listings.filter((item) => item.status === "rented").length),
-    icon: Package,
+    icon: Building2,
     color: "text-blue-600",
     bg: "bg-blue-50/80",
   },
   {
-    label: "Earnings",
+    label: "Total Earnings",
     value: `₹${earnings.toLocaleString("en-IN")}`,
     icon: DollarSign,
     color: "text-indigo-600",
@@ -192,7 +194,7 @@ function RequestSummary({ request, caption }: { request: BookingRequest; caption
         <p className="text-[11px] text-slate-400">{caption}</p>
         <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
         <p className="text-[11px] text-slate-500">
-          {formatDay(request.startDate)} – {formatDay(request.endDate)} · {nights}d · ₹{calculatedTotal.toLocaleString("en-IN")}
+          {formatDay(request.startDate)} – {formatDay(request.endDate)} · {nights} nights · ₹{calculatedTotal.toLocaleString("en-IN")}
         </p>
       </div>
     </div>
@@ -318,13 +320,14 @@ function ViewBookingContent() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 flex-1 w-full space-y-8">
         
+        {/* Top Header & Tab Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/60 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              Dashboard Overview
+              Host & Rental Dashboard
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-              Effortlessly track your rentals, equipment performance, and active inventory.
+              Effortlessly track your room bookings, host earnings, and active stay requests[cite: 3].
             </p>
           </div>
 
@@ -337,7 +340,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My Listings
+              My Room Listings
             </button>
             <button
               onClick={() => setActiveTab("rentals")}
@@ -347,7 +350,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My Rentals
+              My Stays & Rentals
             </button>
             <button
               onClick={() => setActiveTab("notifications")}
@@ -367,16 +370,17 @@ function ViewBookingContent() {
           </div>
         </div>
 
+        {/* TAB 1: LISTINGS / HOSTING */}
         {activeTab === "listings" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Inventory & Listings</h2>
-                <p className="text-xs text-slate-500">Manage your active gear available for sharing.</p>
+                <h2 className="text-lg font-bold text-slate-900">Your Property Listings</h2>
+                <p className="text-xs text-slate-500">Manage your rooms, update availability, and review guest reservation requests.</p>
               </div>
               <Link href="/list-item">
                 <RippleButton className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all cursor-pointer">
-                  <Plus className="w-4 h-4" /> Add Listing
+                  <Plus className="w-4 h-4" /> Host a Room
                 </RippleButton>
               </Link>
             </div>
@@ -401,16 +405,16 @@ function ViewBookingContent() {
             {loading ? (
               <div className="py-16 text-center">
                 <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-xs font-medium text-slate-500">Loading listings...</p>
+                <p className="text-xs font-medium text-slate-500">Loading your room listings...</p>
               </div>
             ) : myListings.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200/60 p-10 text-center space-y-3 shadow-xs">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto">
-                  <Package className="w-6 h-6" />
+                  <Building2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">No listings found</h3>
+                <h3 className="text-base font-bold text-slate-900">No room listings found</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Start sharing your gear today to unlock passive income opportunities.
+                  Start hosting your spare room or property today to welcome guests and earn income.
                 </p>
                 <Link href="/list-item" className="inline-block pt-1">
                   <RippleButton className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow-xs cursor-pointer">
@@ -433,15 +437,15 @@ function ViewBookingContent() {
                       <div className="p-5 flex-1 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                            <span>{listing.category || "General"}</span>
+                            <span>{listing.category || "Private Room"}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(listing)}</span>
                           </div>
                           <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{listingTitle(listing)}</h3>
-                          <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 0} <span className="text-[11px] font-normal text-slate-500">/ day</span></div>
+                          <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 0} <span className="text-[11px] font-normal text-slate-500">/ night</span></div>
 
                           {listing.status === "rented" && typeof listing.rental === "object" && listing.rental !== null && (
                             <p className="text-[11px] font-semibold text-blue-600 mt-2">
-                              Booked {formatDay(listing.rental.startDate)} – {formatDay(listing.rental.endDate)}
+                              Booked for {formatDay(listing.rental.startDate)} – {formatDay(listing.rental.endDate)}
                             </p>
                           )}
                         </div>
@@ -452,17 +456,17 @@ function ViewBookingContent() {
                               onClick={() => markReturned(listing.id)}
                               className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
                             >
-                              Mark returned
+                              Complete stay / check-out
                             </RippleButton>
                           ) : (
                             <span className="flex-1 px-3 py-2 text-center text-xs font-semibold text-slate-500">
-                              Available for rent
+                              Ready for guests
                             </span>
                           )}
                           <RippleButton 
                             onClick={() => promptDeleteListing(listing.id)}
                             className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center"
-                            title="Delete"
+                            title="Delete listing"
                           >
                             <Trash2 className="w-4 h-4" />
                           </RippleButton>
@@ -476,11 +480,12 @@ function ViewBookingContent() {
           </div>
         )}
 
+        {/* TAB 2: RENTALS / BOOKED STAYS */}
         {activeTab === "rentals" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Active Bookings</h2>
-              <p className="text-xs text-slate-500">Monitor your ongoing rentals and scheduled returns.</p>
+              <h2 className="text-lg font-bold text-slate-900">Your Stays & Bookings</h2>
+              <p className="text-xs text-slate-500">Monitor your active room bookings and upcoming check-in dates.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -502,12 +507,12 @@ function ViewBookingContent() {
 
             {myRentals.length === 0 ? (
               <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-16 text-center">
-                <p className="text-sm font-semibold text-slate-900">No rentals yet</p>
+                <p className="text-sm font-semibold text-slate-900">No active stays found</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Items you book show up here while you have them.
+                  Rooms you book or reserve will appear here.
                 </p>
                 <Link href="/browse" className="mt-3 inline-block text-sm font-semibold text-blue-600">
-                  Browse listings
+                  Browse available rooms
                 </Link>
               </div>
             ) : (
@@ -529,7 +534,7 @@ function ViewBookingContent() {
                       <div className="p-5 flex-1 flex flex-col justify-between gap-3">
                         <div>
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                            <span>{rental.category || "General"}</span>
+                            <span>{rental.category || "Private Room"}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(rental)}</span>
                           </div>
                           <Link href={`/listings/${rental.id}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600">
@@ -539,13 +544,13 @@ function ViewBookingContent() {
 
                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Period</span>
+                            <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                             <span className="font-semibold text-slate-800">
                               {formatDay(rentalObj?.startDate)} – {formatDay(rentalObj?.endDate)}
                             </span>
                           </div>
                           <div className="text-right">
-                            <span className="text-slate-400 block text-[10px]">Total ({days}d)</span>
+                            <span className="text-slate-400 block text-[10px]">Total ({days} nights)</span>
                             <span className="font-bold text-blue-600">₹{total.toLocaleString("en-IN")}</span>
                           </div>
                         </div>
@@ -554,7 +559,7 @@ function ViewBookingContent() {
                           onClick={() => markReturned(rental.id)}
                           className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                         >
-                          Return item
+                          Check out / End stay
                         </button>
                       </div>
                     </div>
@@ -565,24 +570,26 @@ function ViewBookingContent() {
           </div>
         )}
 
+        {/* TAB 3: NOTIFICATIONS */}
         {activeTab === "notifications" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Notifications</h2>
+              <h2 className="text-lg font-bold text-slate-900">Notifications & Requests</h2>
               <p className="text-xs text-slate-500">
-                Rental requests on your gear, and updates on the items you asked to rent.
+                Manage incoming guest reservation requests for your rooms, and track status updates on rooms you want to book.
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Incoming Hosting Requests */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-blue-600" /> Hosting — booking requests for your gear
+                  <Bell className="w-4 h-4 text-blue-600" /> Hosting — Guest Reservation Requests
                 </h3>
 
                 {incoming.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">
-                    No one has asked to rent your listings yet.
+                    No guest requests for your rooms yet.
                   </div>
                 ) : (
                   incoming.map((request) => {
@@ -593,16 +600,16 @@ function ViewBookingContent() {
 
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
-                        <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
+                        <RequestSummary request={request} caption={`${request.renterName} wants to book your room`} />
 
                         {liveStatus === "pending" ? (
                           <div className="space-y-3">
                             <div className="rounded-xl bg-blue-50 border border-blue-200 p-3">
                               <p className="text-[11px] font-bold text-blue-700 flex items-center gap-1">
-                                <Bell className="w-3.5 h-3.5" /> New request — {request.renterName} wants these dates
+                                <Bell className="w-3.5 h-3.5" /> New request — {request.renterName} requested these dates
                               </p>
                               <p className="text-[11px] text-blue-600 mt-0.5">
-                                Approve before {formatDeadline(request.approvalDeadline)}
+                                Review and approve before {formatDeadline(request.approvalDeadline)}
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -623,10 +630,10 @@ function ViewBookingContent() {
                         ) : liveStatus === "approved" ? (
                           <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-0.5">
                             <p className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" /> Waiting for payment
+                              <Clock className="w-3.5 h-3.5" /> Waiting for guest payment
                             </p>
                             <p className="text-[11px] text-amber-600">
-                              You approved this. Waiting for {request.renterName} to complete payment by {formatDeadline(request.paymentDeadline)}.
+                              You approved this request. Waiting for {request.renterName} to complete payment by {formatDeadline(request.paymentDeadline)}.
                             </p>
                           </div>
                         ) : liveStatus === "paid" ? (
@@ -647,14 +654,15 @@ function ViewBookingContent() {
                 )}
               </div>
 
+              {/* Outgoing Tenant Bookings */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-indigo-600" /> Renting — items you asked to book
+                  <Clock className="w-4 h-4 text-indigo-600" /> Renting — Rooms You Requested to Book
                 </h3>
 
                 {outgoing.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">
-                    You have not requested any rental dates yet.
+                    You have not submitted any room stay requests yet.
                   </div>
                 ) : (
                   outgoing.map((request) => {
@@ -665,13 +673,13 @@ function ViewBookingContent() {
 
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
-                        <RequestSummary request={request} caption="You requested" />
+                        <RequestSummary request={request} caption="You requested stay" />
 
                         {liveStatus === "pending" && (
                           <div className="space-y-3">
                             <div className="rounded-xl bg-indigo-50 border border-indigo-200 p-3 space-y-0.5">
                               <p className="text-[11px] font-bold text-indigo-700 flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" /> Request sent
+                                <Clock className="w-3.5 h-3.5" /> Request sent to host
                               </p>
                               <p className="text-[11px] text-indigo-600">
                                 Awaiting host approval before {formatDeadline(request.approvalDeadline)}
@@ -690,10 +698,10 @@ function ViewBookingContent() {
                           <div className="space-y-3">
                             <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-0.5">
                               <p className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
-                                <AlertCircle className="w-3.5 h-3.5" /> Approved by host
+                                <AlertCircle className="w-3.5 h-3.5" /> Approved by host!
                               </p>
                               <p className="text-[11px] text-amber-600">
-                                Pay within {formatCountdown(request.paymentDeadline, now)} or the approval lapses.
+                                Complete payment within {formatCountdown(request.paymentDeadline, now)} to secure your room.
                               </p>
                             </div>
                             <Link
@@ -731,7 +739,7 @@ function ViewBookingContent() {
                         {liveStatus === "expired" && (
                           <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
                             <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
-                              <AlertCircle className="w-3.5 h-3.5" /> This request expired before payment
+                              <AlertCircle className="w-3.5 h-3.5" /> Request expired before payment
                             </p>
                           </div>
                         )}
@@ -754,6 +762,7 @@ function ViewBookingContent() {
 
       </main>
 
+      {/* Delete Listing Confirmation Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xl max-w-sm w-full p-6 space-y-4 relative animate-scaleUp">
@@ -770,13 +779,13 @@ function ViewBookingContent() {
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Delete Listing</h3>
+                <h3 className="text-base font-bold text-slate-900">Delete Room Listing</h3>
                 <p className="text-xs text-slate-500">This action cannot be undone.</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-              Are you sure you want to remove this product from your shared inventory?
+              Are you sure you want to remove this property listing from your account?
             </p>
 
             <div className="flex items-center gap-2 pt-2">
