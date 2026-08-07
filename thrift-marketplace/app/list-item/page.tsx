@@ -6,12 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRouter } from "next/navigation"; 
 import { 
-  Camera, Laptop, Gamepad2, Smartphone, Projector, Disc, Wrench, 
-  Bike, Compass, Car, Music, Armchair, Home, Baby, Watch, Sparkles, 
-  Package, BookOpen, Stethoscope, Utensils, Briefcase, Building2, 
-  Sprout, HelpCircle, Check, ArrowRight, ArrowLeft, Save, ShieldCheck, 
-  Info, MapPin, Calendar, DollarSign, Eye, RefreshCw, X, UploadCloud, 
-  Trash2, Star, Zap, AlertCircle
+  Home, Building2, MapPin, Calendar, DollarSign, Eye, RefreshCw, X, UploadCloud, 
+  Trash2, Star, Zap, AlertCircle, Check, ArrowRight, ArrowLeft, Save, ShieldCheck, 
+  Info, Sparkles, Users, BedDouble, Clock, Coffee
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -20,98 +17,56 @@ import { useAuth } from "@/app/context/AuthContext";
 // ==========================================
 // TYPES & INTERFACES
 // ==========================================
-type CategoryType = 
-  | "Electronics" | "Cameras" | "Laptops" | "Gaming Consoles" | "Mobile Phones" 
-  | "Projectors" | "Drones" | "Tools" | "Sports Equipment" | "Camping Gear" 
-  | "Cycling" | "Motorcycles" | "Cars" | "Musical Instruments" | "Furniture" 
-  | "Home Appliances" | "Photography Equipment" | "Baby Products" | "Fashion Accessories" 
-  | "Luxury Watches" | "Jewelry" | "Party Equipment" | "Event Supplies" | "Books" 
-  | "Education" | "Medical Equipment" | "Kitchen Equipment" | "Office Equipment" 
-  | "Construction Equipment" | "Agriculture Equipment" | "Other";
+type PropertyType = "Shared Room" | "Private Room" | "Apartment" | "";
 
 interface ListingFormState {
-  productName: string;
-  category: CategoryType | "";
-  subcategory: string;
-  brand: string;
-  model: string;
-  condition: string;
-  purchaseYear: string;
-  age: string;
-  serialNumber: string;
-  color: string;
-  weight: string;
-  dimensions: string;
-  accessoriesIncluded: string;
-  originalBox: boolean;
-  warranty: boolean;
-  invoice: boolean;
+  propertyType: PropertyType;
+  productName: string; // Listing Title
   description: string;
-  usageInstructions: string;
-  minRentalDuration: string;
-  maxRentalDuration: string;
-  
+
+  country: string;
+  state: string;
+  city: string;
+  postalCode: string;
+  streetName: string;
+  houseNumber: string;
+  latitude: string;
+  longitude: string;
+
+  dailyPrice: string; // Price per Night
+  securityDeposit: string;
+  cleaningFee: string;
+
+  availableFrom: string;
+  availableTo: string;
+  minStay: string;
+  maxStay: string;
+
+  numGuests: string;
+  numBeds: string;
+
+  amenities: {
+    wifi: boolean;
+    kitchen: boolean;
+    bathroom: boolean;
+    hotWater: boolean;
+    washingMachine: boolean;
+    heating: boolean;
+    parking: boolean;
+    towels: boolean;
+    bedSheets: boolean;
+  };
+
   images: string[];
   primaryImageIndex: number;
 
-  dailyPrice: string;
-  weeklyPrice: string;
-  monthlyPrice: string;
-  securityDeposit: string;
-  lateReturnFee: string;
-  weeklyDiscount: string;
-  monthlyDiscount: string;
-
-  unavailableDates: string[];
-  advanceNotice: string;
-  instantBooking: boolean;
-  pickupTime: string;
-  returnTime: string;
-  maxConcurrent: string;
-
-  address: string;
-  city: string;
-  state: string;
-  pinCode: string;
-  pickupOnly: boolean;
-  deliveryAvailable: boolean;
-  deliveryRadius: string;
-  deliveryCharges: string;
+  checkInTime: string;
+  checkOutTime: string;
+  smokingAllowed: boolean;
+  petsAllowed: boolean;
+  visitorsAllowed: boolean;
+  quietHours: string;
 }
-
-const CATEGORIES: { name: CategoryType; icon: React.ReactNode }[] = [
-  { name: "Electronics", icon: <Zap className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cameras", icon: <Camera className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Laptops", icon: <Laptop className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Gaming Consoles", icon: <Gamepad2 className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Mobile Phones", icon: <Smartphone className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Projectors", icon: <Projector className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Drones", icon: <Disc className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Tools", icon: <Wrench className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Sports Equipment", icon: <Compass className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Camping Gear", icon: <Home className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cycling", icon: <Bike className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Motorcycles", icon: <Car className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cars", icon: <Car className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Musical Instruments", icon: <Music className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Furniture", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Home Appliances", icon: <Home className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Photography Equipment", icon: <Camera className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Baby Products", icon: <Baby className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Fashion Accessories", icon: <Watch className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Luxury Watches", icon: <Watch className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Jewelry", icon: <Sparkles className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Party Equipment", icon: <Package className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Event Supplies", icon: <Package className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Books", icon: <BookOpen className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Education", icon: <BookOpen className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Medical Equipment", icon: <Stethoscope className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Kitchen Equipment", icon: <Utensils className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Office Equipment", icon: <Briefcase className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Construction Equipment", icon: <Building2 className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Agriculture Equipment", icon: <Sprout className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Other", icon: <Package className="w-4 h-4 text-[#2563EB]" /> },
-];
 
 export default function ListItemPage() {
   return (
@@ -131,87 +86,86 @@ function ListItemContent() {
 
   // Form State
   const [form, setForm] = useState<ListingFormState>({
+    propertyType: "Private Room",
     productName: "",
-    category: "",
-    subcategory: "",
-    brand: "",
-    model: "",
-    condition: "Like New",
-    purchaseYear: "2024",
-    age: "1 Year",
-    serialNumber: "",
-    color: "",
-    weight: "",
-    dimensions: "",
-    accessoriesIncluded: "",
-    originalBox: true,
-    warranty: false,
-    invoice: true,
     description: "",
-    usageInstructions: "",
-    minRentalDuration: "1 Day",
-    maxRentalDuration: "30 Days",
-    
+
+    country: "Germany",
+    state: "Baden-Württemberg",
+    city: "Stuttgart",
+    postalCode: "70174",
+    streetName: "Friedrichstraße",
+    houseNumber: "43",
+    latitude: "48.7758",
+    longitude: "9.1829",
+
+    dailyPrice: "850",
+    securityDeposit: "2500",
+    cleaningFee: "500",
+
+    availableFrom: "2026-09-01",
+    availableTo: "2027-09-01",
+    minStay: "1 Night",
+    maxStay: "90 Days",
+
+    numGuests: "1",
+    numBeds: "1",
+
+    amenities: {
+      wifi: true,
+      kitchen: true,
+      bathroom: true,
+      hotWater: true,
+      washingMachine: false,
+      heating: true,
+      parking: false,
+      towels: true,
+      bedSheets: true,
+    },
+
     images: [
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800",
-      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=800"
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800"
     ],
     primaryImageIndex: 0,
 
-    dailyPrice: "850",
-    weeklyPrice: "5100",
-    monthlyPrice: "18000",
-    securityDeposit: "2500",
-    lateReturnFee: "500",
-    weeklyDiscount: "15%",
-    monthlyDiscount: "30%",
-
-    unavailableDates: [],
-    advanceNotice: "24 Hours",
-    instantBooking: true,
-    pickupTime: "09:00 AM - 08:00 PM",
-    returnTime: "09:00 AM - 08:00 PM",
-    maxConcurrent: "1",
-
-    address: "Friedrichstraße 43",
-    city: "Stuttgart",
-    state: "Baden-Württemberg",
-    pinCode: "70174",
-    pickupOnly: false,
-    deliveryAvailable: true,
-    deliveryRadius: "15 km",
-    deliveryCharges: "150",
+    checkInTime: "02:00 PM",
+    checkOutTime: "11:00 AM",
+    smokingAllowed: false,
+    petsAllowed: false,
+    visitorsAllowed: true,
+    quietHours: "10:00 PM - 07:00 AM",
   });
 
   const publishListing = async () => {
     console.log("PUBLISH BUTTON CLICKED");
-  if (!user) {
-    alert("Please sign in again before publishing your listing.");
-    return;
-  }
-  try {
-    const response = await fetch("/api/auth/products", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-  body: JSON.stringify({ ...form, userId: user.id }),
-  });
+    if (!user) {
+      alert("Please sign in again before publishing your listing.");
+      return;
+    }
+    try {
+      const response = await fetch("/api/auth/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...form, userId: user.id, category: "Rooms" }),
+      });
 
-  const result = await response.json();
+      const result = await response.json();
 
-  if (response.ok) {
-    localStorage.removeItem("rentit_listing_draft");
-    setIsSubmitted(true);
-  } else {
-    console.error("Failed to save product", result);
-    alert(result?.error || "Failed to save product");
-  }
-} catch (error) {
-  console.error(error);
-  alert("Something went wrong.");
-}
-};
+      if (response.ok) {
+        localStorage.removeItem("rentit_listing_draft");
+        setIsSubmitted(true);
+      } else {
+        console.error("Failed to save room listing", result);
+        alert(result?.error || "Failed to save room listing");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    }
+  };
 
   // Auto-save draft effect
   useEffect(() => {
@@ -230,32 +184,34 @@ function ListItemContent() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const updateAmenity = (key: keyof ListingFormState["amenities"], val: boolean) => {
+    setForm(prev => ({ ...prev, amenities: { ...prev.amenities, [key]: val } }));
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = e.target.files;
+    const files = e.target.files;
 
-  if (files && files.length > 0) {
-    const readers = Array.from(files).map((file) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          resolve(reader.result as string);
-        };
-
-        reader.readAsDataURL(file);
+    if (files && files.length > 0) {
+      const readers = Array.from(files).map((file) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
       });
-    });
 
-    Promise.all(readers).then((images) => {
-      setForm(prev => ({
-        ...prev,
-        images: [...prev.images, ...images]
-      }));
-    });
-  }
+      Promise.all(readers).then((images) => {
+        setForm(prev => ({
+          ...prev,
+          images: [...prev.images, ...images]
+        }));
+      });
+    }
 
-  e.target.value = "";
-};
+    e.target.value = "";
+  };
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -285,10 +241,10 @@ function ListItemContent() {
               <Check className="w-10 h-10 stroke-[3]" />
             </div>
             <h1 className="text-3xl font-extrabold font-heading text-gray-900 tracking-tight mb-2">
-              Listing Published Successfully! 🎉
+              Property Listed Successfully! 🎉
             </h1>
             <p className="text-gray-600 mb-8">
-              Your item is now live and optimized for maximum trust and conversion on RentIt. Verified renters in your area can now discover and book your product.
+              Your room is now live and optimized for maximum trust and booking conversion on RentIt. Verified guests in your area can now discover and book your space.
             </p>
 
             <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 text-left flex items-center gap-4 shadow-sm">
@@ -299,13 +255,13 @@ function ListItemContent() {
               />
               <div>
                 <span className="inline-block px-2.5 py-0.5 bg-blue-50 text-[#2563EB] text-xs font-semibold rounded-full mb-1">
-                  {form.category || "Electronics"}
+                  {form.propertyType || "Private Room"}
                 </span>
                 <h3 className="font-bold text-gray-900 text-base line-clamp-1">
-                  {form.productName || "Professional Cinematic Camera Kit"}
+                  {form.productName || "Cozy Modern Room in City Center"}
                 </h3>
                 <p className="text-sm font-bold text-[#2563EB] mt-1">
-                  ₹{form.dailyPrice || "850"} <span className="text-xs text-gray-500 font-normal">/ day</span>
+                  ₹{form.dailyPrice || "850"} <span className="text-xs text-gray-500 font-normal">/ night</span>
                 </p>
               </div>
             </div>
@@ -325,7 +281,7 @@ function ListItemContent() {
                 }}
                 className="flex-1 py-3.5 px-6 rounded-2xl border border-gray-200 bg-white text-gray-800 font-semibold hover:bg-gray-50 transition-all cursor-pointer"
               >
-                List Another Product
+                List Another Property
               </button>
             </div>
           </motion.div>
@@ -346,7 +302,7 @@ function ListItemContent() {
               Host Experience • Under 2 Minutes
             </span>
             <h1 className="text-3xl lg:text-4xl font-extrabold font-heading text-gray-900 tracking-tight mt-2">
-              Lend Your Product & Earn
+              List Your Room & Earn
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -375,11 +331,11 @@ function ListItemContent() {
           <div className="flex items-center justify-between min-w-[700px] gap-2">
             {[
               { num: 1, label: "Basic Info" },
-              { num: 2, label: "Photos" },
+              { num: 2, label: "Location" },
               { num: 3, label: "Pricing" },
               { num: 4, label: "Availability" },
-              { num: 5, label: "Location" },
-              { num: 6, label: "Preview" },
+              { num: 5, label: "Amenities & Photos" },
+              { num: 6, label: "Rules & Preview" },
             ].map((step) => {
               const isCompleted = currentStep > step.num;
               const isCurrent = currentStep === step.num;
@@ -428,113 +384,31 @@ function ListItemContent() {
                     className="space-y-6"
                   >
                     <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Basic Product Information</h2>
-                      <p className="text-sm text-gray-500 mt-1">Provide clear details so renters know exactly what they are getting.</p>
+                      <h2 className="text-2xl font-bold font-heading text-gray-900">Basic Property Information</h2>
+                      <p className="text-sm text-gray-500 mt-1">Provide clear details so guests know exactly what kind of space they are booking.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Product Name *</label>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Property Type *</label>
+                        <select 
+                          value={form.propertyType}
+                          onChange={(e) => updateField("propertyType", e.target.value as PropertyType)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
+                        >
+                          <option value="Private Room">Private Room</option>
+                          <option value="Shared Room">Shared Room</option>
+                          <option value="Apartment">Apartment</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Listing Title *</label>
                         <input 
                           type="text" 
-                          placeholder="e.g., Sony Alpha 7IV Mirrorless Camera with 24-70mm Lens"
+                          placeholder="e.g., Cozy Private Room near City Center & Metro"
                           value={form.productName}
                           onChange={(e) => updateField("productName", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Category *</label>
-                        <select 
-                          value={form.category}
-                          onChange={(e) => updateField("category", e.target.value as CategoryType)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
-                        >
-                          <option value="">Select Category...</option>
-                          {CATEGORIES.map((cat) => (
-                            <option key={cat.name} value={cat.name}>{cat.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Subcategory *</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Full-Frame Cameras"
-                          value={form.subcategory}
-                          onChange={(e) => updateField("subcategory", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Brand</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Sony"
-                          value={form.brand}
-                          onChange={(e) => updateField("brand", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Model</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., ILCE-7M4"
-                          value={form.model}
-                          onChange={(e) => updateField("model", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Condition</label>
-                        <select 
-                          value={form.condition}
-                          onChange={(e) => updateField("condition", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
-                        >
-                          <option value="Brand New">Brand New</option>
-                          <option value="Like New">Like New</option>
-                          <option value="Excellent">Excellent</option>
-                          <option value="Good">Good</option>
-                          <option value="Fair">Fair</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Purchase Year</label>
-                        <input 
-                          type="text" 
-                          placeholder="2024"
-                          value={form.purchaseYear}
-                          onChange={(e) => updateField("purchaseYear", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Color</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Matte Black"
-                          value={form.color}
-                          onChange={(e) => updateField("color", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Serial Number (Optional)</label>
-                        <input 
-                          type="text" 
-                          placeholder="For safety & verification"
-                          value={form.serialNumber}
-                          onChange={(e) => updateField("serialNumber", e.target.value)}
                           className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
                         />
                       </div>
@@ -543,43 +417,33 @@ function ListItemContent() {
                         <label className="block text-sm font-bold text-gray-800 mb-2">Description & Highlights</label>
                         <textarea 
                           rows={4}
-                          placeholder="Describe key features, specs, and why renters will love using this item..."
+                          placeholder="Describe the space, neighborhood vibe, accessibility, and what guests love about staying here..."
                           value={form.description}
                           onChange={(e) => updateField("description", e.target.value)}
                           className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs resize-none"
                         />
                       </div>
 
-                      <div className="sm:col-span-2 grid grid-cols-3 gap-4 pt-2">
-                        <label className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.originalBox}
-                            onChange={(e) => updateField("originalBox", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-semibold text-gray-800">Original Box</span>
-                        </label>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Max Guests Accommodated *</label>
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={form.numGuests}
+                          onChange={(e) => updateField("numGuests", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
 
-                        <label className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.warranty}
-                            onChange={(e) => updateField("warranty", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-semibold text-gray-800">Under Warranty</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.invoice}
-                            onChange={(e) => updateField("invoice", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-semibold text-gray-800">Purchase Invoice</span>
-                        </label>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Number of Beds *</label>
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={form.numBeds}
+                          onChange={(e) => updateField("numBeds", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
                       </div>
                     </div>
                   </motion.div>
@@ -595,59 +459,256 @@ function ListItemContent() {
                     className="space-y-6"
                   >
                     <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Upload Product Photos</h2>
-                      <p className="text-sm text-gray-500 mt-1">Listings with 4+ high-resolution photos get up to 3x more rental inquiries.</p>
+                      <h2 className="text-2xl font-bold font-heading text-gray-900">Property Location</h2>
+                      <p className="text-sm text-gray-500 mt-1">Exact address is only shared with confirmed guests after booking.</p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/60 p-4 rounded-2xl flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Sparkles className="w-5 h-5" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Country *</label>
+                        <input 
+                          type="text" 
+                          value={form.country}
+                          onChange={(e) => updateField("country", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#2563EB] uppercase tracking-wider">AI Photo Quality Score</span>
-                          <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">94 / 100 (Excellent)</span>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">State / Region *</label>
+                        <input 
+                          type="text" 
+                          value={form.state}
+                          onChange={(e) => updateField("state", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">City *</label>
+                        <input 
+                          type="text" 
+                          value={form.city}
+                          onChange={(e) => updateField("city", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Postal Code *</label>
+                        <input 
+                          type="text" 
+                          value={form.postalCode}
+                          onChange={(e) => updateField("postalCode", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Street Name *</label>
+                        <input 
+                          type="text" 
+                          value={form.streetName}
+                          onChange={(e) => updateField("streetName", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">House Number *</label>
+                        <input 
+                          type="text" 
+                          value={form.houseNumber}
+                          onChange={(e) => updateField("houseNumber", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {currentStep === 3 && (
+                  <motion.div 
+                    key="step3"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-6"
+                  >
+                    <div>
+                      <h2 className="text-2xl font-bold font-heading text-gray-900">Set Your Pricing</h2>
+                      <p className="text-sm text-gray-500 mt-1">Configure nightly rates and deposit requirements for your room.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Price per Night (₹) *</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
+                          <input 
+                            type="number" 
+                            value={form.dailyPrice}
+                            onChange={(e) => updateField("dailyPrice", e.target.value)}
+                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
+                          />
                         </div>
-                        <p className="text-xs text-gray-600 mt-0.5">High lighting detected. Primary image looks sharp and professional.</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Security Deposit (₹)</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
+                          <input 
+                            type="number" 
+                            value={form.securityDeposit}
+                            onChange={(e) => updateField("securityDeposit", e.target.value)}
+                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Cleaning Fee (₹)</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
+                          <input 
+                            type="number" 
+                            value={form.cleaningFee}
+                            onChange={(e) => updateField("cleaningFee", e.target.value)}
+                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Estimated Monthly Income</label>
+                        <div className="px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-800">Potential Payout (20 nights)</span>
+                          <span className="text-base font-extrabold text-emerald-700">₹{(Number(form.dailyPrice || 0) * 20).toLocaleString()} / mo</span>
+                        </div>
                       </div>
                     </div>
+                  </motion.div>
+                )}
 
-                    <label className="border-2 border-dashed border-gray-300 hover:border-[#2563EB] bg-gray-50/50 rounded-3xl p-8 text-center transition-all cursor-pointer block">
-                      <div className="w-16 h-16 bg-blue-100 text-[#2563EB] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <UploadCloud className="w-8 h-8" />
+                {currentStep === 4 && (
+                  <motion.div 
+                    key="step4"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-6"
+                  >
+                    <div>
+                      <h2 className="text-2xl font-bold font-heading text-gray-900">Availability & Stay Duration</h2>
+                      <p className="text-sm text-gray-500 mt-1">Set date ranges and stay limits for guests booking your room.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Available From *</label>
+                        <input 
+                          type="date" 
+                          value={form.availableFrom}
+                          onChange={(e) => updateField("availableFrom", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
                       </div>
-                      <h3 className="font-bold text-gray-900 text-base">Drag & drop photos here, or browse files</h3>
-                      <p className="text-xs text-gray-500 mt-1">Supports PNG, JPG or WEBP (Max 10 images, up to 15MB each)</p>
-                      
-                      <span className="mt-5 inline-block px-6 py-2.5 rounded-2xl bg-white border border-gray-200 font-semibold text-sm text-gray-800 shadow-sm hover:bg-gray-50 transition-all">
-                        Browse Files
-                      </span>
 
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </label>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Available To *</label>
+                        <input 
+                          type="date" 
+                          value={form.availableTo}
+                          onChange={(e) => updateField("availableTo", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Minimum Stay *</label>
+                        <input 
+                          type="text" 
+                          value={form.minStay}
+                          onChange={(e) => updateField("minStay", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Maximum Stay *</label>
+                        <input 
+                          type="text" 
+                          value={form.maxStay}
+                          onChange={(e) => updateField("maxStay", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {currentStep === 5 && (
+                  <motion.div 
+                    key="step5"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-6"
+                  >
+                    <div>
+                      <h2 className="text-2xl font-bold font-heading text-gray-900">Amenities & Photos</h2>
+                      <p className="text-sm text-gray-500 mt-1">Select available room features and upload crisp photos of your space.</p>
+                    </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-bold text-sm text-gray-900">Uploaded Photos ({form.images.length}/10)</h4>
-                        <span className="text-xs text-gray-500">Click star to set primary photo</span>
+                      <h4 className="font-bold text-sm text-gray-800 mb-3">Room Amenities</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {Object.entries(form.amenities).map(([key, val]) => (
+                          <label key={key} className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
+                            <input 
+                              type="checkbox" 
+                              checked={val}
+                              onChange={(e) => updateAmenity(key as keyof ListingFormState["amenities"], e.target.checked)}
+                              className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-semibold capitalize text-gray-800">{key.replace(/([A-Z])/g, ' $1')}</span>
+                          </label>
+                        ))}
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100">
+                      <label className="border-2 border-dashed border-gray-300 hover:border-[#2563EB] bg-gray-50/50 rounded-3xl p-6 text-center transition-all cursor-pointer block">
+                        <div className="w-12 h-12 bg-blue-100 text-[#2563EB] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                          <UploadCloud className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-sm">Drag & drop room photos here, or browse</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">PNG, JPG or WEBP (Max 10 images)</p>
+                        <span className="mt-4 inline-block px-5 py-2 rounded-xl bg-white border border-gray-200 font-semibold text-xs text-gray-800 shadow-sm hover:bg-gray-50 transition-all">
+                          Browse Files
+                        </span>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          multiple
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                         {form.images.map((imgUrl, idx) => (
                           <div key={idx} className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-square bg-gray-100">
                             <img src={imgUrl} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
-                            
                             {idx === form.primaryImageIndex && (
-                              <span className="absolute top-2 left-2 bg-[#2563EB] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
-                                Primary Cover
+                              <span className="absolute top-2 left-2 bg-[#2563EB] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
+                                Cover
                               </span>
                             )}
-
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
                               <button 
                                 title="Set as Primary"
@@ -677,273 +738,6 @@ function ListItemContent() {
                   </motion.div>
                 )}
 
-                {currentStep === 3 && (
-                  <motion.div 
-                    key="step3"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Set Your Pricing</h2>
-                      <p className="text-sm text-gray-500 mt-1">Smart pricing recommendations maximize your monthly passive income.</p>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 p-5 rounded-2xl flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
-                          <Sparkles className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">AI Suggested Daily Price</span>
-                          <h4 className="text-xl font-extrabold text-gray-900">₹850 <span className="text-xs font-normal text-gray-600">/ day</span></h4>
-                          <p className="text-xs text-gray-600 mt-0.5">Based on 45 similar items rented in your area this month.</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          updateField("dailyPrice", "850");
-                          updateField("weeklyPrice", "5100");
-                          updateField("monthlyPrice", "18000");
-                        }}
-                        className="px-4 py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-600/20 hover:bg-amber-700 transition-all cursor-pointer shrink-0"
-                      >
-                        Apply Price
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Daily Rental Price (₹) *</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.dailyPrice}
-                            onChange={(e) => updateField("dailyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Weekly Price (₹)</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.weeklyPrice}
-                            onChange={(e) => updateField("weeklyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Monthly Price (₹)</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.monthlyPrice}
-                            onChange={(e) => updateField("monthlyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Security Deposit (₹) *</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.securityDeposit}
-                            onChange={(e) => updateField("securityDeposit", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                        <span className="text-[11px] text-gray-500 mt-1 block">Fully refundable to renter upon safe return.</span>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Late Return Fee (₹ / day)</label>
-                        <input 
-                          type="number" 
-                          value={form.lateReturnFee}
-                          onChange={(e) => updateField("lateReturnFee", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Estimated Monthly Earnings</label>
-                        <div className="px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-800">Potential Payout</span>
-                          <span className="text-base font-extrabold text-emerald-700">₹{(Number(form.dailyPrice || 0) * 15).toLocaleString()} / mo</span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 4 && (
-                  <motion.div 
-                    key="step4"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Availability & Time Slots</h2>
-                      <p className="text-sm text-gray-500 mt-1">Configure when renters can pickup or receive your item.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Advance Notice Required</label>
-                        <select 
-                          value={form.advanceNotice}
-                          onChange={(e) => updateField("advanceNotice", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
-                        >
-                          <option value="Same Day (2 hours)">Same Day (2 hours)</option>
-                          <option value="24 Hours">24 Hours</option>
-                          <option value="48 Hours">48 Hours</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Maximum Concurrent Bookings</label>
-                        <input 
-                          type="number" 
-                          value={form.maxConcurrent}
-                          onChange={(e) => updateField("maxConcurrent", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Pickup Time Window</label>
-                        <input 
-                          type="text" 
-                          value={form.pickupTime}
-                          onChange={(e) => updateField("pickupTime", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Return Time Window</label>
-                        <input 
-                          type="text" 
-                          value={form.returnTime}
-                          onChange={(e) => updateField("returnTime", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 p-5 rounded-2xl bg-white border border-gray-200 flex items-center justify-between">
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900">Instant Booking</h4>
-                          <p className="text-xs text-gray-500 mt-0.5">Allow verified renters to book instantly without manual approval.</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={form.instantBooking}
-                          onChange={(e) => updateField("instantBooking", e.target.checked)}
-                          className="w-6 h-6 text-[#2563EB] rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 5 && (
-                  <motion.div 
-                    key="step5"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Item Location & Delivery</h2>
-                      <p className="text-sm text-gray-500 mt-1">Exact address is only shared with confirmed renters after booking.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Street Address *</label>
-                        <input 
-                          type="text" 
-                          value={form.address}
-                          onChange={(e) => updateField("address", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">City *</label>
-                        <input 
-                          type="text" 
-                          value={form.city}
-                          onChange={(e) => updateField("city", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">State *</label>
-                        <input 
-                          type="text" 
-                          value={form.state}
-                          onChange={(e) => updateField("state", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">PIN Code *</label>
-                        <input 
-                          type="text" 
-                          value={form.pinCode}
-                          onChange={(e) => updateField("pinCode", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Delivery Charges (₹)</label>
-                        <input 
-                          type="number" 
-                          value={form.deliveryCharges}
-                          onChange={(e) => updateField("deliveryCharges", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 p-5 rounded-2xl bg-white border border-gray-200 flex items-center justify-between">
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900">Offer Doorstep Delivery</h4>
-                          <p className="text-xs text-gray-500 mt-0.5">Deliver within a 15 km radius for extra convenience and higher bookings.</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={form.deliveryAvailable}
-                          onChange={(e) => updateField("deliveryAvailable", e.target.checked)}
-                          className="w-6 h-6 text-[#2563EB] rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
                 {currentStep === 6 && (
                   <motion.div 
                     key="step6"
@@ -954,36 +748,100 @@ function ListItemContent() {
                     className="space-y-6"
                   >
                     <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Review & Publish Listing</h2>
-                      <p className="text-sm text-gray-500 mt-1">This is exactly how your product card will appear to thousands of verified renters.</p>
+                      <h2 className="text-2xl font-bold font-heading text-gray-900">House Rules & Preview</h2>
+                      <p className="text-sm text-gray-500 mt-1">Set guidelines for guests and review your final listing card.</p>
                     </div>
 
-                    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Check-in Time</label>
+                        <input 
+                          type="text" 
+                          value={form.checkInTime}
+                          onChange={(e) => updateField("checkInTime", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Check-out Time</label>
+                        <input 
+                          type="text" 
+                          value={form.checkOutTime}
+                          onChange={(e) => updateField("checkOutTime", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Quiet Hours</label>
+                        <input 
+                          type="text" 
+                          value={form.quietHours}
+                          onChange={(e) => updateField("quietHours", e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 grid grid-cols-3 gap-3 pt-2">
+                        <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
+                          <input 
+                            type="checkbox" 
+                            checked={form.smokingAllowed}
+                            onChange={(e) => updateField("smokingAllowed", e.target.checked)}
+                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
+                          />
+                          <span className="text-xs font-semibold text-gray-800">Smoking Allowed</span>
+                        </label>
+
+                        <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
+                          <input 
+                            type="checkbox" 
+                            checked={form.petsAllowed}
+                            onChange={(e) => updateField("petsAllowed", e.target.checked)}
+                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
+                          />
+                          <span className="text-xs font-semibold text-gray-800">Pets Allowed</span>
+                        </label>
+
+                        <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
+                          <input 
+                            type="checkbox" 
+                            checked={form.visitorsAllowed}
+                            onChange={(e) => updateField("visitorsAllowed", e.target.checked)}
+                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
+                          />
+                          <span className="text-xs font-semibold text-gray-800">Visitors Allowed</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6 mt-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <img 
                           src={form.images[form.primaryImageIndex] || form.images[0]} 
-                          alt="Product preview" 
+                          alt="Listing preview" 
                           className="w-full h-64 object-cover rounded-2xl border border-gray-100"
                         />
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
-                              {form.category || "Electronics"}
+                              {form.propertyType || "Private Room"}
                             </span>
                             <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
                               <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
                             </span>
                           </div>
                           <h3 className="text-xl font-extrabold text-gray-900 font-heading">
-                            {form.productName || "Professional Cinematic Camera Kit"}
+                            {form.productName || "Cozy Modern Room in City Center"}
                           </h3>
                           <p className="text-xs text-gray-600 line-clamp-3">
-                            {form.description || "High-end cinematic camera kit in pristine condition. Includes all original accessories and secure carrying case."}
+                            {form.description || "Comfortable space equipped with high-speed Wi-Fi, convenient access to public transit, and prime neighborhood amenities."}
                           </p>
                           <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                             <div>
                               <span className="text-2xl font-extrabold text-[#2563EB]">₹{form.dailyPrice || "850"}</span>
-                              <span className="text-xs text-gray-500 font-medium"> / day</span>
+                              <span className="text-xs text-gray-500 font-medium"> / night</span>
                             </div>
                             <div className="text-right">
                               <span className="text-xs text-gray-500 block">Security Deposit</span>
@@ -995,20 +853,20 @@ function ListItemContent() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100 text-center">
                         <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Condition</span>
-                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.condition}</span>
+                          <span className="text-xs text-gray-500 block">Guests</span>
+                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.numGuests} Max</span>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
                           <span className="text-xs text-gray-500 block">Location</span>
                           <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.city}, {form.state}</span>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Instant Book</span>
-                          <span className="text-xs font-bold text-emerald-600 mt-0.5 block">{form.instantBooking ? "Enabled" : "Manual"}</span>
+                          <span className="text-xs text-gray-500 block">Beds</span>
+                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.numBeds} Bed(s)</span>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Delivery</span>
-                          <span className="text-xs font-bold text-blue-600 mt-0.5 block">{form.deliveryAvailable ? "Available" : "Pickup Only"}</span>
+                          <span className="text-xs text-gray-500 block">Check-in</span>
+                          <span className="text-xs font-bold text-blue-600 mt-0.5 block">{form.checkInTime}</span>
                         </div>
                       </div>
                     </div>
@@ -1073,19 +931,19 @@ function ListItemContent() {
                 <div className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-full">
-                      {form.category || "Electronics"}
+                      {form.propertyType || "Private Room"}
                     </span>
                     <span className="text-xs font-bold text-gray-900 flex items-center gap-1">
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> New Host
                     </span>
                   </div>
                   <h4 className="font-bold text-gray-900 text-sm line-clamp-1">
-                    {form.productName || "Your Product Title"}
+                    {form.productName || "Your Property Title"}
                   </h4>
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <div>
                       <span className="text-lg font-extrabold text-[#2563EB]">₹{form.dailyPrice || "0"}</span>
-                      <span className="text-[10px] text-gray-500"> / day</span>
+                      <span className="text-[10px] text-gray-500"> / night</span>
                     </div>
                     <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-gray-400" /> {form.city || "City"}
@@ -1100,7 +958,7 @@ function ListItemContent() {
                   <h4 className="font-bold text-xs uppercase tracking-wider">Host Protection Guarantee</h4>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Every rental on RentIt is covered up to ₹50,000 against damage or theft with verified renter ID checks.
+                  Every booking on RentIt is covered up to ₹50,000 against property damage or incidents with verified guest ID checks.
                 </p>
               </div>
 
