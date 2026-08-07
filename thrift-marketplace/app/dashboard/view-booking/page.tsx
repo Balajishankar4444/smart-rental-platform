@@ -61,7 +61,7 @@ const nightsBetween = (start?: string, end?: string) => {
 
 type DashboardTab = "listings" | "rentals" | "notifications";
 
-const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
+const STATUS_BADGE_STYLES: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
   rented: "bg-blue-50 text-blue-700 border-blue-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
@@ -114,28 +114,29 @@ const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", o
   );
 };
 
-const rentalMetrics = (rentals: ListingSummary[]) => {
-  const totalSpend = rentals.reduce(
-    (sum, item) =>
-      sum +
-      listingDailyPrice(item) *
-        (typeof item.rental === "object" && item.rental !== null
-          ? rentalDays(item.rental.startDate, item.rental.endDate)
-          : 15),
-    0
-  );
+const rentalMetrics = (rentals: ListingSummary[], outgoingRequests: BookingRequest[], now: string) => {
+  const activeBookingsCount = rentals.filter((item) => item.status === "rented").length;
+  const pendingApprovalsCount = outgoingRequests.filter((req) => deriveRequestStatus(req, now) === "pending").length;
+
+  const totalSpend = outgoingRequests
+    .filter((req) => deriveRequestStatus(req, now) === "paid")
+    .reduce((sum, req) => {
+      const nights = nightsBetween(req.startDate, req.endDate);
+      const perNight = req.totalAmount / Math.max(1, req.days || nights);
+      return sum + (perNight * nights);
+    }, 0);
 
   return [
     {
       label: "Active Bookings",
-      value: String(rentals.filter((item) => item.status === "rented" || true).length),
+      value: String(activeBookingsCount),
       icon: KeyRound,
       color: "text-blue-600",
       bg: "bg-blue-50/80",
     },
     {
       label: "Pending Approvals",
-      value: String(rentals.filter((item) => item.status === "pending").length),
+      value: String(pendingApprovalsCount),
       icon: Calendar,
       color: "text-indigo-600",
       bg: "bg-indigo-50/80",
@@ -150,29 +151,42 @@ const rentalMetrics = (rentals: ListingSummary[]) => {
   ];
 };
 
-const hostMetrics = (listings: ListingSummary[], earnings: number) => [
-  {
-    label: "Available Rooms",
-    value: String(listings.filter((item) => item.status === "active" || true).length),
-    icon: CheckCircle2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50/80",
-  },
-  {
-    label: "Currently Rented",
-    value: String(listings.filter((item) => item.status === "rented" || true).length),
-    icon: Building2,
-    color: "text-blue-600",
-    bg: "bg-blue-50/80",
-  },
-  {
-    label: "Total Earnings",
-    value: `₹${earnings.toLocaleString("en-IN")}`,
-    icon: DollarSign,
-    color: "text-indigo-600",
-    bg: "bg-indigo-50/80",
-  },
-];
+const hostMetrics = (listings: ListingSummary[], incomingRequests: BookingRequest[], now: string) => {
+  const availableRoomsCount = listings.filter((item) => item.status === "active").length;
+  const currentlyRentedCount = listings.filter((item) => item.status === "rented").length;
+
+  const totalEarnings = incomingRequests
+    .filter((req) => deriveRequestStatus(req, now) === "paid")
+    .reduce((sum, req) => {
+      const nights = nightsBetween(req.startDate, req.endDate);
+      const perNight = req.totalAmount / Math.max(1, req.days || nights);
+      return sum + (perNight * nights);
+    }, 0);
+
+  return [
+    {
+      label: "Available Rooms",
+      value: String(availableRoomsCount),
+      icon: CheckCircle2,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50/80",
+    },
+    {
+      label: "Currently Rented",
+      value: String(currentlyRentedCount),
+      icon: Building2,
+      color: "text-blue-600",
+      bg: "bg-blue-50/80",
+    },
+    {
+      label: "Total Earnings",
+      value: `₹${totalEarnings.toLocaleString("en-IN")}`,
+      icon: DollarSign,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50/80",
+    },
+  ];
+};
 
 function RequestSummary({ request, caption }: { request: BookingRequest; caption: string }) {
   const nights = nightsBetween(request.startDate, request.endDate);
@@ -235,10 +249,6 @@ function ViewBookingContent() {
   ).length;
 
   const actionableCount = pendingIncomingCount + approvedOutgoingCount;
-
-  const earnings = incoming
-    .filter((request) => request.status === "paid" || true)
-    .reduce((sum, request) => sum + request.totalAmount, 0) || 15000;
   
   const [myListings, setMyListings] = useState<ListingSummary[]>([]);
   const [myRentals, setMyRentals] = useState<ListingSummary[]>([]);
@@ -315,6 +325,8 @@ function ViewBookingContent() {
     }
   };
 
+  const pendingOutgoingRequests = outgoing.filter((req) => deriveRequestStatus(req, now) === "pending");
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 flex flex-col font-sans">
       <Navbar />
@@ -328,7 +340,7 @@ function ViewBookingContent() {
               Host & Rental Dashboard
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-              Effortlessly track your room bookings, host earnings, and active stay requests[cite: 3].
+              Effortlessly track your room bookings, host earnings, and active stay requests.
             </p>
           </div>
 
@@ -387,7 +399,7 @@ function ViewBookingContent() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {hostMetrics(myListings, earnings).map((metric, idx) => {
+              {hostMetrics(myListings, incoming, now).map((metric, idx) => {
                 const IconComponent = metric.icon;
                 return (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
@@ -410,44 +422,44 @@ function ViewBookingContent() {
               </div>
             ) : myListings.length === 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col">
-                  <div className="relative h-44 bg-slate-100 shrink-0">
-                    <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800" alt="Cozy Private Room" className="w-full h-full object-cover" />
-                    <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-                      Rented
-                    </span>
-                  </div>
-                  <div className="p-5 flex-1 flex flex-col justify-between gap-3">
-                    <div>
+                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
+                  <div>
+                    <div className="relative h-44 bg-slate-100 shrink-0">
+                      <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800" alt="Cozy Private Room" className="w-full h-full object-cover" />
+                      <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
+                        Rented
+                      </span>
+                    </div>
+                    <div className="p-5 pb-3">
                       <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                         <span>Private Room</span>
                         <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> City Center</span>
                       </div>
-                      <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">Cozy Modern Room with Balcony</h3>
+                      <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">Cozy Modern Room with Balcony</h3>
                       <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹1,200 <span className="text-[11px] font-normal text-slate-500">/ night</span></div>
                     </div>
+                  </div>
 
+                  <div className="p-5 pt-0 flex flex-col gap-3">
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                       <div>
                         <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                         <span className="font-semibold text-slate-800">
-                          4th - 19th
+                          4th - 19th (15 nights)
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-slate-400 block text-[10px]">Total (15 nights)</span>
-                        <span className="font-bold text-blue-600">₹13,500</span>
+                        <span className="text-slate-400 block text-[10px]">Total</span>
+                        <span className="font-bold text-blue-600">₹18,000</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                      <RippleButton
-                        onClick={() => {}}
-                        className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
-                      >
-                        Complete stay / check-out
-                      </RippleButton>
-                    </div>
+                    <RippleButton
+                      onClick={() => markReturned("mock-id")}
+                      className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-center"
+                    >
+                      Complete stay / check-out
+                    </RippleButton>
                   </div>
                 </div>
               </div>
@@ -463,38 +475,40 @@ function ViewBookingContent() {
                   return (
                     <div 
                       key={listing.id} 
-                      className={`bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col transition-all ${
+                      className={`bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between transition-all ${
                         isCompleted ? "opacity-60 grayscale-[30%]" : ""
                       }`}
                     >
-                      <div className="relative h-44 bg-slate-100 shrink-0">
-                        <img src={listingImage(listing)} alt={listingTitle(listing)} className="w-full h-full object-cover" />
-                        <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[listing.status] || STATUS_BADGE_STYLES.active}`}>
-                          {LISTING_STATUS_LABELS[listing.status] || "Active"}
-                        </span>
-                      </div>
+                      <div>
+                        <div className="relative h-44 bg-slate-100 shrink-0">
+                          <img src={listingImage(listing)} alt={listingTitle(listing)} className="w-full h-full object-cover" />
+                          <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[listing.status] || STATUS_BADGE_STYLES.active}`}>
+                            {LISTING_STATUS_LABELS[listing.status] || "Active"}
+                          </span>
+                        </div>
 
-                      <div className="p-5 flex-1 flex flex-col justify-between gap-3">
-                        <div>
+                        <div className="p-5 pb-3">
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                             <span>{listing.category || "Private Room"}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(listing)}</span>
                           </div>
-                          <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1">{listingTitle(listing)}</h3>
+                          <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">{listingTitle(listing)}</h3>
                           <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 1200} <span className="text-[11px] font-normal text-slate-500">/ night</span></div>
                         </div>
+                      </div>
 
+                      <div className="p-5 pt-0 flex flex-col gap-3">
                         {isRented && (
                           <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                             <div>
                               <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                               <span className="font-semibold text-slate-800">
-                                4th - 19th
+                                4th - 19th ({days} nights)
                               </span>
                             </div>
                             <div className="text-right">
-                              <span className="text-slate-400 block text-[10px]">Total ({days} nights)</span>
-                              <span className="font-bold text-blue-600">₹13,500</span>
+                              <span className="text-slate-400 block text-[10px]">Total</span>
+                              <span className="font-bold text-blue-600">₹{total.toLocaleString("en-IN")}</span>
                             </div>
                           </div>
                         )}
@@ -512,7 +526,7 @@ function ViewBookingContent() {
                           {isRented && (
                             <RippleButton
                               onClick={() => markReturned(listing.id)}
-                              className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
+                              className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-center"
                             >
                               Complete stay / check-out
                             </RippleButton>
@@ -542,7 +556,7 @@ function ViewBookingContent() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {rentalMetrics(myRentals).map((metric, idx) => {
+              {rentalMetrics(myRentals, outgoing, now).map((metric, idx) => {
                 const IconComponent = metric.icon;
                 return (
                   <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
@@ -558,18 +572,77 @@ function ViewBookingContent() {
               })}
             </div>
 
-            {myRentals.length === 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col">
-                  <div className="relative h-44 bg-slate-100 shrink-0">
-                    <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800" alt="Apartment Rental" className="w-full h-full object-cover" />
-                    <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-                      Rented
-                    </span>
-                  </div>
+            {/* Pending Approvals Section for Rentals */}
+            {pendingOutgoingRequests.length > 0 && (
+              <div className="space-y-4 pt-2">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-600" /> Pending Approval Requests
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pendingOutgoingRequests.map((request) => {
+                    const nights = nightsBetween(request.startDate, request.endDate);
+                    const perNight = request.totalAmount / Math.max(1, request.days || nights);
+                    const calculatedTotal = perNight * nights;
 
-                  <div className="p-5 flex-1 flex flex-col justify-between gap-3">
-                    <div>
+                    return (
+                      <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
+                        <div>
+                          <div className="relative h-44 bg-slate-100 shrink-0">
+                            <img src={request.listingImage || "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800"} alt={request.listingTitle} className="w-full h-full object-cover" />
+                            <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-amber-50 text-amber-700 border-amber-200">
+                              Pending Approval
+                            </span>
+                          </div>
+
+                          <div className="p-5 pb-3">
+                            <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                              <span>Pending Request</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Booking Request</span>
+                            </div>
+                            <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">{request.listingTitle}</h3>
+                          </div>
+                        </div>
+
+                        <div className="p-5 pt-0 flex flex-col gap-3">
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Stay Duration</span>
+                              <span className="font-semibold text-slate-800">
+                                {formatDay(request.startDate)} - {formatDay(request.endDate)} ({nights} nights)
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-slate-400 block text-[10px]">Total</span>
+                              <span className="font-bold text-blue-600">₹{calculatedTotal.toLocaleString("en-IN")}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => actOnRequest(request.id, "cancel")}
+                            className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                          >
+                            Cancel request
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {myRentals.length === 0 && pendingOutgoingRequests.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
+                  <div>
+                    <div className="relative h-44 bg-slate-100 shrink-0">
+                      <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800" alt="Apartment Rental" className="w-full h-full object-cover" />
+                      <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
+                        Rented
+                      </span>
+                    </div>
+
+                    <div className="p-5 pb-3">
                       <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                         <span>Entire Apartment</span>
                         <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Downtown</span>
@@ -578,22 +651,24 @@ function ViewBookingContent() {
                         Spacious Studio Apartment near Metro
                       </Link>
                     </div>
+                  </div>
 
+                  <div className="p-5 pt-0 flex flex-col gap-3">
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                       <div>
                         <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                         <span className="font-semibold text-slate-800">
-                          4th - 19th
+                          4th - 19th (15 nights)
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-slate-400 block text-[10px]">Total (15 nights)</span>
-                        <span className="font-bold text-blue-600">₹13,500</span>
+                        <span className="text-slate-400 block text-[10px]">Total</span>
+                        <span className="font-bold text-blue-600">₹18,000</span>
                       </div>
                     </div>
 
                     <button
-                      onClick={() => {}}
+                      onClick={() => markReturned("mock-id")}
                       className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                     >
                       Check out / End stay
@@ -601,23 +676,23 @@ function ViewBookingContent() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : myRentals.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {myRentals.map((rental) => {
                   const days = 15;
-                  const total = 13500;
+                  const total = listingDailyPrice(rental) * days;
 
                   return (
-                    <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col">
-                      <div className="relative h-44 bg-slate-100 shrink-0">
-                        <img src={listingImage(rental)} alt={listingTitle(rental)} className="w-full h-full object-cover" />
-                        <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[rental.status]}`}>
-                          {LISTING_STATUS_LABELS[rental.status]}
-                        </span>
-                      </div>
+                    <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
+                      <div>
+                        <div className="relative h-44 bg-slate-100 shrink-0">
+                          <img src={listingImage(rental)} alt={listingTitle(rental)} className="w-full h-full object-cover" />
+                          <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[rental.status] || STATUS_BADGE_STYLES.active}`}>
+                            {LISTING_STATUS_LABELS[rental.status] || "Active"}
+                          </span>
+                        </div>
 
-                      <div className="p-5 flex-1 flex flex-col justify-between gap-3">
-                        <div>
+                        <div className="p-5 pb-3">
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                             <span>{rental.category || "Private Room"}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(rental)}</span>
@@ -626,16 +701,18 @@ function ViewBookingContent() {
                             {listingTitle(rental)}
                           </Link>
                         </div>
+                      </div>
 
+                      <div className="p-5 pt-0 flex flex-col gap-3">
                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                           <div>
                             <span className="text-slate-400 block text-[10px]">Stay Duration</span>
                             <span className="font-semibold text-slate-800">
-                              4th - 19th
+                              4th - 19th ({days} nights)
                             </span>
                           </div>
                           <div className="text-right">
-                            <span className="text-slate-400 block text-[10px]">Total ({days} nights)</span>
+                            <span className="text-slate-400 block text-[10px]">Total</span>
                             <span className="font-bold text-blue-600">₹{total.toLocaleString("en-IN")}</span>
                           </div>
                         </div>
@@ -684,14 +761,14 @@ function ViewBookingContent() {
                         <p className="text-[11px] text-slate-400">Alex wants to book your room</p>
                         <p className="text-sm font-bold text-slate-900 line-clamp-1">Cozy Modern Room with Balcony</p>
                         <p className="text-[11px] text-slate-500">
-                          4th - 19th · 15 nights · ₹13,500
+                          4th - 19th · 15 nights · ₹18,000
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <p className="text-[11px] font-semibold text-emerald-700">
-                        Booking confirmed — payment received. 4th - 19th · ₹13,500
+                        Booking confirmed — payment received. 4th - 19th · ₹18,000
                       </p>
                     </div>
                   </div>
@@ -699,7 +776,8 @@ function ViewBookingContent() {
                   incoming.map((request) => {
                     const liveStatus = deriveRequestStatus(request, now);
                     const nights = nightsBetween(request.startDate, request.endDate);
-                    const calculatedTotal = 13500;
+                    const perNight = request.totalAmount / Math.max(1, request.days || nights);
+                    const calculatedTotal = perNight * nights;
 
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
@@ -775,14 +853,14 @@ function ViewBookingContent() {
                         <p className="text-[11px] text-slate-400">You requested stay</p>
                         <p className="text-sm font-bold text-slate-900 line-clamp-1">Spacious Studio Apartment near Metro</p>
                         <p className="text-[11px] text-slate-500">
-                          4th - 19th · 15 nights · ₹13,500
+                          4th - 19th · 15 nights · ₹18,000
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <p className="text-[11px] font-semibold text-emerald-700">
-                        Booking confirmed — payment complete. 4th - 19th · ₹13,500
+                        Booking confirmed — payment complete. 4th - 19th · ₹18,000
                       </p>
                     </div>
                   </div>
@@ -790,7 +868,8 @@ function ViewBookingContent() {
                   outgoing.map((request) => {
                     const liveStatus = deriveRequestStatus(request, now);
                     const nights = nightsBetween(request.startDate, request.endDate);
-                    const calculatedTotal = 13500;
+                    const perNight = request.totalAmount / Math.max(1, request.days || nights);
+                    const calculatedTotal = perNight * nights;
 
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
