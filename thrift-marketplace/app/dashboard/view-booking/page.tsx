@@ -208,7 +208,7 @@ function RequestSummary({ request, caption }: { request: BookingRequest; caption
         <p className="text-[11px] text-slate-400">{caption}</p>
         <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
         <p className="text-[11px] text-slate-500">
-          7th - 22nd · {nights} nights · ₹{calculatedTotal.toLocaleString("en-IN")}
+          {formatDay(request.startDate)} - {formatDay(request.endDate)} · {nights} nights · ₹{calculatedTotal.toLocaleString("en-IN")}
         </p>
       </div>
     </div>
@@ -818,7 +818,7 @@ function ViewBookingContent() {
                           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                             <p className="text-[11px] font-semibold text-emerald-700">
-                              Booking confirmed — payment received. 1st - 15th Aug · ₹{calculatedTotal.toLocaleString("en-IN")}
+                              Booking confirmed — payment received. {formatDay(request.startDate)} - {formatDay(request.endDate)} · ₹{calculatedTotal.toLocaleString("en-IN")}
                             </p>
                           </div>
                         ) : (
@@ -920,7 +920,7 @@ function ViewBookingContent() {
                           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                             <p className="text-[11px] font-semibold text-emerald-700">
-                              Booking confirmed — payment complete. 1st - 15th Aug · ₹{calculatedTotal.toLocaleString("en-IN")}
+                              Booking confirmed — payment complete. {formatDay(request.startDate)} - {formatDay(request.endDate)} · ₹{calculatedTotal.toLocaleString("en-IN")}
                             </p>
                           </div>
                         )}
