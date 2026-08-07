@@ -1,79 +1,54 @@
-export const LISTING_STATUSES = ["active", "deleted", "in_rent", "in_lease"] as const;
+// thrift-marketplace/utils/listings.ts
 
-export type ListingStatus = (typeof LISTING_STATUSES)[number];
+export type ListingStatus = "active" | "pending" | "rented" | "completed" | "cancelled";
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
-  active: "Available",
-  deleted: "Deleted",
-  in_rent: "In Rent",
-  in_lease: "In Lease",
+  active: "Active",
+  pending: "Pending",
+  rented: "Rented",
+  completed: "Completed",
+  cancelled: "Cancelled",
 };
 
-/** A rental of 30 days or longer is treated as a lease rather than a rent. */
-export const LEASE_MIN_DAYS = 30;
-
 export interface ListingRental {
-  renterId: string;
-  startDate: string;
-  endDate: string;
-  bookedAt: string;
+  renterId?: string;
+  startDate?: string;
+  endDate?: string;
+  bookedAt?: string;
 }
 
-export function rentalDays(rental: ListingRental) {
-  const start = new Date(rental.startDate).getTime();
-  const end = new Date(rental.endDate).getTime();
-  if (Number.isNaN(start) || Number.isNaN(end)) return 0;
-  return Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-}
-
-/**
- * Status is never chosen by a user: it follows the listing's own state.
- * Removed -> deleted, booked and not yet returned -> in_rent / in_lease, otherwise available.
- */
-export function deriveListingStatus(
-  listing: { deletedAt?: string | null; rental?: ListingRental | null },
-  now = new Date()
-): ListingStatus {
-  if (listing.deletedAt) return "deleted";
-
-  const rental = listing.rental;
-  if (rental && new Date(rental.endDate).getTime() >= now.getTime()) {
-    return rentalDays(rental) >= LEASE_MIN_DAYS ? "in_lease" : "in_rent";
-  }
-
-  return "active";
-}
-
-/** A listing as returned by GET /api/auth/products (images collapsed to `primaryImage`). */
 export interface ListingSummary {
   id: string;
   userId: string;
-  status: ListingStatus;
+  status?: ListingStatus | string;
   rental?: ListingRental | null;
   productName: string;
   category: string;
-  subcategory: string;
-  brand: string;
-  condition: string;
-  description: string;
-  primaryImage: string;
-  dailyPrice: string;
-  weeklyPrice: string;
-  monthlyPrice: string;
-  securityDeposit: string;
-  city: string;
-  state: string;
-  instantBooking: boolean;
-  createdAt: string;
-  ownerName: string;
-  ownerAvatar: string;
+  subcategory?: string;
+  brand?: string;
+  condition?: string;
+  description?: string;
+  primaryImage?: string;
+  images?: string[];
+  dailyPrice: string | number;
+  weeklyPrice?: string | number;
+  monthlyPrice?: string | number;
+  securityDeposit?: string | number;
+  city?: string;
+  state?: string;
+  instantBooking?: boolean;
+  createdAt?: string;
+  ownerName?: string;
+  ownerAvatar?: string;
 }
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800";
 
-export function listingImage(listing: Pick<ListingSummary, "primaryImage">) {
-  return listing.primaryImage || FALLBACK_IMAGE;
+export function listingImage(listing: Pick<ListingSummary, "primaryImage" | "images">) {
+  if (listing.primaryImage) return listing.primaryImage;
+  if (Array.isArray(listing.images) && listing.images.length > 0) return listing.images[0];
+  return FALLBACK_IMAGE;
 }
 
 export function listingTitle(listing: Pick<ListingSummary, "productName">) {
@@ -88,11 +63,30 @@ export function listingDailyPrice(listing: Pick<ListingSummary, "dailyPrice">) {
   return Number(listing.dailyPrice) || 0;
 }
 
+export function deriveListingStatus(listing: ListingSummary): ListingStatus {
+  if (listing.status) {
+    return listing.status as ListingStatus;
+  }
+  if (listing.rental && listing.rental.renterId) {
+    return "rented";
+  }
+  return "active";
+}
+
+export function rentalDays(startDate?: string, endDate?: string): number {
+  if (!startDate || !endDate) return 1;
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  const diffTime = Math.abs(end - start);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 1;
+}
+
 export async function fetchListings(params: {
   userId?: string;
   renterId?: string;
   excludeUserId?: string;
-  status?: ListingStatus | "all";
+  status?: string;
 }): Promise<ListingSummary[]> {
   const query = new URLSearchParams();
   if (params.userId) query.set("userId", params.userId);
