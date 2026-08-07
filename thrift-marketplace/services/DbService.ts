@@ -1,4 +1,4 @@
-// thrift-marketplace/services/DbService.ts
+// services/DbService.ts
 import fs from "fs";
 import path from "path";
 import { ListingRental } from "@/utils/listings";

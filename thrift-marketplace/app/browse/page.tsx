@@ -241,7 +241,7 @@ function SearchContent() {
     }
   };
 
-  // Filter the active listings coming from the API
+  // Filter the active listings coming from the API[cite: 1]
   const query = searchQuery.trim().toLowerCase();
   const cityName = selectedCity.split(",")[0].trim().toLowerCase();
 
@@ -251,7 +251,7 @@ function SearchContent() {
         !query ||
         [listingTitle(item), item.category, item.brand, item.description]
           .filter(Boolean)
-          .some((field) => field.toLowerCase().includes(query));
+          .some((field) => field && field.toLowerCase().includes(query));
       const matchesCategory = selectedCategory === "All Categories" || item.category === selectedCategory;
       const matchesCity =
         selectedCity === ALL_LOCATIONS ||
