@@ -1,6 +1,7 @@
 // components/Categories.tsx
 "use client";
 
+import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -19,7 +20,7 @@ const CATEGORIES = [
   { name: "Pet Friendly", icon: Dog, count: "" },
 ];
 
-export const Categories = () => {
+function CategoriesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get("category");
@@ -83,5 +84,13 @@ export const Categories = () => {
         })}
       </div>
     </section>
+  );
+}
+
+export const Categories = () => {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-sm text-gray-400">Loading categories...</div>}>
+      <CategoriesContent />
+    </Suspense>
   );
 };

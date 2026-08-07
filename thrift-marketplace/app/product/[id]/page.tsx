@@ -1,1149 +1,1096 @@
-// app/list-item/page.tsx
+// app/product/[id]/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { 
-  Camera, Laptop, Gamepad2, Smartphone, Projector, Disc, Wrench, 
-  Bike, Compass, Car, Music, Armchair, Home, Baby, Watch, Sparkles, 
-  Package, BookOpen, Stethoscope, Utensils, Briefcase, Building2, 
-  Sprout, HelpCircle, Check, ArrowRight, ArrowLeft, Save, ShieldCheck, 
-  Info, MapPin, Calendar, DollarSign, Eye, RefreshCw, X, UploadCloud, 
-  Trash2, Star, Zap, AlertCircle
+import {
+  Star,
+  ShieldCheck,
+  Zap,
+  Check,
+  X,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Heart,
+  Share2,
+  MessageSquare,
+  Maximize2,
+  Send,
+  Lock,
 } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
+import { useFavorites } from "@/hooks/useFavorites";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
 // ==========================================
-// TYPES & INTERFACES
+// TYPES & MOCK DATA
 // ==========================================
-type CategoryType = 
-  | "Electronics" | "Cameras" | "Laptops" | "Gaming Consoles" | "Mobile Phones" 
-  | "Projectors" | "Drones" | "Tools" | "Sports Equipment" | "Camping Gear" 
-  | "Cycling" | "Motorcycles" | "Cars" | "Musical Instruments" | "Furniture" 
-  | "Home Appliances" | "Photography Equipment" | "Baby Products" | "Fashion Accessories" 
-  | "Luxury Watches" | "Jewelry" | "Party Equipment" | "Event Supplies" | "Books" 
-  | "Education" | "Medical Equipment" | "Kitchen Equipment" | "Office Equipment" 
-  | "Construction Equipment" | "Agriculture Equipment" | "Other";
+interface Review {
+  id: string;
+  author: string;
+  avatar: string;
+  rating: number;
+  date: string;
+  comment: string;
+  verifiedRental: boolean;
+  photos?: string[];
+  helpfulCount: number;
+}
 
-interface ListingFormState {
-  productName: string;
-  category: CategoryType | "";
-  subcategory: string;
+interface ListingRental {
+  startDate: string;
+  endDate: string;
+  renterId: string;
+}
+
+interface ProductDetail {
+  id: string;
+  title: string;
+  category: string;
   brand: string;
   model: string;
   condition: string;
-  purchaseYear: string;
   age: string;
-  serialNumber: string;
-  color: string;
-  weight: string;
-  dimensions: string;
-  accessoriesIncluded: string;
-  originalBox: boolean;
-  warranty: boolean;
-  invoice: boolean;
-  description: string;
-  usageInstructions: string;
-  minRentalDuration: string;
-  maxRentalDuration: string;
-  
+  dailyPrice: number;
+  weeklyPrice: number;
+  monthlyPrice: number;
+  securityDeposit: number;
+  platformProtection: number;
+  lateFee: number;
+  rating: number;
+  reviewsCount: number;
   images: string[];
-  primaryImageIndex: number;
-
-  dailyPrice: string;
-  weeklyPrice: string;
-  monthlyPrice: string;
-  securityDeposit: string;
-  lateReturnFee: string;
-  weeklyDiscount: string;
-  monthlyDiscount: string;
-
-  unavailableDates: string[];
-  advanceNotice: string;
-  instantBooking: boolean;
-  pickupTime: string;
-  returnTime: string;
-  maxConcurrent: string;
-
-  address: string;
   city: string;
-  state: string;
-  pinCode: string;
-  pickupOnly: boolean;
-  deliveryAvailable: boolean;
-  deliveryRadius: string;
-  deliveryCharges: string;
+  area: string;
+  distance: string;
+  verifiedHost: boolean;
+  instantBook: boolean;
+  rentalCount: number;
+  viewsCount: number;
+  wishlistCount: number;
+  shortDescription: string;
+  fullDescription: string;
+  propertyType: string;
+  numGuests: string | number;
+  numBeds: string | number;
+  availableFrom: string;
+  availableTo: string;
+  rental?: ListingRental | null;
+  amenities: Record<string, boolean>;
+  houseRules: {
+    checkIn: string;
+    checkOut: string;
+    quietHours: string;
+    smoking: boolean;
+    pets: boolean;
+    visitors: boolean;
+  };
+  owner: {
+    name: string;
+    avatar: string;
+    rating: number;
+    rentalsCompleted: number;
+    responseTime: string;
+    memberSince: string;
+    languages: string[];
+    verified: boolean;
+  };
+  specs: {
+    weight: string;
+    color: string;
+    power: string;
+    warranty: string;
+    pickup: string;
+    delivery: string;
+  };
+  included: string[];
+  reviews: Review[];
 }
 
-const CATEGORIES: { name: CategoryType; icon: React.ReactNode }[] = [
-  { name: "Electronics", icon: <Zap className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cameras", icon: <Camera className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Laptops", icon: <Laptop className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Gaming Consoles", icon: <Gamepad2 className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Mobile Phones", icon: <Smartphone className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Projectors", icon: <Projector className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Drones", icon: <Disc className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Tools", icon: <Wrench className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Sports Equipment", icon: <Compass className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Camping Gear", icon: <Home className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cycling", icon: <Bike className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Motorcycles", icon: <Car className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Cars", icon: <Car className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Musical Instruments", icon: <Music className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Furniture", icon: <Armchair className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Home Appliances", icon: <Home className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Photography Equipment", icon: <Camera className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Baby Products", icon: <Baby className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Fashion Accessories", icon: <Watch className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Luxury Watches", icon: <Watch className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Jewelry", icon: <Sparkles className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Party Equipment", icon: <Package className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Event Supplies", icon: <Package className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Books", icon: <BookOpen className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Education", icon: <BookOpen className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Medical Equipment", icon: <Stethoscope className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Kitchen Equipment", icon: <Utensils className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Office Equipment", icon: <Briefcase className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Construction Equipment", icon: <Building2 className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Agriculture Equipment", icon: <Sprout className="w-4 h-4 text-[#2563EB]" /> },
-  { name: "Other", icon: <Package className="w-4 h-4 text-[#2563EB]" /> },
-];
-
-export default function ListItemPage() {
-  return (
-    <ProtectedRoute>
-      <ListItemContent />
-    </ProtectedRoute>
-  );
-}
-
-function ListItemContent() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Form State
-  const [form, setForm] = useState<ListingFormState>({
-    productName: "",
-    category: "",
-    subcategory: "",
-    brand: "",
-    model: "",
+const MOCK_PRODUCTS: Record<string, ProductDetail> = {
+  "sony-alpha-7iv": {
+    id: "sony-alpha-7iv",
+    title: "Sony Alpha 7IV Mirrorless Camera with 24-70mm Lens",
+    category: "Cameras",
+    brand: "Sony",
+    model: "Alpha 7 IV (ILCE-7M4)",
     condition: "Like New",
-    purchaseYear: "2024",
-    age: "1 Year",
-    serialNumber: "",
-    color: "",
-    weight: "",
-    dimensions: "",
-    accessoriesIncluded: "",
-    originalBox: true,
-    warranty: false,
-    invoice: true,
-    description: "",
-    usageInstructions: "",
-    minRentalDuration: "1 Day",
-    maxRentalDuration: "30 Days",
-    
+    age: "8 months",
+    dailyPrice: 850,
+    weeklyPrice: 4800,
+    monthlyPrice: 15000,
+    securityDeposit: 3000,
+    platformProtection: 99,
+    lateFee: 200,
+    rating: 4.9,
+    reviewsCount: 42,
     images: [
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800",
-      "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=800"
+      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1502982720700-bfff97f2ecac?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1519638399535-1b036603ac77?auto=format&fit=crop&q=80&w=1200",
+      "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1200",
     ],
-    primaryImageIndex: 0,
+    city: "Bengaluru, KA",
+    area: "Indiranagar",
+    distance: "1.2 km away",
+    verifiedHost: true,
+    instantBook: true,
+    rentalCount: 38,
+    viewsCount: 1245,
+    wishlistCount: 94,
+    shortDescription: "Professional full-frame mirrorless camera equipped with a versatile 24-70mm f/2.8 zoom lens. Ideal for weddings, commercial shoots, and cinematic videography.",
+    fullDescription: "The Sony Alpha 7 IV redefines full-frame performance with breathtaking 33MP image quality, 4K 60p recording, and industry-leading real-time autofocus.",
+    propertyType: "Private Room",
+    numGuests: 2,
+    numBeds: 1,
+    availableFrom: "2026-08-01",
+    availableTo: "2026-12-31",
+    rental: null,
+    amenities: { wifi: true, kitchen: true, ac: true, workspace: true },
+    houseRules: {
+      checkIn: "2:00 PM",
+      checkOut: "11:00 AM",
+      quietHours: "10 PM - 7 AM",
+      smoking: false,
+      pets: false,
+      visitors: true,
+    },
+    owner: {
+      name: "Aarav Sharma",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+      rating: 4.9,
+      rentalsCompleted: 120,
+      responseTime: "Under 15 mins",
+      memberSince: "January 2024",
+      languages: ["English", "Hindi"],
+      verified: true,
+    },
+    specs: {
+      weight: "658 g",
+      color: "Matte Black",
+      power: "NP-FZ100",
+      warranty: "Active",
+      pickup: "Indiranagar Metro",
+      delivery: "Available",
+    },
+    included: ["Body", "24-70mm Lens", "2x Batteries", "Charger", "128GB SD"],
+    reviews: [
+      {
+        id: "r1",
+        author: "Vikram Malhotra",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
+        rating: 5,
+        date: "2 weeks ago",
+        comment: "Absolute pristine condition! Aarav was extremely helpful with pickup coordination.",
+        verifiedRental: true,
+        helpfulCount: 14,
+      },
+    ],
+  },
+};
 
-    dailyPrice: "850",
-    weeklyPrice: "5100",
-    monthlyPrice: "18000",
-    securityDeposit: "2500",
-    lateReturnFee: "500",
-    weeklyDiscount: "15%",
-    monthlyDiscount: "30%",
+interface StoredListing {
+  id: string;
+  userId?: string;
+  ownerName?: string;
+  ownerAvatar?: string;
+  productName?: string;
+  category?: string;
+  brand?: string;
+  model?: string;
+  condition?: string;
+  age?: string;
+  dailyPrice?: string;
+  weeklyPrice?: string;
+  monthlyPrice?: string;
+  securityDeposit?: string;
+  lateReturnFee?: string;
+  images?: string[];
+  city?: string;
+  state?: string;
+  address?: string;
+  instantBooking?: boolean;
+  description?: string;
+  usageInstructions?: string;
+  weight?: string;
+  color?: string;
+  dimensions?: string;
+  warranty?: boolean;
+  pickupTime?: string;
+  deliveryAvailable?: boolean;
+  accessoriesIncluded?: string;
+  propertyType?: string;
+  numGuests?: string | number;
+  numBeds?: string | number;
+  availableFrom?: string;
+  availableTo?: string;
+  rental?: ListingRental | null;
+  amenities?: Record<string, boolean>;
+  checkInTime?: string;
+  checkOutTime?: string;
+  quietHours?: string;
+  smokingAllowed?: boolean;
+  petsAllowed?: boolean;
+  visitorsAllowed?: boolean;
+}
 
-    unavailableDates: [],
-    advanceNotice: "24 Hours",
-    instantBooking: true,
-    pickupTime: "09:00 AM - 08:00 PM",
-    returnTime: "09:00 AM - 08:00 PM",
-    maxConcurrent: "1",
+function toProductDetail(listing: StoredListing): ProductDetail {
+  const images: string[] = listing.images?.length
+    ? listing.images
+    : ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200"];
 
-    address: "Friedrichstraße 43",
-    city: "Stuttgart",
-    state: "Baden-Württemberg",
-    pinCode: "70174",
-    pickupOnly: false,
-    deliveryAvailable: true,
-    deliveryRadius: "15 km",
-    deliveryCharges: "150",
-  });
+  return {
+    id: listing.id,
+    title: listing.productName || "Untitled listing",
+    category: listing.category || "General",
+    brand: listing.brand || "—",
+    model: listing.model || "—",
+    condition: listing.condition || "—",
+    age: listing.age || "—",
+    dailyPrice: Number(listing.dailyPrice) || 0,
+    weeklyPrice: Number(listing.weeklyPrice) || 0,
+    monthlyPrice: Number(listing.monthlyPrice) || 0,
+    securityDeposit: Number(listing.securityDeposit) || 0,
+    platformProtection: 99,
+    lateFee: Number(listing.lateReturnFee) || 0,
+    rating: 0,
+    reviewsCount: 0,
+    images,
+    city: listing.city || "",
+    area: listing.address || "",
+    distance: [listing.city, listing.state].filter(Boolean).join(", "),
+    verifiedHost: false,
+    instantBook: Boolean(listing.instantBooking),
+    rentalCount: 0,
+    viewsCount: 0,
+    wishlistCount: 0,
+    shortDescription: listing.description || "",
+    fullDescription: listing.usageInstructions || listing.description || "",
+    propertyType: listing.propertyType || "Private Room",
+    numGuests: listing.numGuests || "—",
+    numBeds: listing.numBeds || "—",
+    availableFrom: listing.availableFrom || "",
+    availableTo: listing.availableTo || "",
+    rental: listing.rental || null,
+    amenities: listing.amenities || {},
+    houseRules: {
+      checkIn: listing.checkInTime || "—",
+      checkOut: listing.checkOutTime || "—",
+      quietHours: listing.quietHours || "—",
+      smoking: Boolean(listing.smokingAllowed),
+      pets: Boolean(listing.petsAllowed),
+      visitors: Boolean(listing.visitorsAllowed),
+    },
+    owner: {
+      name: listing.ownerName || "Listing owner",
+      avatar: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+      rating: 0,
+      rentalsCompleted: 0,
+      responseTime: "—",
+      memberSince: "—",
+      languages: [],
+      verified: false,
+    },
+    specs: {
+      weight: listing.weight || "—",
+      color: listing.color || "—",
+      power: listing.dimensions || "—",
+      warranty: listing.warranty ? "Active" : "None",
+      pickup: listing.pickupTime || "—",
+      delivery: listing.deliveryAvailable ? "Available" : "Pickup only",
+    },
+    included: listing.accessoriesIncluded
+      ? String(listing.accessoriesIncluded).split(",").map((part: string) => part.trim()).filter(Boolean)
+      : [],
+    reviews: [],
+  };
+}
 
-  // Auto-save draft effect
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+const formatDateString = (year: number, month: number, day: number) => {
+  const m = String(month + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+};
+
+const formatDisplayDate = (dateString: string) => {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split("-");
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  if (isNaN(date.getTime())) return dateString;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+// ==========================================
+// MAIN COMPONENT
+// ==========================================
+export default function ProductDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawId = params?.id;
+  const productId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const mockProduct = (productId && MOCK_PRODUCTS[productId]) || null;
+  const [product, setProduct] = useState<ProductDetail | null>(mockProduct);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(!mockProduct);
+
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [messageSent, setMessageSent] = useState(false);
+
+  const { user, authStatus } = useAuth();
+  const isAuthenticated = Boolean(user);
+  const isCheckingAuth = authStatus === "loading";
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");
+  const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
+  
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(7);
+  const [currentYear, setCurrentYear] = useState(2026);
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  const [listingRequests, setListingRequests] = useState<any[]>([]);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSavingDraft(true);
-      localStorage.setItem("rentit_listing_draft", JSON.stringify(form));
-      setTimeout(() => {
-        setSavingDraft(false);
-        setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      }, 800);
+    if (!productId || mockProduct) return;
+    let cancelled = false;
+
+    fetch(`/api/auth/products?id=${encodeURIComponent(productId)}`)
+      .then((response) => response.json())
+      .then((result) => {
+        if (!cancelled && result?.data) setProduct(toProductDetail(result.data));
+      })
+      .catch((err) => console.error("Failed to load listing", err))
+      .finally(() => {
+        if (!cancelled) setIsLoadingProduct(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, mockProduct]);
+
+  useEffect(() => {
+    if (!productId) return;
+    fetch(`/api/auth/booking-requests?listingId=${encodeURIComponent(productId)}`)
+      .then((r) => r.json())
+      .then((res) => setListingRequests(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setListingRequests([]));
+  }, [productId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setIsCalendarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [requestError, setRequestError] = useState("");
+
+  const isWishlisted = productId ? isFavorite(productId) : false;
+
+  // Build a Set of blocked dates from product.rental and active/pending requests
+  const blockedDates = React.useMemo(() => {
+    const set = new Set<string>();
+
+    const addRange = (startStr: string, endStr: string) => {
+      const start = new Date(startStr);
+      const end = new Date(endStr);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+      const curr = new Date(start);
+      while (curr <= end) {
+        const y = curr.getFullYear();
+        const m = String(curr.getMonth() + 1).padStart(2, "0");
+        const d = String(curr.getDate()).padStart(2, "0");
+        set.add(`${y}-${m}-${d}`);
+        curr.setDate(curr.getDate() + 1);
+      }
+    };
+
+    if (product?.rental && typeof product.rental === "object") {
+      addRange(product.rental.startDate, product.rental.endDate);
+    }
+    listingRequests
+      .filter((r) => r.status === "pending" || r.status === "approved" || r.status === "paid")
+      .forEach((r) => addRange(r.startDate, r.endDate));
+
+    return set;
+  }, [product, listingRequests]);
+
+  const handleWishlistToggle = () => {
+    if (!isAuthenticated) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    if (productId) toggleFavorite(productId);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim()) return;
+    setMessageSent(true);
+    setTimeout(() => {
+      setMessageSent(false);
+      setMessageText("");
+      setIsContactModalOpen(false);
     }, 2000);
-    return () => clearTimeout(timer);
-  }, [form]);
-
-  const updateField = (field: keyof ListingFormState, value: any) => {
-    setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const newImages: string[] = [];
-      Array.from(files).forEach((file) => {
-        const url = URL.createObjectURL(file);
-        newImages.push(url);
-      });
-      setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+  const calculateDays = () => {
+    if (!startDate || !endDate) return 0;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const rentalDays = calculateDays();
+  const rentalCost = rentalDays * (product?.dailyPrice ?? 0);
+  const platformFee = Math.round(rentalCost * 0.08);
+  const taxes = Math.round((rentalCost + platformFee) * 0.18);
+  const grandTotal =
+    rentalDays > 0
+      ? rentalCost + (product?.securityDeposit ?? 0) + (product?.platformProtection ?? 0) + platformFee + taxes
+      : 0;
+
+  const getDaysInMonth = (year: number, month: number) => {
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const prevTotalDays = new Date(year, month, 0).getDate();
+    const days = [];
+
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = prevTotalDays - i;
+      const prevM = month === 0 ? 11 : month - 1;
+      const prevY = month === 0 ? year - 1 : year;
+      days.push({ day: dayNum, dateStr: formatDateString(prevY, prevM, dayNum), isCurrentMonth: false });
     }
-    e.target.value = "";
+
+    for (let i = 1; i <= totalDays; i++) {
+      days.push({ day: i, dateStr: formatDateString(year, month, i), isCurrentMonth: true });
+    }
+
+    const remainingCells = 42 - days.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      const nextM = month === 11 ? 0 : month + 1;
+      const nextY = month === 11 ? year + 1 : year;
+      days.push({ day: i, dateStr: formatDateString(nextY, nextM, i), isCurrentMonth: false });
+    }
+
+    return days;
   };
 
-  const nextStep = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleDateClick = (dateStr: string) => {
+    if (blockedDates.has(dateStr)) return;
+
+    if (!startDate || (startDate && endDate)) {
+      setStartDate(dateStr);
+      setEndDate("");
+    } else if (startDate && !endDate) {
+      if (dateStr < startDate) {
+        setStartDate(dateStr);
+      } else {
+        const startObj = new Date(startDate);
+        const endObj = new Date(dateStr);
+        let hasBlockedBetween = false;
+        const curr = new Date(startObj);
+        while (curr <= endObj) {
+          const yr = curr.getFullYear();
+          const mo = String(curr.getMonth() + 1).padStart(2, "0");
+          const da = String(curr.getDate()).padStart(2, "0");
+          if (blockedDates.has(`${yr}-${mo}-${da}`)) {
+            hasBlockedBetween = true;
+            break;
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+
+        if (hasBlockedBetween) {
+          setStartDate(dateStr);
+          setEndDate("");
+        } else {
+          setEndDate(dateStr);
+          setIsCalendarOpen(false);
+        }
+      }
     }
   };
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
+  const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
-  const handlePublish = async () => {
-    setIsSubmitting(true);
+  const handleProceedToBook = async () => {
+    if (!isAuthenticated || !user) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      setRequestError("Please select your check-in and check-out dates to continue.");
+      return;
+    }
+
+    setRequestError("");
+    setIsRequesting(true);
+
     try {
-      // Map frontend form structure to your detailed backend JSON product format
-      const payload = {
-        title: form.productName || "Professional Listing",
-        category: form.category || "Electronics",
-        subcategory: form.subcategory,
-        brand: form.brand,
-        model: form.model,
-        sku: `SKU-${Date.now().toString().slice(-6)}`,
-        condition: form.condition,
-        shortDescription: form.description ? form.description.slice(0, 120) + "..." : "",
-        detailedDescription: form.description,
-        media: {
-          mainThumbnail: form.images[form.primaryImageIndex] || form.images[0],
-          galleryImages: form.images.filter((_, idx) => idx !== form.primaryImageIndex),
-          videos: []
-        },
-        rentInfo: {
-          pricePerDay: Number(form.dailyPrice) || 0,
-          securityDeposit: Number(form.securityDeposit) || 0,
-          minimumRentalDays: 1,
-          maximumRentalDays: 30
-        },
-        sellInfo: {
-          purchasePrice: Number(form.monthlyPrice) * 2 || 0,
-          allowOutrightPurchase: false
-        },
-        location: {
-          city: form.city,
-          state: form.state,
-          country: "Germany",
-          postalCode: form.pinCode,
-          address: form.address
-        },
-        specifications: {
-          Color: form.color,
-          Weight: form.weight,
-          Dimensions: form.dimensions,
-          PurchaseYear: form.purchaseYear
-        },
-        rules: {
-          cancellationPolicy: "Free cancellation up to 48 hours before rental start date.",
-          requiresKycVerification: true,
-          insuranceIncluded: true
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const response = await fetch("/api/auth/booking-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: productId,
+          renterId: user.id,
+          renterName: user.name,
+          startDate,
+          endDate,
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save listing to server");
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error || "Could not send the request");
       }
 
-      setIsSubmitted(true);
-    } catch (error) {
-      console.error("Error saving product:", error);
-      // Fallback display success UI even if backend route isn't wired yet so user flow isn't blocked
-      setIsSubmitted(true);
+      setRequestSent(true);
+    } catch (err) {
+      setRequestError(err instanceof Error ? err.message : "Could not send the request");
     } finally {
-      setIsSubmitting(false);
+      setIsRequesting(false);
     }
   };
 
-  if (isSubmitted) {
+  const handleNavigateToLoginPage = () => {
+    router.push(`/login?redirect=${encodeURIComponent(bookingUrl)}`);
+  };
+
+  if (isLoadingProduct) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-[#0F172A]">
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center px-6 py-24">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="glass-panel max-w-xl w-full p-10 rounded-3xl text-center shadow-2xl border border-gray-200/80"
-          >
-            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-              <Check className="w-10 h-10 stroke-[3]" />
-            </div>
-            <h1 className="text-3xl font-extrabold font-heading text-gray-900 tracking-tight mb-2">
-              Listing Published Successfully! 🎉
-            </h1>
-            <p className="text-gray-600 mb-8">
-              Your item is now live and optimized for maximum trust and conversion on RentIt. Verified renters in your area can now discover and book your product.
-            </p>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 text-left flex items-center gap-4 shadow-sm">
-              <img 
-                src={form.images[form.primaryImageIndex] || form.images[0]} 
-                alt={form.productName} 
-                className="w-20 h-20 rounded-xl object-cover"
-              />
-              <div>
-                <span className="inline-block px-2.5 py-0.5 bg-blue-50 text-[#2563EB] text-xs font-semibold rounded-full mb-1">
-                  {form.category || "Electronics"}
-                </span>
-                <h3 className="font-bold text-gray-900 text-base line-clamp-1">
-                  {form.productName || "Professional Cinematic Camera Kit"}
-                </h3>
-                <p className="text-sm font-bold text-[#2563EB] mt-1">
-                  ₹{form.dailyPrice || "850"} <span className="text-xs text-gray-500 font-normal">/ day</span>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button 
-                onClick={() => window.location.href = "/listings"}
-                className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold shadow-lg shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
-              >
-                View Listings
-              </button>
-              <button 
-                onClick={() => {
-                  setIsSubmitted(false);
-                  setCurrentStep(1);
-                  setForm(prev => ({ ...prev, productName: "" }));
-                }}
-                className="flex-1 py-3.5 px-6 rounded-2xl border border-gray-200 bg-white text-gray-800 font-semibold hover:bg-gray-50 transition-all cursor-pointer"
-              >
-                List Another Product
-              </button>
-            </div>
-          </motion.div>
-        </main>
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <h1 className="text-xl font-bold text-slate-900">Listing not available</h1>
+          <p className="text-sm text-slate-500">This item may have been removed by its owner.</p>
+          <Link href="/browse" className="text-sm font-semibold text-[#2563EB]">
+            Browse active listings
+          </Link>
+        </div>
         <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-[#0F172A] selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col font-sans text-slate-900 selection:bg-[#2563EB] selection:text-white">
       <Navbar />
 
-      <main className="flex-1 pt-28 pb-20 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#2563EB] bg-blue-50 px-3 py-1 rounded-full">
-              Host Experience • Under 2 Minutes
-            </span>
-            <h1 className="text-3xl lg:text-4xl font-extrabold font-heading text-gray-900 tracking-tight mt-2">
-              Lend Your Product & Earn
+      <main className="flex-1 pt-20 pb-12 px-4 sm:px-6 max-w-[1280px] mx-auto w-full space-y-6">
+        
+        {/* ==========================================
+            1. COMPACT HEADER SECTION
+        ========================================== */}
+        <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/85 pb-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-extrabold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
+                {product.category}
+              </span>
+              <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                {product.condition}
+              </span>
+              {product.instantBook && (
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-white flex items-center gap-1">
+                  <Zap className="w-3 h-3 fill-current" /> Instant Book
+                </span>
+              )}
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold font-heading text-slate-900 tracking-tight">
+              {product.title}
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
-              {savingDraft ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#2563EB]" />
-                  Saving draft...
-                </>
-              ) : lastSaved ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  Draft saved at {lastSaved}
-                </>
-              ) : (
-                <>
-                  <Save className="w-3.5 h-3.5 text-gray-400" />
-                  Auto-saving enabled
-                </>
-              )}
-            </span>
-          </div>
-        </div>
 
-        <div className="glass-panel rounded-2xl p-4 mb-8 shadow-xs border border-gray-200/80 overflow-x-auto">
-          <div className="flex items-center justify-between min-w-[700px] gap-2">
-            {[
-              { num: 1, label: "Basic Info" },
-              { num: 2, label: "Photos" },
-              { num: 3, label: "Pricing" },
-              { num: 4, label: "Availability" },
-              { num: 5, label: "Location" },
-              { num: 6, label: "Preview" },
-            ].map((step) => {
-              const isCompleted = currentStep > step.num;
-              const isCurrent = currentStep === step.num;
-              return (
-                <div 
-                  key={step.num} 
-                  onClick={() => step.num < currentStep && setCurrentStep(step.num)}
-                  className={`flex items-center gap-3 flex-1 px-3 py-2 rounded-xl transition-all ${
-                    step.num < currentStep ? "cursor-pointer hover:bg-gray-100/60" : ""
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1 text-xs font-semibold bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-xs">
+              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span>{product.rating}</span>
+              <span className="text-slate-400">({product.reviewsCount})</span>
+            </div>
+            <button
+              onClick={handleWishlistToggle}
+              aria-label="Wishlist item"
+              className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+            >
+              <Heart className={`w-4 h-4 ${isWishlisted ? "fill-red-500 text-red-500" : "text-slate-600"}`} />
+            </button>
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              aria-label="Share item"
+              className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+            >
+              <Share2 className="w-4 h-4 text-slate-600" />
+            </button>
+          </div>
+        </section>
+
+        {/* ==========================================
+            2. MAIN SPLIT GRID (GALLERY + PRICING SIDEBAR)
+        ========================================== */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left: Gallery & Room Details / Amenities / House Rules */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            <div className="grid grid-cols-4 gap-2 bg-slate-900 p-2 rounded-2xl shadow-md">
+              <div className="col-span-4 relative aspect-[16/9] rounded-xl overflow-hidden group">
+                <img
+                  src={product.images[activeImageIdx]}
+                  alt={product.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-zoom-in"
+                  onClick={() => setIsFullscreenOpen(true)}
+                />
+                <button
+                  onClick={() => setIsFullscreenOpen(true)}
+                  aria-label="Fullscreen gallery"
+                  className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg hover:bg-[#2563EB] transition-colors"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" /> Expand Image
+                </button>
+              </div>
+              {product.images.map((img, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setActiveImageIdx(idx)}
+                  className={`relative aspect-[16/10] rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                    activeImageIdx === idx ? "border-[#2563EB] opacity-100 scale-95" : "border-transparent opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                    isCompleted 
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20" 
-                      : isCurrent 
-                      ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/30 scale-105 ring-4 ring-blue-100" 
-                      : "bg-gray-200 text-gray-600"
-                  }`}>
-                    {isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : step.num}
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">Step 0{step.num}</span>
-                    <span className={`text-xs font-bold block ${isCurrent ? "text-gray-900" : "text-gray-600"}`}>
-                      {step.label}
-                    </span>
-                  </div>
-                  {step.num < 6 && <div className="h-px bg-gray-200 flex-1 ml-2 hidden xl:block" />}
+                  <img src={img} alt="Thumbnail" className="w-full h-full object-cover" />
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              ))}
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 space-y-6">
-            <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-xl border border-gray-200/80">
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
+                  {product.propertyType}
+                </span>
+                <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
+                </span>
+              </div>
               
-              <AnimatePresence mode="wait">
-                {currentStep === 1 && (
-                  <motion.div 
-                    key="step1"
-                    initial={{ opacity: 0, y: 15 }}
+              <p className="text-xs text-gray-600 leading-relaxed">{product.shortDescription}</p>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100 text-center">
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Guests</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.numGuests} Max</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Beds</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.numBeds} Bed(s)</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Location</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.city}</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Check-in</span>
+                  <span className="text-xs font-bold text-blue-600 mt-0.5 block">{product.houseRules.checkIn}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-3">
+              <h3 className="text-sm font-bold font-heading text-slate-900">Amenities</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(product.amenities || {})
+                  .filter(([, on]) => on)
+                  .map(([key]) => (
+                    <span key={key} className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg capitalize">
+                      ✓ {key.replace(/([A-Z])/g, " $1")}
+                    </span>
+                  ))}
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-4">
+              <h3 className="text-sm font-bold font-heading text-slate-900">House Rules</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Check-in</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.checkIn}</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Check-out</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.checkOut}</span>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-2xl">
+                  <span className="text-xs text-gray-500 block">Quiet Hours</span>
+                  <span className="text-xs font-bold text-gray-900 mt-0.5 block">{product.houseRules.quietHours}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={product.owner.avatar} alt={product.owner.name} className="w-10 h-10 rounded-full object-cover" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900">Hosted by {product.owner.name}</h4>
+                  <p className="text-[10px] text-slate-500">Responds {product.owner.responseTime} • {product.distance}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsContactModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 font-bold text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-[#2563EB]" /> Chat
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering */}
+          <div className="lg:col-span-5 bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-4 sticky top-20">
+            <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-2xl font-extrabold text-slate-900">₹{product.dailyPrice}</span>
+                <span className="text-xs text-slate-500 font-medium"> / day</span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                Save 20% on weekly
+              </span>
+            </div>
+
+            {/* Date Picker Trigger */}
+            <div className="space-y-1 relative" ref={calendarRef}>
+              <label className="text-[11px] font-bold text-slate-700">Select Dates</label>
+              <div
+                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between cursor-pointer hover:border-[#2563EB] transition-colors text-xs"
+              >
+                <div className="flex items-center gap-2 font-bold text-slate-800">
+                  <Calendar className="w-3.5 h-3.5 text-[#2563EB]" />
+                  <span>
+                    {startDate && endDate
+                      ? `${formatDisplayDate(startDate)} → ${formatDisplayDate(endDate)}`
+                      : "Select check-in & check-out"}
+                  </span>
+                </div>
+                <span className="font-extrabold text-[#2563EB]">{rentalDays > 0 ? `${rentalDays}d` : "—"}</span>
+              </div>
+
+              {/* Popup Calendar Dropdown with Blocked Date Support */}
+              <AnimatePresence>
+                {isCalendarOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
+                    exit={{ opacity: 0, y: 5 }}
+                    className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-xl p-3 shadow-xl border border-slate-100 space-y-3"
                   >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Basic Product Information</h2>
-                      <p className="text-sm text-gray-500 mt-1">Provide clear details so renters know exactly what they are getting.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Product Name *</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Sony Alpha 7IV Mirrorless Camera with 24-70mm Lens"
-                          value={form.productName}
-                          onChange={(e) => updateField("productName", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Category *</label>
-                        <select 
-                          value={form.category}
-                          onChange={(e) => updateField("category", e.target.value as CategoryType)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
-                        >
-                          <option value="">Select Category...</option>
-                          {CATEGORIES.map((cat) => (
-                            <option key={cat.name} value={cat.name}>{cat.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Subcategory *</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Full-Frame Cameras"
-                          value={form.subcategory}
-                          onChange={(e) => updateField("subcategory", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Brand</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Sony"
-                          value={form.brand}
-                          onChange={(e) => updateField("brand", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Model</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., ILCE-7M4"
-                          value={form.model}
-                          onChange={(e) => updateField("model", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Condition</label>
-                        <select 
-                          value={form.condition}
-                          onChange={(e) => updateField("condition", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
-                        >
-                          <option value="Brand New">Brand New</option>
-                          <option value="Like New">Like New</option>
-                          <option value="Excellent">Excellent</option>
-                          <option value="Good">Good</option>
-                          <option value="Fair">Fair</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Purchase Year</label>
-                        <input 
-                          type="text" 
-                          placeholder="2024"
-                          value={form.purchaseYear}
-                          onChange={(e) => updateField("purchaseYear", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Color</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g., Matte Black"
-                          value={form.color}
-                          onChange={(e) => updateField("color", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Serial Number (Optional)</label>
-                        <input 
-                          type="text" 
-                          placeholder="For safety & verification"
-                          value={form.serialNumber}
-                          onChange={(e) => updateField("serialNumber", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Description & Highlights</label>
-                        <textarea 
-                          rows={4}
-                          placeholder="Describe key features, specs, and why renters will love using this item..."
-                          value={form.description}
-                          onChange={(e) => updateField("description", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs resize-none"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 grid grid-cols-3 gap-4 pt-2">
-                        <label className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.originalBox}
-                            onChange={(e) => updateField("originalBox", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-semibold text-gray-800">Original Box</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.warranty}
-                            onChange={(e) => updateField("warranty", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-semibold text-gray-800">Under Warranty</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.invoice}
-                            onChange={(e) => updateField("invoice", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm font-semibold text-gray-800">Purchase Invoice</span>
-                        </label>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 2 && (
-                  <motion.div 
-                    key="step2"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Upload Product Photos</h2>
-                      <p className="text-sm text-gray-500 mt-1">Listings with 4+ high-resolution photos get up to 3x more rental inquiries.</p>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/60 p-4 rounded-2xl flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#2563EB] uppercase tracking-wider">AI Photo Quality Score</span>
-                          <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">94 / 100 (Excellent)</span>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-0.5">High lighting detected. Primary image looks sharp and professional.</p>
-                      </div>
-                    </div>
-
-                    <label className="border-2 border-dashed border-gray-300 hover:border-[#2563EB] bg-gray-50/50 rounded-3xl p-8 text-center transition-all cursor-pointer block">
-                      <div className="w-16 h-16 bg-blue-100 text-[#2563EB] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <UploadCloud className="w-8 h-8" />
-                      </div>
-                      <h3 className="font-bold text-gray-900 text-base">Drag & drop photos here, or browse files</h3>
-                      <p className="text-xs text-gray-500 mt-1">Supports PNG, JPG or WEBP (Max 10 images, up to 15MB each)</p>
-                      
-                      <span className="mt-5 inline-block px-6 py-2.5 rounded-2xl bg-white border border-gray-200 font-semibold text-sm text-gray-800 shadow-sm hover:bg-gray-50 transition-all">
-                        Browse Files
-                      </span>
-
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </label>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-bold text-sm text-gray-900">Uploaded Photos ({form.images.length}/10)</h4>
-                        <span className="text-xs text-gray-500">Click star to set primary photo</span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {form.images.map((imgUrl, idx) => (
-                          <div key={idx} className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-square bg-gray-100">
-                            <img src={imgUrl} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
-                            
-                            {idx === form.primaryImageIndex && (
-                              <span className="absolute top-2 left-2 bg-[#2563EB] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
-                                Primary Cover
-                              </span>
-                            )}
-
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
-                              <button 
-                                title="Set as Primary"
-                                onClick={() => updateField("primaryImageIndex", idx)}
-                                className={`p-2 rounded-xl text-white transition-all ${idx === form.primaryImageIndex ? 'bg-blue-600' : 'bg-black/60 hover:bg-black'}`}
-                              >
-                                <Star className="w-4 h-4 fill-current" />
-                              </button>
-                              <button 
-                                title="Delete Image"
-                                onClick={() => {
-                                  const updated = form.images.filter((_, i) => i !== idx);
-                                  updateField("images", updated);
-                                  if (form.primaryImageIndex >= updated.length) {
-                                    updateField("primaryImageIndex", 0);
-                                  }
-                                }}
-                                className="p-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 3 && (
-                  <motion.div 
-                    key="step3"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Set Your Pricing</h2>
-                      <p className="text-sm text-gray-500 mt-1">Smart pricing recommendations maximize your monthly passive income.</p>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 p-5 rounded-2xl flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
-                          <Sparkles className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">AI Suggested Daily Price</span>
-                          <h4 className="text-xl font-extrabold text-gray-900">₹850 <span className="text-xs font-normal text-gray-600">/ day</span></h4>
-                          <p className="text-xs text-gray-600 mt-0.5">Based on 45 similar items rented in your area this month.</p>
-                        </div>
-                      </div>
-                      <button 
+                    <div className="flex items-center justify-between pb-1">
+                      <button
                         onClick={() => {
-                          updateField("dailyPrice", "850");
-                          updateField("weeklyPrice", "5100");
-                          updateField("monthlyPrice", "18000");
+                          if (currentMonth === 0) {
+                            setCurrentMonth(11);
+                            setCurrentYear(currentYear - 1);
+                          } else {
+                            setCurrentMonth(currentMonth - 1);
+                          }
                         }}
-                        className="px-4 py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-600/20 hover:bg-amber-700 transition-all cursor-pointer shrink-0"
+                        className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
                       >
-                        Apply Price
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-xs font-bold text-slate-800">
+                        {MONTH_NAMES[currentMonth]} {currentYear}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (currentMonth === 11) {
+                            setCurrentMonth(0);
+                            setCurrentYear(currentYear + 1);
+                          } else {
+                            setCurrentMonth(currentMonth + 1);
+                          }
+                        }}
+                        className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Daily Rental Price (₹) *</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.dailyPrice}
-                            onChange={(e) => updateField("dailyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {WEEKDAYS.map((wd) => (
+                        <span key={wd} className="text-[9px] font-extrabold text-slate-400 py-0.5">
+                          {wd}
+                        </span>
+                      ))}
+                      {getDaysInMonth(currentYear, currentMonth).map((d, i) => {
+                        const isBlocked = blockedDates.has(d.dateStr);
+                        const isSelected = d.dateStr === startDate || d.dateStr === endDate;
+                        const isInRange = startDate && endDate && d.dateStr > startDate && d.dateStr < endDate;
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Weekly Price (₹)</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.weeklyPrice}
-                            onChange={(e) => updateField("weeklyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Monthly Price (₹)</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.monthlyPrice}
-                            onChange={(e) => updateField("monthlyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Security Deposit (₹) *</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.securityDeposit}
-                            onChange={(e) => updateField("securityDeposit", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                        <span className="text-[11px] text-gray-500 mt-1 block">Fully refundable to renter upon safe return.</span>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Late Return Fee (₹ / day)</label>
-                        <input 
-                          type="number" 
-                          value={form.lateReturnFee}
-                          onChange={(e) => updateField("lateReturnFee", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Estimated Monthly Earnings</label>
-                        <div className="px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-800">Potential Payout</span>
-                          <span className="text-base font-extrabold text-emerald-700">₹{(Number(form.dailyPrice || 0) * 15).toLocaleString()} / mo</span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 4 && (
-                  <motion.div 
-                    key="step4"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Availability & Time Slots</h2>
-                      <p className="text-sm text-gray-500 mt-1">Configure when renters can pickup or receive your item.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Advance Notice Required</label>
-                        <select 
-                          value={form.advanceNotice}
-                          onChange={(e) => updateField("advanceNotice", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
-                        >
-                          <option value="Same Day (2 hours)">Same Day (2 hours)</option>
-                          <option value="24 Hours">24 Hours</option>
-                          <option value="48 Hours">48 Hours</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Maximum Concurrent Bookings</label>
-                        <input 
-                          type="number" 
-                          value={form.maxConcurrent}
-                          onChange={(e) => updateField("maxConcurrent", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Pickup Time Window</label>
-                        <input 
-                          type="text" 
-                          value={form.pickupTime}
-                          onChange={(e) => updateField("pickupTime", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Return Time Window</label>
-                        <input 
-                          type="text" 
-                          value={form.returnTime}
-                          onChange={(e) => updateField("returnTime", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 p-5 rounded-2xl bg-white border border-gray-200 flex items-center justify-between">
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900">Instant Booking</h4>
-                          <p className="text-xs text-gray-500 mt-0.5">Allow verified renters to book instantly without manual approval.</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={form.instantBooking}
-                          onChange={(e) => updateField("instantBooking", e.target.checked)}
-                          className="w-6 h-6 text-[#2563EB] rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 5 && (
-                  <motion.div 
-                    key="step5"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Item Location & Delivery</h2>
-                      <p className="text-sm text-gray-500 mt-1">Exact address is only shared with confirmed renters after booking.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div className="sm:col-span-2">
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Street Address *</label>
-                        <input 
-                          type="text" 
-                          value={form.address}
-                          onChange={(e) => updateField("address", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">City *</label>
-                        <input 
-                          type="text" 
-                          value={form.city}
-                          onChange={(e) => updateField("city", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">State *</label>
-                        <input 
-                          type="text" 
-                          value={form.state}
-                          onChange={(e) => updateField("state", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">PIN Code *</label>
-                        <input 
-                          type="text" 
-                          value={form.pinCode}
-                          onChange={(e) => updateField("pinCode", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Delivery Charges (₹)</label>
-                        <input 
-                          type="number" 
-                          value={form.deliveryCharges}
-                          onChange={(e) => updateField("deliveryCharges", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2 p-5 rounded-2xl bg-white border border-gray-200 flex items-center justify-between">
-                        <div>
-                          <h4 className="font-bold text-sm text-gray-900">Offer Doorstep Delivery</h4>
-                          <p className="text-xs text-gray-500 mt-0.5">Deliver within a 15 km radius for extra convenience and higher bookings.</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={form.deliveryAvailable}
-                          onChange={(e) => updateField("deliveryAvailable", e.target.checked)}
-                          className="w-6 h-6 text-[#2563EB] rounded focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {currentStep === 6 && (
-                  <motion.div 
-                    key="step6"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.25 }}
-                    className="space-y-6"
-                  >
-                    <div>
-                      <h2 className="text-2xl font-bold font-heading text-gray-900">Review & Publish Listing</h2>
-                      <p className="text-sm text-gray-500 mt-1">This is exactly how your product card will appear to thousands of verified renters.</p>
-                    </div>
-
-                    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-md space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <img 
-                          src={form.images[form.primaryImageIndex] || form.images[0]} 
-                          alt="Product preview" 
-                          className="w-full h-64 object-cover rounded-2xl border border-gray-100"
-                        />
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
-                              {form.category || "Electronics"}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                              <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
-                            </span>
-                          </div>
-                          <h3 className="text-xl font-extrabold text-gray-900 font-heading">
-                            {form.productName || "Professional Cinematic Camera Kit"}
-                          </h3>
-                          <p className="text-xs text-gray-600 line-clamp-3">
-                            {form.description || "High-end cinematic camera kit in pristine condition. Includes all original accessories and secure carrying case."}
-                          </p>
-                          <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-                            <div>
-                              <span className="text-2xl font-extrabold text-[#2563EB]">₹{form.dailyPrice || "850"}</span>
-                              <span className="text-xs text-gray-500 font-medium"> / day</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xs text-gray-500 block">Security Deposit</span>
-                              <span className="text-sm font-bold text-gray-900">₹{form.securityDeposit || "2500"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100 text-center">
-                        <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Condition</span>
-                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.condition}</span>
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Location</span>
-                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.city}, {form.state}</span>
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Instant Book</span>
-                          <span className="text-xs font-bold text-emerald-600 mt-0.5 block">{form.instantBooking ? "Enabled" : "Manual"}</span>
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Delivery</span>
-                          <span className="text-xs font-bold text-blue-600 mt-0.5 block">{form.deliveryAvailable ? "Available" : "Pickup Only"}</span>
-                        </div>
-                      </div>
+                        return (
+                          <button
+                            key={i}
+                            disabled={!d.isCurrentMonth || isBlocked}
+                            onClick={() => handleDateClick(d.dateStr)}
+                            className={`py-1 text-[11px] rounded-md transition-all ${
+                              isBlocked
+                                ? "line-through text-slate-300 bg-slate-100 opacity-50 cursor-not-allowed"
+                                : !d.isCurrentMonth
+                                ? "text-slate-200 cursor-not-allowed"
+                                : isSelected
+                                ? "bg-[#2563EB] text-white font-bold cursor-pointer"
+                                : isInRange
+                                ? "bg-blue-50 text-[#2563EB] font-semibold cursor-pointer"
+                                : "hover:bg-slate-100 text-slate-700 cursor-pointer"
+                            }`}
+                          >
+                            {d.day}
+                          </button>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-200">
-                <button 
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold text-sm transition-all cursor-pointer ${
-                    currentStep === 1 
-                      ? "opacity-40 cursor-not-allowed text-gray-400 bg-gray-100" 
-                      : "text-gray-700 bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Previous</span>
-                </button>
-
-                <div className="flex items-center gap-3">
-                  {currentStep < totalSteps ? (
-                    <button 
-                      onClick={nextStep}
-                      className="flex items-center gap-2 px-7 py-3 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold text-sm shadow-lg shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
-                    >
-                      <span>Next Step</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={handlePublish}
-                      disabled={isSubmitting}
-                      className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 hover:opacity-95 transition-all cursor-pointer scale-105"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Publishing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4" />
-                          <span>Publish Listing Now</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-
             </div>
+
+            {/* Cost Breakdown */}
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>₹{product.dailyPrice} × {rentalDays} days</span>
+                <span className="font-bold text-slate-800">₹{rentalCost}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Security Deposit (Refundable)</span>
+                <span className="font-bold text-slate-800">₹{rentalDays > 0 ? product.securityDeposit : 0}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Protection Cover & Fees</span>
+                <span className="font-bold text-slate-800">₹{rentalDays > 0 ? product.platformProtection + platformFee + taxes : 0}</span>
+              </div>
+              <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-extrabold text-slate-900">
+                <span>Total Amount Due</span>
+                <span className="text-[#2563EB]">₹{grandTotal}</span>
+              </div>
+            </div>
+
+            {requestSent ? (
+              <div className="space-y-2 text-center">
+                <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2.5 px-3">
+                  Request sent. The owner has to approve these dates before you pay.
+                </p>
+                <Link
+                  href="/dashboard/view-booking?tab=notifications"
+                  className="block text-xs font-semibold text-[#2563EB]"
+                >
+                  Track it in notifications
+                </Link>
+              </div>
+            ) : (
+              <button
+                onClick={handleProceedToBook}
+                disabled={isCheckingAuth || isRequesting || !startDate || !endDate}
+                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                {isRequesting ? "Sending request..." : "Request these dates"}
+              </button>
+            )}
+
+            {requestError && (
+              <p className="text-[11px] font-semibold text-red-600 text-center">{requestError}</p>
+            )}
           </div>
+        </div>
 
-          <div className="lg:col-span-4 space-y-6">
-            <div className="glass-panel rounded-3xl p-6 shadow-xl border border-gray-200/80 sticky top-28">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-[#2563EB]" />
-                  <h3 className="font-bold text-sm text-gray-900">Live Preview</h3>
+      </main>
+
+      {/* Login Modal */}
+      <AnimatePresence>
+        {isLoginModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 text-[#2563EB] font-bold text-xs">
+                  <Lock className="w-4 h-4" />
+                  <span>Authentication Required</span>
                 </div>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <button onClick={() => setIsLoginModalOpen(false)} className="cursor-pointer text-slate-400 hover:text-slate-600">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white mb-4">
-                <img 
-                  src={form.images[form.primaryImageIndex] || form.images[0]} 
-                  alt="Live preview" 
-                  className="w-full h-40 object-cover"
-                />
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-full">
-                      {form.category || "Electronics"}
-                    </span>
-                    <span className="text-xs font-bold text-gray-900 flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> New Host
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-gray-900 text-sm line-clamp-1">
-                    {form.productName || "Your Product Title"}
-                  </h4>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <div>
-                      <span className="text-lg font-extrabold text-[#2563EB]">₹{form.dailyPrice || "0"}</span>
-                      <span className="text-[10px] text-gray-500"> / day</span>
-                    </div>
-                    <span className="text-[11px] font-semibold text-gray-600 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-gray-400" /> {form.city || "City"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center gap-2 text-[#2563EB]">
-                  <ShieldCheck className="w-4 h-4" />
-                  <h4 className="font-bold text-xs uppercase tracking-wider">Host Protection Guarantee</h4>
-                </div>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Every rental on RentIt is covered up to ₹50,000 against damage or theft with verified renter ID checks.
+              <div className="space-y-2 py-2">
+                <h3 className="text-base font-bold text-slate-900">Please log in to book</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  You are currently signed out. Click below to sign in so you can complete your reservation.
                 </p>
               </div>
 
-            </div>
-
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleNavigateToLoginPage}
+                  className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-md"
+                >
+                  Sign In
+                </button>
+              </div>
+            </motion.div>
           </div>
+        )}
+      </AnimatePresence>
 
-        </div>
-      </main>
+      {/* Fullscreen Modal */}
+      <AnimatePresence>
+        {isFullscreenOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
+          >
+            <button
+              onClick={() => setIsFullscreenOpen(false)}
+              className="absolute top-6 right-6 z-50 text-white bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-md transition-colors cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center">
+              <img
+                src={product.images[activeImageIdx]}
+                alt={product.title}
+                className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Share / Contact Modals */}
+      <AnimatePresence>
+        {isShareModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900">Share Listing</h3>
+                <button onClick={() => setIsShareModalOpen(false)} className="cursor-pointer">
+                  <X className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={typeof window !== "undefined" ? window.location.href : ""}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600 outline-none"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="bg-[#2563EB] text-white text-xs font-bold px-3 py-2 rounded-lg shrink-0 cursor-pointer"
+                >
+                  {copiedLink ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {isContactModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-5 max-w-md w-full shadow-xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-xs font-bold text-slate-900">Message {product.owner.name}</h3>
+                <button onClick={() => setIsContactModalOpen(false)} className="cursor-pointer">
+                  <X className="w-4 h-4 text-slate-500" />
+                </button>
+              </div>
+
+              {messageSent ? (
+                <div className="py-6 text-center space-y-1">
+                  <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900">Message Sent!</h4>
+                </div>
+              ) : (
+                <form onSubmit={handleSendMessage} className="space-y-3">
+                  <textarea
+                    rows={3}
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="Ask a question about availability or pickup..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 outline-none focus:border-[#2563EB] resize-none"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" /> Send Message
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </div>

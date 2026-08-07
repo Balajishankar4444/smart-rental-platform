@@ -1,6 +1,6 @@
 // lib/productStore.ts
 import { dbService, StoredListingRecord } from '@/services/DbService';
-import { deriveListingStatus } from '@/utils/listings';
+import { deriveListingStatus, ListingSummary } from '@/utils/listings';
 
 export type StoredProduct = StoredListingRecord;
 
@@ -21,13 +21,13 @@ export function withStatus(product: StoredProduct) {
   };
 }
 
-export function toSummary(detailed: Product): ListingSummary {
+export function toSummary(detailed: StoredProduct): ListingSummary {
   return {
     id: detailed.id,
     userId: detailed.userId,
     productName: detailed.productName,
     category: detailed.category,
-    propertyType: detailed.propertyType, // <--- Add this line
+    propertyType: detailed.propertyType,
     brand: detailed.brand,
     dailyPrice: detailed.dailyPrice,
     images: detailed.images,
@@ -40,5 +40,4 @@ export function toSummary(detailed: Product): ListingSummary {
     longitude: detailed.longitude,
     instantBooking: detailed.instantBooking,
   };
-}
 }

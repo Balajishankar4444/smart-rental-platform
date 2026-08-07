@@ -89,21 +89,6 @@ export async function POST(request: Request) {
     }
 
     const requests = db.bookingRequests || [];
-    const alreadyOpen = requests
-      .map(withDerivedStatus)
-      .some(
-        (item: any) =>
-          item.listingId === listingId &&
-          item.renterId === renterId &&
-          (item.status === 'pending' || item.status === 'approved')
-      );
-
-    if (alreadyOpen) {
-      return NextResponse.json(
-        { success: false, error: 'You already have an open request for this listing' },
-        { status: 409 }
-      );
-    }
 
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
