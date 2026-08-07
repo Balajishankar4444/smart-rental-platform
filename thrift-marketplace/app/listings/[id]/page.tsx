@@ -355,14 +355,20 @@ export default function ProductDetailPage() {
   const isCheckingAuth = authStatus === "loading";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // 1. Initialized to empty strings instead of hardcoded defaults
-  const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");
+  // a) Empty defaults (keep URL param so search dates flow in)
+  const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");  
   const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
   
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(7);
   const [currentYear, setCurrentYear] = useState(2026);
   const calendarRef = useRef<HTMLDivElement>(null);
+
+  // d) todayStr helper
+  const todayStr = React.useMemo(() => {
+    const now = new Date();
+    return formatDateString(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
 
   useEffect(() => {
     if (!productId || mockProduct) return;
@@ -444,14 +450,14 @@ export default function ProductDetailPage() {
     }, 2000);
   };
 
-  // 2. Fixed calculateDays: returns 0 when dates are missing and computes exact nights without +1 offset
-  const calculateDays = () => {
-    if (!startDate || !endDate) return 0;
+  // b) calculateDays returns 0 when nothing is picked
+  const calculateDays = () => {  
+    if (!startDate || !endDate) return 0;  
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
+    return diffDays > 0 ? diffDays : 0;  
   };
 
   const rentalDays = calculateDays();
@@ -491,6 +497,8 @@ export default function ProductDetailPage() {
   };
 
   const handleDateClick = (dateStr: string) => {
+    // d) Guard in handleDateClick to block past dates
+    if (dateStr < todayStr) return;
     if (blockedDates.has(dateStr)) return;
 
     if (!startDate || (startDate && endDate)) {
@@ -528,17 +536,14 @@ export default function ProductDetailPage() {
 
   const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
-  // 3. Added validation guard to block requests until dates are chosen
-  const handleProceedToBook = async () => {
-    if (!isAuthenticated || !user) {
-      setIsLoginModalOpen(true);
-      return;
-    }
-
-    if (!startDate || !endDate) {
-      setRequestError("Please select your check-in and check-out dates to continue.");
-      return;
-    }
+  // c) Require dates before sending the booking request
+  const handleProceedToBook = async () => {  
+    if (!isAuthenticated || !user) { setIsLoginModalOpen(true); return; }  
+    if (!startDate || !endDate) {  
+      setRequestError("Please select your dates first");  
+      setIsCalendarOpen(true);  
+      return;  
+    }  
 
     setRequestError("");
     setIsRequesting(true);
@@ -849,17 +854,20 @@ export default function ProductDetailPage() {
                       ))}
                       {getDaysInMonth(currentYear, currentMonth).map((d, i) => {
                         const isBlocked = blockedDates.has(d.dateStr);
+                        const isPast = d.dateStr < todayStr;
                         const isSelected = d.dateStr === startDate || d.dateStr === endDate;
                         const isInRange = startDate && endDate && d.dateStr > startDate && d.dateStr < endDate;
 
                         return (
                           <button
                             key={i}
-                            disabled={!d.isCurrentMonth || isBlocked}
+                            disabled={!d.isCurrentMonth || isBlocked || isPast}
                             onClick={() => handleDateClick(d.dateStr)}
                             className={`py-1 text-[11px] rounded-md transition-all ${
                               !d.isCurrentMonth
                                 ? "text-slate-200 cursor-not-allowed"
+                                : isPast
+                                ? "line-through text-slate-200 cursor-not-allowed"
                                 : isBlocked
                                 ? "opacity-40 blur-[1px] line-through cursor-not-allowed bg-slate-100 text-slate-400 font-normal"
                                 : isSelected
@@ -912,10 +920,9 @@ export default function ProductDetailPage() {
                 </Link>
               </div>
             ) : (
-              // 4. Button visually disabled until dates exist
               <button
                 onClick={handleProceedToBook}
-                disabled={isCheckingAuth || isRequesting || !startDate || !endDate}
+                disabled={isCheckingAuth || isRequesting}
                 className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Zap className="w-3.5 h-3.5 fill-current" />

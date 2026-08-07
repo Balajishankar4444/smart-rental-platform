@@ -49,6 +49,11 @@ const formatDisplayDate = (dateString: string) => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
+const todayStr = (() => {
+  const n = new Date();
+  return formatDateString(n.getFullYear(), n.getMonth(), n.getDate());
+})();
+
 export const InteractiveSearch = () => {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [query, setQuery] = useState("");
@@ -59,13 +64,13 @@ export const InteractiveSearch = () => {
   const [locationSearch, setLocationSearch] = useState("");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 
-  const [startDate, setStartDate] = useState("2026-08-05");
-  const [endDate, setEndDate] = useState("2026-08-08");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Calendar View State
-  const [currentMonth, setCurrentMonth] = useState(7); // August (0-indexed)
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const calendarDropdownRef = useRef<HTMLDivElement>(null);
@@ -95,6 +100,10 @@ export const InteractiveSearch = () => {
   );
 
   const handleSearch = () => {
+    if (!startDate || !endDate) {
+      setIsCalendarOpen(true);
+      return;
+    }
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
     params.set("location", location);
@@ -137,6 +146,7 @@ export const InteractiveSearch = () => {
   };
 
   const handleDateClick = (dateStr: string) => {
+    if (dateStr < todayStr) return;
     if (!startDate || (startDate && endDate)) {
       setStartDate(dateStr);
       setEndDate("");
@@ -292,7 +302,7 @@ export const InteractiveSearch = () => {
               <div className="w-full overflow-hidden">
                 <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Dates</span>
                 <span className="text-sm font-semibold text-gray-900 block truncate">
-                  {formatDisplayDate(startDate)} {endDate ? `- ${formatDisplayDate(endDate)}` : ""}
+                  {startDate ? `${formatDisplayDate(startDate)} ${endDate ? `- ${formatDisplayDate(endDate)}` : ""}` : "Add dates"}
                 </span>
               </div>
             </div>
@@ -340,19 +350,23 @@ export const InteractiveSearch = () => {
                     {getDaysInMonth(currentYear, currentMonth).map(({ day, dateStr, isCurrentMonth }, idx) => {
                       const isSelected = dateStr === startDate || dateStr === endDate;
                       const isInRange = startDate && endDate && dateStr > startDate && dateStr < endDate;
+                      const isPast = dateStr < todayStr;
 
                       return (
                         <button
                           key={idx}
+                          disabled={isPast}
                           onClick={() => handleDateClick(dateStr)}
-                          className={`h-9 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                            isSelected 
-                              ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105 z-10" 
+                          className={`h-9 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition-all ${
+                            isPast
+                              ? "text-gray-300 line-through cursor-not-allowed"
+                              : isSelected 
+                              ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105 z-10 cursor-pointer" 
                               : isInRange 
-                              ? "bg-blue-50 text-[#2563EB] rounded-none" 
+                              ? "bg-blue-50 text-[#2563EB] rounded-none cursor-pointer" 
                               : isCurrentMonth 
-                              ? "text-gray-800 hover:bg-gray-100" 
-                              : "text-gray-300 hover:bg-gray-50"
+                              ? "text-gray-800 hover:bg-gray-100 cursor-pointer" 
+                              : "text-gray-300 hover:bg-gray-50 cursor-pointer"
                           }`}
                         >
                           {day}

@@ -87,6 +87,11 @@ const formatDateString = (year: number, month: number, day: number) => {
   return `${year}-${m}-${d}`;
 };
 
+const todayStr = (() => {  
+  const n = new Date();  
+  return formatDateString(n.getFullYear(), n.getMonth(), n.getDate());  
+})();
+
 const formatDisplayDate = (dateString: string) => {
   if (!dateString) return "";
   const [year, month, day] = dateString.split("-");
@@ -117,12 +122,12 @@ function SearchContent() {
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 
-  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "2026-08-05");
-  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "2026-08-08");
+  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");  
+  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  const [currentMonth, setCurrentMonth] = useState(7);
-  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());  
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
@@ -218,6 +223,7 @@ function SearchContent() {
   };
 
   const handleDateClick = (dateStr: string) => {
+    if (dateStr < todayStr) return;
     if (!startDate || (startDate && endDate)) {
       setStartDate(dateStr);
       setEndDate("");
@@ -410,7 +416,7 @@ function SearchContent() {
                   <div className="w-full overflow-hidden">
                     <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Dates</span>
                     <span className="text-sm font-semibold text-gray-900 block truncate">
-                      {formatDisplayDate(startDate)} {endDate ? `- ${formatDisplayDate(endDate)}` : ""}
+                      {startDate ? `${formatDisplayDate(startDate)} ${endDate ? `- ${formatDisplayDate(endDate)}` : ""}` : "Add dates"}
                     </span>
                   </div>
                 </div>
@@ -455,14 +461,18 @@ function SearchContent() {
                         {getDaysInMonth(currentYear, currentMonth).map(({ day, dateStr, isCurrentMonth }, idx) => {
                           const isSelected = dateStr === startDate || dateStr === endDate;
                           const isInRange = startDate && endDate && dateStr > startDate && dateStr < endDate;
+                          const isPast = dateStr < todayStr;
 
                           return (
                             <button
                               key={idx}
+                              disabled={isPast}
                               onClick={() => handleDateClick(dateStr)}
                               className={`h-9 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                                isSelected 
-                                  ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105 z-10" 
+                                isPast
+                                  ? "text-gray-300 line-through cursor-not-allowed"
+                                  : isSelected 
+                                  ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105" 
                                   : isInRange 
                                   ? "bg-blue-50 text-[#2563EB] rounded-none" 
                                   : isCurrentMonth 
@@ -640,7 +650,7 @@ function SearchContent() {
           <div className="lg:col-span-9 space-y-6">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-slate-600">
-                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> rooms available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span>
+                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> rooms available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> {startDate && endDate ? <>for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span></> : ""}
               </p>
             </div>
 
@@ -688,7 +698,10 @@ function SearchContent() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.2 }}
-                      onClick={() => { window.location.href = `/listings/${item.id}`; }}
+                      onClick={() => {  
+                        const q = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";  
+                        window.location.href = `/listings/${item.id}${q}`;  
+                      }}
                       className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group"
                     >
                       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">

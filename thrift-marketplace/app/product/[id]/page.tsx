@@ -355,6 +355,7 @@ export default function ProductDetailPage() {
   const isCheckingAuth = authStatus === "loading";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+  // 1. Initialized to empty strings instead of hardcoded defaults
   const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");
   const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
   
@@ -362,8 +363,6 @@ export default function ProductDetailPage() {
   const [currentMonth, setCurrentMonth] = useState(7);
   const [currentYear, setCurrentYear] = useState(2026);
   const calendarRef = useRef<HTMLDivElement>(null);
-
-  const [listingRequests, setListingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     if (!productId || mockProduct) return;
@@ -385,14 +384,6 @@ export default function ProductDetailPage() {
   }, [productId, mockProduct]);
 
   useEffect(() => {
-    if (!productId) return;
-    fetch(`/api/auth/booking-requests?listingId=${encodeURIComponent(productId)}`)
-      .then((r) => r.json())
-      .then((res) => setListingRequests(Array.isArray(res?.data) ? res.data : []))
-      .catch(() => setListingRequests([]));
-  }, [productId]);
-
-  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
         setIsCalendarOpen(false);
@@ -408,33 +399,25 @@ export default function ProductDetailPage() {
 
   const isWishlisted = productId ? isFavorite(productId) : false;
 
-  // Build a Set of blocked dates from product.rental and active/pending requests
+  // Build a Set of blocked dates from product.rental
   const blockedDates = React.useMemo(() => {
     const set = new Set<string>();
-
-    const addRange = (startStr: string, endStr: string) => {
-      const start = new Date(startStr);
-      const end = new Date(endStr);
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
-      const curr = new Date(start);
-      while (curr <= end) {
-        const y = curr.getFullYear();
-        const m = String(curr.getMonth() + 1).padStart(2, "0");
-        const d = String(curr.getDate()).padStart(2, "0");
-        set.add(`${y}-${m}-${d}`);
-        curr.setDate(curr.getDate() + 1);
-      }
-    };
-
     if (product?.rental && typeof product.rental === "object") {
-      addRange(product.rental.startDate, product.rental.endDate);
+      const start = new Date(product.rental.startDate);
+      const end = new Date(product.rental.endDate);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        const curr = new Date(start);
+        while (curr <= end) {
+          const year = curr.getFullYear();
+          const month = String(curr.getMonth() + 1).padStart(2, "0");
+          const day = String(curr.getDate()).padStart(2, "0");
+          set.add(`${year}-${month}-${day}`);
+          curr.setDate(curr.getDate() + 1);
+        }
+      }
     }
-    listingRequests
-      .filter((r) => r.status === "pending" || r.status === "approved" || r.status === "paid")
-      .forEach((r) => addRange(r.startDate, r.endDate));
-
     return set;
-  }, [product, listingRequests]);
+  }, [product]);
 
   const handleWishlistToggle = () => {
     if (!isAuthenticated) {
@@ -461,6 +444,7 @@ export default function ProductDetailPage() {
     }, 2000);
   };
 
+  // 2. Fixed calculateDays: returns 0 when dates are missing and computes exact nights without +1 offset
   const calculateDays = () => {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
@@ -544,6 +528,7 @@ export default function ProductDetailPage() {
 
   const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
+  // 3. Added validation guard to block requests until dates are chosen
   const handleProceedToBook = async () => {
     if (!isAuthenticated || !user) {
       setIsLoginModalOpen(true);
@@ -625,7 +610,7 @@ export default function ProductDetailPage() {
         {/* ==========================================
             1. COMPACT HEADER SECTION
         ========================================== */}
-        <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/85 pb-4">
+        <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/80 pb-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-extrabold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
@@ -873,10 +858,10 @@ export default function ProductDetailPage() {
                             disabled={!d.isCurrentMonth || isBlocked}
                             onClick={() => handleDateClick(d.dateStr)}
                             className={`py-1 text-[11px] rounded-md transition-all ${
-                              isBlocked
-                                ? "line-through text-slate-300 bg-slate-100 opacity-50 cursor-not-allowed"
-                                : !d.isCurrentMonth
+                              !d.isCurrentMonth
                                 ? "text-slate-200 cursor-not-allowed"
+                                : isBlocked
+                                ? "opacity-40 blur-[1px] line-through cursor-not-allowed bg-slate-100 text-slate-400 font-normal"
                                 : isSelected
                                 ? "bg-[#2563EB] text-white font-bold cursor-pointer"
                                 : isInRange
@@ -927,6 +912,7 @@ export default function ProductDetailPage() {
                 </Link>
               </div>
             ) : (
+              // 4. Button visually disabled until dates exist
               <button
                 onClick={handleProceedToBook}
                 disabled={isCheckingAuth || isRequesting || !startDate || !endDate}
