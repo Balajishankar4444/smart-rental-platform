@@ -46,6 +46,7 @@ export function paymentDeadlineFor(decidedAt: string) {
   return Number.isNaN(time) ? null : new Date(time + PAYMENT_WINDOW_MS).toISOString();
 }
 
+/** The host must approve before the booking start date, or the request lapses. */
 export function approvalDeadlineFor(startDate: string) {
   const start = new Date(startDate).getTime();
   return Number.isNaN(start) ? null : new Date(start).toISOString();
@@ -104,4 +105,19 @@ export function formatDeadline(isoString?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Live countdown from now to the deadline, e.g. "23h 14m 09s" or "Expired". */  
+export function formatCountdown(deadline?: string | null, now = Date.now()): string {  
+  if (!deadline) return "";  
+  const remaining = new Date(deadline).getTime() - now;  
+  if (Number.isNaN(remaining)) return "";  
+  if (remaining <= 0) return "Expired";  
+  
+  const totalSeconds = Math.floor(remaining / 1000);  
+  const h = Math.floor(totalSeconds / 3600);  
+  const m = Math.floor((totalSeconds % 3600) / 60);  
+  const s = totalSeconds % 60;  
+  const pad = (n: number) => String(n).padStart(2, "0");  
+  return `${h}h ${pad(m)}m ${pad(s)}s`;  
 }

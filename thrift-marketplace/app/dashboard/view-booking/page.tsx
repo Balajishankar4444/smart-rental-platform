@@ -26,6 +26,8 @@ import {
   BOOKING_REQUEST_LABELS,
   BookingRequest,
   formatDeadline,
+  formatCountdown,
+  deriveRequestStatus,
 } from "@/utils/bookingRequests";
 import {
   fetchListings,
@@ -202,6 +204,14 @@ function ViewBookingContent() {
   const [activeTab, setActiveTab] = useState<DashboardTab>(
     tabParam === "rentals" || tabParam === "notifications" ? tabParam : "listings"
   );
+  
+  // Ticking clock state for live timer countdowns
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const {
     incoming,
     outgoing,
@@ -557,39 +567,39 @@ function ViewBookingContent() {
                     No one has asked to rent your listings yet.
                   </div>
                 ) : (
-                  incoming.map((request) => (
-                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
-                      <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
+                  incoming.map((request) => {
+                    const liveStatus = deriveRequestStatus(request, now);
+                    return (
+                      <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
+                        <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
 
-                      {request.status === "pending" ? (
-                        <div className="space-y-2">
-                          <p className="text-[11px] font-semibold text-amber-600">
-                            Approve before {formatDeadline(request.approvalDeadline)} or the request lapses.
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => actOnRequest(request.id, "approve")}
-                              className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
-                            >
-                              Approve dates
-                            </button>
-                            <button
-                              onClick={() => actOnRequest(request.id, "decline")}
-                              className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                            >
-                              Decline
-                            </button>
+                        {liveStatus === "pending" ? (
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => actOnRequest(request.id, "approve")}
+                                className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                              >
+                                Approve dates
+                              </button>
+                              <button
+                                onClick={() => actOnRequest(request.id, "decline")}
+                                className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                              >
+                                Decline
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] font-semibold text-slate-500">
-                          {BOOKING_REQUEST_LABELS[request.status]}
-                          {request.status === "approved" &&
-                            ` · pay by ${formatDeadline(request.paymentDeadline)}`}
-                        </p>
-                      )}
-                    </div>
-                  ))
+                        ) : (
+                          <p className="text-[11px] font-semibold text-slate-500">
+                            {BOOKING_REQUEST_LABELS[liveStatus]}
+                            {liveStatus === "approved" &&
+                              ` · pay within ${formatCountdown(request.paymentDeadline, now)}`}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
@@ -603,38 +613,41 @@ function ViewBookingContent() {
                     You have not requested any rental dates yet.
                   </div>
                 ) : (
-                  outgoing.map((request) => (
-                    <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
-                      <RequestSummary request={request} caption="You requested" />
+                  outgoing.map((request) => {
+                    const liveStatus = deriveRequestStatus(request, now);
+                    return (
+                      <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
+                        <RequestSummary request={request} caption="You requested" />
 
-                      <p className="text-[11px] font-semibold text-slate-500">
-                        {BOOKING_REQUEST_LABELS[request.status]}
-                      </p>
+                        <p className="text-[11px] font-semibold text-slate-500">
+                          {BOOKING_REQUEST_LABELS[liveStatus]}
+                        </p>
 
-                      {request.status === "approved" && (
-                        <div className="space-y-2">
-                          <p className="text-[11px] font-semibold text-amber-600">
-                            Pay before {formatDeadline(request.paymentDeadline)} or the approval lapses.
-                          </p>
-                          <Link
-                            href={`/booking?requestId=${request.id}`}
-                            className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
+                        {liveStatus === "approved" && (
+                          <div className="space-y-2">
+                            <p className="text-[11px] font-semibold text-amber-600">
+                              Pay within {formatCountdown(request.paymentDeadline, now)} or the approval lapses.
+                            </p>
+                            <Link
+                              href={`/booking?requestId=${request.id}`}
+                              className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
+                            >
+                              Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
+                            </Link>
+                          </div>
+                        )}
+
+                        {(liveStatus === "pending" || liveStatus === "approved") && (
+                          <button
+                            onClick={() => actOnRequest(request.id, "cancel")}
+                            className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                           >
-                            Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
-                          </Link>
-                        </div>
-                      )}
-
-                      {(request.status === "pending" || request.status === "approved") && (
-                        <button
-                          onClick={() => actOnRequest(request.id, "cancel")}
-                          className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          Cancel request
-                        </button>
-                      )}
-                    </div>
-                  ))
+                            Cancel request
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

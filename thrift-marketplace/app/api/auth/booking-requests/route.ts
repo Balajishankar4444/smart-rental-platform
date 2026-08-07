@@ -161,6 +161,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Request not found' }, { status: 404 });
     }
 
+    // Securely compute status using the latest clock time to enforce expirations server-side
     const status = deriveRequestStatus(bookingRequest);
     const isOwner = bookingRequest.ownerId === userId;
     const isRenter = bookingRequest.renterId === userId;
@@ -185,7 +186,7 @@ export async function PATCH(request: Request) {
 
       if (action === 'approve') {
         bookingRequest.status = 'approved';
-        bookingRequest.paymentDeadline = paymentDeadlineFor(decidedAt, bookingRequest.startDate);
+        bookingRequest.paymentDeadline = paymentDeadlineFor(decidedAt);
       } else {
         bookingRequest.status = 'declined';
       }
@@ -206,6 +207,7 @@ export async function PATCH(request: Request) {
 
       bookingRequest.status = 'cancelled';
     } else {
+      // 'pay' action check
       if (!isRenter) {
         return NextResponse.json(
           { success: false, error: 'Only the renter can pay for this request' },

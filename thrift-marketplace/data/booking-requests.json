@@ -29,9 +29,9 @@
     "endDate": "2026-08-20",
     "days": 1,
     "totalAmount": 830,
-    "status": "pending",
+    "status": "declined",
     "createdAt": "2026-08-07T06:21:02.429Z",
-    "decidedAt": null,
+    "decidedAt": "2026-08-07T06:38:12.005Z",
     "paymentDeadline": null,
     "paidAt": null
   },
@@ -155,10 +155,10 @@
     "endDate": "2026-08-08",
     "days": 3,
     "totalAmount": 2520,
-    "status": "pending",
+    "status": "approved",
     "createdAt": "2026-08-05T12:20:08.968Z",
-    "decidedAt": null,
-    "paymentDeadline": null,
+    "decidedAt": "2026-08-07T06:38:15.224Z",
+    "paymentDeadline": "2026-08-08T06:38:15.224Z",
     "paidAt": null
   },
   {
@@ -191,9 +191,9 @@
     "endDate": "2026-08-08",
     "days": 3,
     "totalAmount": 2460,
-    "status": "pending",
+    "status": "declined",
     "createdAt": "2026-08-06T23:17:37.801Z",
-    "decidedAt": null,
+    "decidedAt": "2026-08-07T06:38:10.179Z",
     "paymentDeadline": null,
     "paidAt": null
   }
