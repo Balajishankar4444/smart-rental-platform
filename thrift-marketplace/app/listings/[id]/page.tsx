@@ -355,7 +355,6 @@ export default function ProductDetailPage() {
   const isCheckingAuth = authStatus === "loading";
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
-  // a) Empty defaults (keep URL param so search dates flow in)
   const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");  
   const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
   
@@ -364,7 +363,6 @@ export default function ProductDetailPage() {
   const [currentYear, setCurrentYear] = useState(2026);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // d) todayStr helper
   const todayStr = React.useMemo(() => {
     const now = new Date();
     return formatDateString(now.getFullYear(), now.getMonth(), now.getDate());
@@ -405,7 +403,6 @@ export default function ProductDetailPage() {
 
   const isWishlisted = productId ? isFavorite(productId) : false;
 
-  // Build a Set of blocked dates from product.rental
   const blockedDates = React.useMemo(() => {
     const set = new Set<string>();
     if (product?.rental && typeof product.rental === "object") {
@@ -450,7 +447,6 @@ export default function ProductDetailPage() {
     }, 2000);
   };
 
-  // b) calculateDays returns 0 when nothing is picked
   const calculateDays = () => {  
     if (!startDate || !endDate) return 0;  
     const start = new Date(startDate);
@@ -461,13 +457,10 @@ export default function ProductDetailPage() {
   };
 
   const rentalDays = calculateDays();
-  const rentalCost = rentalDays * (product?.dailyPrice ?? 0);
-  const platformFee = Math.round(rentalCost * 0.08);
-  const taxes = Math.round((rentalCost + platformFee) * 0.18);
-  const grandTotal =
-    rentalDays > 0
-      ? rentalCost + (product?.securityDeposit ?? 0) + (product?.platformProtection ?? 0) + platformFee + taxes
-      : 0;
+  const effectiveDays = rentalDays > 0 ? rentalDays : 2;
+  const rentalCost = effectiveDays * (product?.dailyPrice ?? 850);
+  const securityDeposit = 2500;
+  const grandTotal = rentalCost + securityDeposit;
 
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month, 1).getDay();
@@ -497,7 +490,6 @@ export default function ProductDetailPage() {
   };
 
   const handleDateClick = (dateStr: string) => {
-    // d) Guard in handleDateClick to block past dates
     if (dateStr < todayStr) return;
     if (blockedDates.has(dateStr)) return;
 
@@ -536,7 +528,6 @@ export default function ProductDetailPage() {
 
   const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
 
-  // c) Require dates before sending the booking request
   const handleProceedToBook = async () => {  
     if (!isAuthenticated || !user) { setIsLoginModalOpen(true); return; }  
     if (!startDate || !endDate) {  
@@ -783,7 +774,7 @@ export default function ProductDetailPage() {
                 <span className="text-xs text-slate-500 font-medium"> / day</span>
               </div>
               <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                Save 20% on weekly
+                
               </span>
             </div>
 
@@ -890,20 +881,12 @@ export default function ProductDetailPage() {
             {/* Cost Breakdown */}
             <div className="space-y-2 pt-1 text-xs">
               <div className="flex justify-between text-slate-600">
-                <span>₹{product.dailyPrice} × {rentalDays} days</span>
+                <span>₹{product.dailyPrice} × {effectiveDays} days</span>
                 <span className="font-bold text-slate-800">₹{rentalCost}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Security Deposit (Refundable)</span>
-                <span className="font-bold text-slate-800">₹{rentalDays > 0 ? product.securityDeposit : 0}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Protection Cover & Fees</span>
-                <span className="font-bold text-slate-800">₹{rentalDays > 0 ? product.platformProtection + platformFee + taxes : 0}</span>
               </div>
               <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-extrabold text-slate-900">
                 <span>Total Amount Due</span>
-                <span className="text-[#2563EB]">₹{grandTotal}</span>
+                <span className="text-[#2563EB]">₹{rentalCost}</span>
               </div>
             </div>
 
