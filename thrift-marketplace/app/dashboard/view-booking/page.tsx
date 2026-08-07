@@ -49,6 +49,14 @@ const formatDay = (value?: string) => {
     : date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 };
 
+const nightsBetween = (start?: string, end?: string) => {  
+  if (!start || !end) return 0;  
+  const s = new Date(start).getTime();  
+  const e = new Date(end).getTime();  
+  if (Number.isNaN(s) || Number.isNaN(e)) return 0;  
+  return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));  
+};
+
 type DashboardTab = "listings" | "rentals" | "notifications";
 
 const STATUS_BADGE_STYLES: Record<ListingStatus, string> = {
@@ -180,7 +188,8 @@ function RequestSummary({ request, caption }: { request: BookingRequest; caption
         <p className="text-[11px] text-slate-400">{caption}</p>
         <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
         <p className="text-[11px] text-slate-500">
-          {formatDay(request.startDate)} – {formatDay(request.endDate)} · {request.days}d · ₹
+          {formatDay(request.startDate)} – {formatDay(request.endDate)} ·{" "}
+          {nightsBetween(request.startDate, request.endDate)}d · ₹  
           {request.totalAmount.toLocaleString("en-IN")}
         </p>
       </div>
@@ -592,15 +601,19 @@ function ViewBookingContent() {
                             </div>
                           </div>
                         ) : liveStatus === "paid" ? (
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-emerald-700 text-[11px] font-semibold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                            <span>Booking confirmed · {formatDay(request.startDate)} – {formatDay(request.endDate)}</span>
+                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 space-y-0.5">
+                            <p className="text-[11px] font-bold text-emerald-700">
+                              ✓ Booking confirmed — payment received
+                            </p>
+                            <p className="text-[11px] text-emerald-600">
+                              {formatDay(request.startDate)} – {formatDay(request.endDate)} · {request.renterName}
+                            </p>
                           </div>
                         ) : (
                           <p className="text-[11px] font-semibold text-slate-500">
                             {BOOKING_REQUEST_LABELS[liveStatus]}
                             {liveStatus === "approved" &&
-                              ` · pay within ${formatCountdown(request.paymentDeadline, now)}`}
+                              ` · pay by ${formatDeadline(request.paymentDeadline)}`}
                           </p>
                         )}
                       </div>
@@ -626,9 +639,13 @@ function ViewBookingContent() {
                         <RequestSummary request={request} caption="You requested" />
 
                         {liveStatus === "paid" ? (
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-emerald-700 text-[11px] font-semibold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                            <span>Booking confirmed · {formatDay(request.startDate)} – {formatDay(request.endDate)}</span>
+                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5 space-y-0.5">
+                            <p className="text-[11px] font-bold text-emerald-700">
+                              ✓ Booking confirmed — payment complete
+                            </p>
+                            <p className="text-[11px] text-emerald-600">
+                              {formatDay(request.startDate)} – {formatDay(request.endDate)}
+                            </p>
                           </div>
                         ) : (
                           <>
