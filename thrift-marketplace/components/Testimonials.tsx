@@ -1,3 +1,4 @@
+// components/Testimonials.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,16 +9,16 @@ const REVIEWS = [
   {
     id: 1,
     name: "Ananya Sharma",
-    role: "Freelance Photographer",
-    text: "Listing my secondary camera body on RentIt pays my monthly studio rent effortlessly. Payouts arrive in under 2 hours directly via UPI!",
+    role: "University Student",
+    text: "I found an affordable room near my university within minutes.",
     rating: 5,
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
   },
   {
     id: 2,
     name: "Vikramaditya Roy",
-    role: "PS5 Lender",
-    text: "I was hesitant at first about letting strangers use my PS5, but the ₹50,000 protection guarantee and Aadhaar verification gave me complete peace of mind.",
+    role: "Room Host",
+    text: "Hosting my spare room helps cover my monthly expenses.",
     rating: 5,
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
   },
@@ -39,7 +40,7 @@ export const Testimonials = () => {
     <section className="py-20 bg-white border-t border-gray-200/80">
       <div className="mx-auto max-w-[1000px] px-6 text-center">
         <span className="text-xs font-extrabold tracking-widest text-[#2563EB] uppercase">Community Feedback</span>
-        <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl mt-2 font-heading">Trusted by 50,000+ Lenders & Renters</h2>
+        <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl mt-2 font-heading">Trusted by Guests & Hosts</h2>
 
         <div
           onMouseEnter={() => setIsPaused(true)}
@@ -99,3 +100,5 @@ export const Testimonials = () => {
     </section>
   );
 };
+
+export default Testimonials;

@@ -26,8 +26,8 @@ function toItemDetail(listing: ListingSummary): ItemDetail {
     rating: 0,
     reviews: 0,
     location: listingLocation(listing),
-    distance: listing.condition || "",
-    owner: listing.ownerName || "Verified lender",
+    distance: listing.subcategory || "",
+    owner: listing.ownerName || "Verified host",
     ownerBadge: listing.instantBooking ? "Instant Booking" : "Request to Book",
     ownerImage: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
     image: listingImage(listing),
@@ -71,8 +71,8 @@ export const FeaturedRentals = () => {
     <section className="py-20 mx-auto max-w-[1440px] px-6 lg:px-12" id="browse">
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl font-heading">Trending Listings Near You</h2>
-          <p className="text-gray-500 text-sm mt-2">Verified quality gear backed by 100% buyer protection.</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl font-heading">Featured Rooms Near You</h2>
+          <p className="text-gray-500 text-sm mt-2">Verified quality rooms backed by secure booking and local hosts.</p>
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 w-full md:w-auto">
@@ -94,8 +94,8 @@ export const FeaturedRentals = () => {
 
       {!loading && filteredItems.length === 0 && (
         <div className="rounded-[24px] border border-dashed border-gray-300 bg-white py-16 text-center">
-          <p className="text-sm font-semibold text-gray-900">No active listings yet</p>
-          <p className="mt-1 text-xs text-gray-500">Be the first to list your gear for rent.</p>
+          <p className="text-sm font-semibold text-gray-900">No active rooms yet</p>
+          <p className="mt-1 text-xs text-gray-500">Be the first to list your space for rent.</p>
         </div>
       )}
 
@@ -187,10 +187,10 @@ export const FeaturedRentals = () => {
                 <div className="p-5 pt-0 flex items-center justify-between">
                   <div>
                     <span className="text-2xl font-black text-gray-900 font-num">₹{item.pricePerDay}</span>
-                    <span className="text-xs text-gray-400 font-medium"> / day</span>
+                    <span className="text-xs text-gray-400 font-medium"> / night</span>
                   </div>
                   <span className="rounded-xl bg-blue-50 px-4 py-2 text-xs font-bold text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white transition-colors">
-                    Quick Rent
+                    Book Now
                   </span>
                 </div>
               </motion.div>

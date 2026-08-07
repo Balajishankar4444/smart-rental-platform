@@ -1,35 +1,28 @@
+// components/Categories.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Camera,
-  Gamepad2,
-  Bike,
-  Wrench,
-  Music,
-  Tent,
-  Sofa,
-  Smartphone,
-  BookOpen,
+  BedDouble,
+  DoorClosed,
+  Building2,
+  GraduationCap,
+  Briefcase,
+  Backpack,
+  Users,
   Dog,
-  PartyPopper,
-  Plane,
 } from "lucide-react";
 
 const CATEGORIES = [
-  { name: "Photography", icon: Camera, count: "12,400+ items" },
-  { name: "Gaming", icon: Gamepad2, count: "8,900+ items" },
-  { name: "Vehicles", icon: Bike, count: "15,100+ items" },
-  { name: "Tools", icon: Wrench, count: "6,200+ items" },
-  { name: "Music", icon: Music, count: "4,800+ items" },
-  { name: "Camping", icon: Tent, count: "5,300+ items" },
-  { name: "Furniture", icon: Sofa, count: "9,700+ items" },
-  { name: "Electronics", icon: Smartphone, count: "18,500+ items" },
-  { name: "Books", icon: BookOpen, count: "3,100+ items" },
-  { name: "Pets Gear", icon: Dog, count: "1,900+ items" },
-  { name: "Party", icon: PartyPopper, count: "7,400+ items" },
-  { name: "Drones", icon: Plane, count: "4,200+ items" },
+  { name: "Shared Rooms", icon: BedDouble, count: "" },
+  { name: "Private Rooms", icon: DoorClosed, count: "" },
+  { name: "Apartments", icon: Building2, count: "" },
+  { name: "Student Housing", icon: GraduationCap, count: "" },
+  { name: "Business Stays", icon: Briefcase, count: "" },
+  { name: "Backpacker Rooms", icon: Backpack, count: "" },
+  { name: "Family Stays", icon: Users, count: "" },
+  { name: "Pet Friendly", icon: Dog, count: "" },
 ];
 
 export const Categories = () => {
@@ -45,7 +38,7 @@ export const Categories = () => {
       <div className="flex items-end justify-between mb-10">
         <div>
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl font-heading">Explore Categories</h2>
-          <p className="text-gray-500 text-sm mt-2">Find high-quality gear available near you for immediate rent.</p>
+          <p className="text-gray-500 text-sm mt-2">Find verified rooms and spaces available for short-term stays near you.</p>
         </div>
       </div>
 

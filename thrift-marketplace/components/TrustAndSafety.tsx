@@ -2,28 +2,38 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ShieldCheck, Lock, CheckCircle2, Headphones } from "lucide-react";
+import { ShieldCheck, Lock, CheckCircle2, Headphones, Star, KeyRound } from "lucide-react";
 
 const TRUST_FEATURES = [
   {
     icon: ShieldCheck,
-    title: "₹50,000 Guarantee",
-    description: "Every item listed is financially covered against accidental damage or loss.",
-  },
-  {
-    icon: Lock,
-    title: "Secure Instant UPI",
-    description: "Transactions and deposits are held securely and released instantly upon return.",
+    title: "Verified Hosts",
+    description: "Every host completes mandatory identity checks and listing verifications.",
   },
   {
     icon: CheckCircle2,
-    title: "Aadhaar Verified Users",
-    description: "100% of renters and lenders complete mandatory ID checks before transacting.",
+    title: "Verified Guests",
+    description: "All guests go through profile checks before their booking is confirmed.",
+  },
+  {
+    icon: Lock,
+    title: "Secure Payments",
+    description: "Transactions and deposits are held securely and handled via trusted gateways.",
+  },
+  {
+    icon: KeyRound,
+    title: "OTP Check-in",
+    description: "Secure digital check-in process at the door using unique verification codes.",
+  },
+  {
+    icon: Star,
+    title: "Reviews & Ratings",
+    description: "Transparent feedback system helps maintain high standards for everyone.",
   },
   {
     icon: Headphones,
     title: "24/7 Support",
-    description: "Our dedicated dispute resolution and safety team is available round the clock.",
+    description: "Our dedicated support team is available round the clock to assist you.",
   },
 ];
 
@@ -36,7 +46,7 @@ export const TrustAndSafety = () => {
           Protected Every Step of the Way
         </h2>
         <p className="text-gray-500 text-sm mt-3">
-          We combine advanced identity verification with world-class insurance to make peer-to-peer rentals completely worry-free.
+          We combine advanced identity verification with secure booking processes to make short-term room stays completely worry-free.
         </p>
       </div>
 

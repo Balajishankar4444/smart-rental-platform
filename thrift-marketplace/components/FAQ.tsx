@@ -5,23 +5,12 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
-const FAQ_ITEMS = [
-  {
-    question: "How does the ₹50,000 protection guarantee work?",
-    answer: "Every rental transaction is covered under our RentIt Shield. If an item is damaged or stolen during the active rental period, our team processes your reimbursement claim within 48 hours after verification.",
-  },
-  {
-    question: "How and when do lenders get paid?",
-    answer: "Lender payouts are processed instantly via UPI or bank transfer as soon as the renter picks up or receives the item, minus our small 5% platform service fee.",
-  },
-  {
-    question: "What happens if a renter returns an item late?",
-    answer: "Late returns are automatically billed to the renter's saved payment method on a per-day penalty rate (1.5x the standard daily rental rate), which is credited directly to the lender.",
-  },
-  {
-    question: "Do I need to verify my identity to rent or list items?",
-    answer: "Yes, for safety and security, all users must complete a quick Aadhaar-based DigiLocker verification or upload valid government-issued ID before renting or lending items.",
-  },
+const FAQ_ITEMS = [  
+  { question: "How do I book a room?", answer: "Find a verified room on our browse page, select your check-in and check-out dates, and submit your booking request securely online." },  
+  { question: "When does the host receive payment?", answer: "Host payouts are securely processed and released shortly after the guest successfully checks in using the secure verification process." },  
+  { question: "How does OTP check-in work?", answer: "Upon arrival, the guest provides the secure OTP received upon booking to the host at the door to verify and log the check-in." },  
+  { question: "Can I cancel my booking?", answer: "Yes, you can cancel your booking directly through your dashboard. Review our cancellation policy terms for details on refunds." },  
+  { question: "Are hosts verified?", answer: "Yes, all hosts undergo mandatory identity checks and listing verifications to ensure a safe and reliable community experience." },  
 ];
 
 export const FAQ = () => {
@@ -32,7 +21,7 @@ export const FAQ = () => {
       <div className="text-center mb-12">
         <span className="text-xs font-extrabold tracking-widest text-[#2563EB] uppercase">Got Questions?</span>
         <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl mt-2 font-heading">Frequently Asked Questions</h2>
-        <p className="text-gray-500 text-sm mt-2">Everything you need to know about renting and lending safely.</p>
+        <p className="text-gray-500 text-sm mt-2">Everything you need to know about booking and hosting safely.</p>
       </div>
 
       <div className="space-y-4">
@@ -74,3 +63,5 @@ export const FAQ = () => {
     </section>
   );
 };
+
+export default FAQ;

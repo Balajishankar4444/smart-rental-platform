@@ -4,25 +4,10 @@
 import { motion } from "framer-motion";
 import { Search, ShieldCheck, CheckCircle2 } from "lucide-react";
 
-const STEPS = [
-  {
-    step: "01",
-    title: "Browse & Request",
-    description: "Explore thousands of verified items nearby, select your dates, and send a booking request.",
-    icon: Search,
-  },
-  {
-    step: "02",
-    title: "Verify & Pay",
-    description: "Complete quick Aadhaar verification and pay securely. Funds are held in escrow for safety.",
-    icon: ShieldCheck,
-  },
-  {
-    step: "03",
-    title: "Use & Return",
-    description: "Pick up the item or get it delivered, enjoy your usage, and return it safely to the owner.",
-    icon: CheckCircle2,
-  },
+const STEPS = [  
+  { step: "01", title: "Search & Book", description: "Find a verified room, pick your dates, and book securely online.", icon: Search },  
+  { step: "02", title: "Meet Your Host", description: "Coordinate arrival and check in using a secure OTP at the door.", icon: ShieldCheck },  
+  { step: "03", title: "Enjoy Your Stay", description: "Settle in, enjoy the space, and leave a review for your host.", icon: CheckCircle2 },  
 ];
 
 export const HowItWorks = () => {
@@ -34,7 +19,7 @@ export const HowItWorks = () => {
           How RentIt Works
         </h2>
         <p className="text-gray-500 text-sm mt-3">
-          Renting or listing items takes less than 2 minutes. Here is how you can get started.
+          Finding or hosting a room takes less than 2 minutes. Here is how you can get started.
         </p>
       </div>
 

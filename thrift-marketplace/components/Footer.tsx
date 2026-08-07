@@ -23,25 +23,25 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
-              India's premier peer-to-peer rental ecosystem connecting verified lenders with trustworthy renters.
+              Germany's trusted room-sharing network connecting verified hosts with trustworthy guests.
             </p>
           </div>
 
           <div className="md:col-span-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Explore</h4>
             <ul className="space-y-2.5 text-xs text-gray-300">
-              <li><a href="#browse" className="hover:text-white transition">Browse Items</a></li>
+              <li><a href="#browse" className="hover:text-white transition">Browse Rooms</a></li>
               <li><a href="#categories" className="hover:text-white transition">Categories</a></li>
               <li><a href="#how-it-works" className="hover:text-white transition">How it Works</a></li>
             </ul>
           </div>
 
           <div className="md:col-span-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Lenders</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Hosts</h4>
             <ul className="space-y-2.5 text-xs text-gray-300">
               <li><a href="#calculator" className="hover:text-white transition">Income Calculator</a></li>
-              <li><a href="#trust-and-safety" className="hover:text-white transition">Protection Guarantee</a></li>
-              <li><a href="#faq" className="hover:text-white transition">Lending Rules</a></li>
+              <li><a href="#trust-and-safety" className="hover:text-white transition">Safety</a></li>
+              <li><a href="#faq" className="hover:text-white transition">Hosting Guidelines</a></li>
             </ul>
           </div>
 
@@ -76,3 +76,5 @@ export const Footer = () => {
     </footer>
   );
 };
+
+export default Footer;

@@ -25,12 +25,12 @@ import { useBookingRequests } from "@/hooks/useBookingRequests";
 
 const NAV_LINKS = [
   { name: "Home", href: "/#hero", id: "hero" },
-  { name: "Browse", href: "/#browse", id: "browse" },
+  { name: "Find Rooms", href: "/#browse", id: "browse" },
   { name: "Categories", href: "/#categories", id: "categories" },
-  { name: "How it Works", href: "/#how-it-works", id: "how-it-works" },
-  { name: "Become a Lender", href: "/#calculator", id: "calculator" },
-  { name: "Trust & Safety", href: "/#trust-and-safety", id: "trust-and-safety" },
-  { name: "Contact", href: "/#faq", id: "faq" },
+  { name: "How It Works", href: "/#how-it-works", id: "how-it-works" },
+  { name: "Become a Host", href: "/#calculator", id: "calculator" },
+  { name: "Safety", href: "/#trust-and-safety", id: "trust-and-safety" },
+  { name: "Help", href: "/#faq", id: "faq" },
 ];
 
 export const Navbar = () => {
@@ -123,7 +123,6 @@ export const Navbar = () => {
     setIsProfileOpen(false);
     setMobileMenuOpen(false);
     router.push(pathname);
-    // Stays on the same page instead of pushing to "/"
   };
 
   const filteredNavLinks = NAV_LINKS.filter(
@@ -336,14 +335,14 @@ export const Navbar = () => {
                 </Link>
               ))}
 
-            {/* Start Lending Button */}
+            {/* Become a Host Button */}
             {!isLoading && (
               <RippleButton
                 onClick={handleStartEarningRedirect}
                 className="hidden sm:inline-flex gap-2 rounded-[18px] bg-gradient-to-r from-[#2563EB] to-[#4F46E5] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 cursor-pointer"
               >
                 <Plus className="h-4 w-4 stroke-[3]" />
-                <span>Start Lending</span>
+                <span>Become a Host</span>
               </RippleButton>
             )}
 
@@ -455,7 +454,7 @@ export const Navbar = () => {
                       }}
                       className="w-full py-3.5 rounded-2xl bg-[#2563EB] text-sm font-bold text-white shadow-lg shadow-blue-500/25 cursor-pointer"
                     >
-                      Lend Your Product
+                      Become a Host
                     </RippleButton>
                   </>
                 ))}
