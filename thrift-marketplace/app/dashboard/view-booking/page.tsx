@@ -575,9 +575,6 @@ function ViewBookingContent() {
             {/* Pending Approvals Section for Rentals */}
             {pendingOutgoingRequests.length > 0 && (
               <div className="space-y-4 pt-2">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-indigo-600" /> Pending Approval Requests
-                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {pendingOutgoingRequests.map((request) => {
                     const nights = nightsBetween(request.startDate, request.endDate);
