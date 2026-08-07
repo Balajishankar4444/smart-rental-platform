@@ -71,7 +71,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = dbService.readDb();
     const product = readProducts().find((item) => item.id === listingId); 
 
     if (!product || product.deletedAt) {  
@@ -116,20 +115,6 @@ if (conflict) {
 }
 
     const datesTaken = requests  
-  .map(withDerivedStatus)  
-  .some(  
-    (item) =>  
-      item.listingId === listingId &&  
-      (item.status === 'pending' || item.status === 'approved' || item.status === 'paid') &&  
-      datesOverlap(startDate, endDate, item.startDate, item.endDate)  
-  );  
-  
-if (datesTaken) {  
-  return NextResponse.json(  
-    { success: false, error: 'Those dates are already booked. Please choose different dates.' },  
-    { status: 409 }  
-  );  
-}
 
     const days = rentalDays({ renterId, startDate, endDate, bookedAt: '' });
     const dailyPrice = Number(product.dailyPrice) || 0;
