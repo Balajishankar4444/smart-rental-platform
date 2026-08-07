@@ -9,7 +9,6 @@ import {
   Package,
   Calendar,
   DollarSign,
-
   Plus,
   CheckCircle2,
   MapPin,
@@ -136,7 +135,6 @@ const rentalMetrics = (rentals: ListingSummary[]) => {
   ];
 };
 
-// Lending numbers come from the listings themselves and the requests that were paid
 const hostMetrics = (listings: ListingSummary[], earnings: number) => [
   {
     label: "Available",
@@ -162,7 +160,6 @@ const hostMetrics = (listings: ListingSummary[], earnings: number) => [
     bg: "bg-indigo-50/80",
   },
 ];
-
 
 function RequestSummary({ request, caption }: { request: BookingRequest; caption: string }) {
   return (
@@ -219,7 +216,6 @@ function ViewBookingContent() {
   const [myRentals, setMyRentals] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Custom Delete Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
@@ -269,7 +265,6 @@ function ViewBookingContent() {
     }
   };
 
-  // Ends an ongoing rental; the listing becomes available again on its own
   const markReturned = async (id: string) => {
     if (!user) return;
 
@@ -298,7 +293,7 @@ function ViewBookingContent() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 flex-1 w-full space-y-8">
         
-        {/* Header & Section Switcher with Total Counts in Brackets */}
+        {/* Header & Cleaned Tab Navigation Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/60 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
@@ -318,7 +313,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My Lendings ({myListings.length})
+              Hosting
             </button>
             <button
               onClick={() => setActiveTab("rentals")}
@@ -328,7 +323,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My Rentals ({myRentals.length})
+              Stays
             </button>
             <button
               onClick={() => setActiveTab("notifications")}
@@ -338,7 +333,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Notifications ({incoming.length + outgoing.length})
+              Notifications
               {actionableCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
                   {actionableCount}
@@ -353,8 +348,8 @@ function ViewBookingContent() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Inventory & Listings</h2>
-                <p className="text-xs text-slate-500">Manage your active gear available for sharing.</p>
+                <h2 className="text-lg font-bold text-slate-900">Properties & Listings</h2>
+                <p className="text-xs text-slate-500">Manage your rooms and properties available for guests.</p>
               </div>
               <Link href="/list-item">
                 <RippleButton className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all cursor-pointer">
@@ -363,7 +358,6 @@ function ViewBookingContent() {
               </Link>
             </div>
 
-            {/* Concise Host Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {hostMetrics(myListings, earnings).map((metric, idx) => {
                 const IconComponent = metric.icon;
@@ -381,7 +375,6 @@ function ViewBookingContent() {
               })}
             </div>
 
-            {/* Listings Grid with identical uniform dimensions */}
             {loading ? (
               <div className="py-16 text-center">
                 <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -424,7 +417,6 @@ function ViewBookingContent() {
                           <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 0} <span className="text-[11px] font-normal text-slate-500">/ day</span></div>
                         </div>
 
-                        {/* Minimal Actions */}
                         <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
                           {listing.status === "in_rent" || listing.status === "in_lease" ? (
                             <RippleButton
@@ -459,11 +451,10 @@ function ViewBookingContent() {
         {activeTab === "rentals" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Active Bookings</h2>
-              <p className="text-xs text-slate-500">Monitor your ongoing rentals and scheduled returns.</p>
+              <h2 className="text-lg font-bold text-slate-900">Booking Management</h2>
+              <p className="text-xs text-slate-500">Monitor active bookings, check-in dates, and check-out schedules.</p>
             </div>
 
-            {/* Concise Rental Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {rentalMetrics(myRentals).map((metric, idx) => {
                 const IconComponent = metric.icon;
@@ -545,7 +536,6 @@ function ViewBookingContent() {
           </div>
         )}
 
-
         {/* --- TAB 3: NOTIFICATIONS --- */}
         {activeTab === "notifications" && (
           <div className="space-y-6">
@@ -559,7 +549,7 @@ function ViewBookingContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-blue-600" /> Requests for your gear
+                  <Bell className="w-4 h-4 text-blue-600" /> Hosting — booking requests for your gear
                 </h3>
 
                 {incoming.length === 0 ? (
@@ -572,19 +562,24 @@ function ViewBookingContent() {
                       <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
 
                       {request.status === "pending" ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => actOnRequest(request.id, "approve")}
-                            className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
-                          >
-                            Approve dates
-                          </button>
-                          <button
-                            onClick={() => actOnRequest(request.id, "decline")}
-                            className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                          >
-                            Decline
-                          </button>
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold text-amber-600">
+                            Approve before {formatDeadline(request.approvalDeadline)} or the request lapses.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => actOnRequest(request.id, "approve")}
+                              className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer"
+                            >
+                              Approve dates
+                            </button>
+                            <button
+                              onClick={() => actOnRequest(request.id, "decline")}
+                              className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                              Decline
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <p className="text-[11px] font-semibold text-slate-500">
@@ -600,7 +595,7 @@ function ViewBookingContent() {
 
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-indigo-600" /> Your rental requests
+                  <Clock className="w-4 h-4 text-indigo-600" /> Renting — items you asked to book
                 </h3>
 
                 {outgoing.length === 0 ? (
@@ -648,7 +643,7 @@ function ViewBookingContent() {
 
       </main>
 
-      {/* --- PROFESSIONAL THEME DELETE CONFIRMATION MODAL --- */}
+      {/* --- DELETE CONFIRMATION MODAL --- */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xl max-w-sm w-full p-6 space-y-4 relative animate-scaleUp">

@@ -1,26 +1,14 @@
 // utils/bookingRequests.ts
-export const BOOKING_REQUEST_STATUSES = [
-  "pending",
-  "approved",
-  "declined",
-  "paid",
-  "expired",
-  "cancelled",
-] as const;
 
-export type BookingRequestStatus = (typeof BOOKING_REQUEST_STATUSES)[number];
+export type BookingRequestStatus =
+  | 'pending'
+  | 'approved'
+  | 'declined'
+  | 'cancelled'
+  | 'paid'
+  | 'expired';
 
-export const BOOKING_REQUEST_LABELS: Record<BookingRequestStatus, string> = {
-  pending: "Awaiting owner approval",
-  approved: "Approved — payment pending",
-  declined: "Declined by owner",
-  paid: "Paid",
-  expired: "Payment window expired",
-  cancelled: "Cancelled",
-};
-
-/** Renters get a day to pay once the owner approves. */
-export const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+export type BookingRequestAction = 'approve' | 'decline' | 'pay' | 'cancel';
 
 export interface BookingRequest {
   id: string;
@@ -36,68 +24,108 @@ export interface BookingRequest {
   totalAmount: number;
   status: BookingRequestStatus;
   createdAt: string;
-  decidedAt?: string | null;
-  paymentDeadline?: string | null;
-  paidAt?: string | null;
+  decidedAt: string | null;
+  approvalDeadline?: string | null;
+  paymentDeadline: string | null;
+  paidAt: string | null;
 }
 
-/**
- * Payment is due within 24h of approval, but never later than the rental
- * itself starts — a booking starting in 6h has a 6h window.
- */
-export function paymentDeadlineFor(approvedAt: string, startDate: string) {
-  const approved = new Date(approvedAt).getTime();
-  const start = new Date(startDate).getTime();
-  const fullWindow = approved + PAYMENT_WINDOW_MS;
+export const BOOKING_REQUEST_LABELS: Record<BookingRequestStatus, string> = {
+  pending: 'Pending owner approval',
+  approved: 'Approved — awaiting payment',
+  declined: 'Declined by owner',
+  cancelled: 'Cancelled',
+  paid: 'Paid and booked',
+  expired: 'Request expired',
+};
 
-  if (!Number.isNaN(start) && start > approved && start < fullWindow) {
-    return new Date(start).toISOString();
-  }
-
-  return new Date(fullWindow).toISOString();
+// 24 hours from creation for owner approval deadline
+export function approvalDeadlineFor(createdAt: string): string {
+  const date = new Date(createdAt);
+  date.setHours(date.getHours() + 24);
+  return date.toISOString();
 }
 
-/** An approved request whose deadline has passed counts as expired. */
-export function deriveRequestStatus(
-  request: Pick<BookingRequest, "status" | "paymentDeadline">,
-  now = Date.now()
-): BookingRequestStatus {
-  if (request.status !== "approved" || !request.paymentDeadline) return request.status;
-  return new Date(request.paymentDeadline).getTime() < now ? "expired" : "approved";
+// 24 hours from decision/approval for payment deadline, capped by start date
+export function paymentDeadlineFor(decidedAt: string, startDate: string): string {
+  const decided = new Date(decidedAt);
+  decided.setHours(decided.getHours() + 24);
+  const start = new Date(startDate);
+  const deadline = decided < start ? decided : start;
+  return deadline.toISOString();
 }
 
-export function formatDeadline(deadline?: string | null) {
-  if (!deadline) return "";
-  const date = new Date(deadline);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
+export function formatDeadline(value?: string | null): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-IN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
-export async function fetchBookingRequests(userId: string): Promise<BookingRequest[]> {
-  const response = await fetch(`/api/auth/booking-requests?userId=${encodeURIComponent(userId)}`);
-  const result = await response.json();
-  return Array.isArray(result?.data) ? result.data : [];
+// Derive dynamic/time-based status for a booking request
+export function deriveRequestStatus(request: BookingRequest): BookingRequestStatus {
+  if (['paid', 'cancelled', 'declined'].includes(request.status)) {
+    return request.status;
+  }
+
+  const now = new Date();
+
+  if (request.status === 'pending') {
+    const created = new Date(request.createdAt);
+    const approvalDeadline = new Date(created.getTime() + 24 * 60 * 60 * 1000);
+    if (now > approvalDeadline) {
+      return 'expired';
+    }
+  }
+
+  if (request.status === 'approved' && request.paymentDeadline) {
+    const deadline = new Date(request.paymentDeadline);
+    if (now > deadline) {
+      return 'expired';
+    }
+  }
+
+  return request.status;
 }
 
-export type BookingRequestAction = "approve" | "decline" | "pay" | "cancel";
+// API client helper functions
+export async function fetchBookingRequests(params: {
+  userId?: string;
+  listingId?: string;
+  renterId?: string;
+}): Promise<BookingRequest[]> {
+  const search = new URLSearchParams();
+  if (params.userId) search.set('userId', params.userId);
+  if (params.listingId) search.set('listingId', params.listingId);
+  if (params.renterId) search.set('renterId', params.renterId);
+
+  // If no params are provided, return an empty array gracefully instead of triggering a 400 error
+  if (!params.userId && !params.listingId && !params.renterId) {
+    return [];
+  }
+
+  const res = await fetch(`/api/auth/booking-requests?${search.toString()}`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Failed to fetch booking requests');
+  return json.data;
+}
 
 export async function updateBookingRequest(
   id: string,
   userId: string,
   action: BookingRequestAction
 ): Promise<BookingRequest> {
-  const response = await fetch("/api/auth/booking-requests", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+  const res = await fetch('/api/auth/booking-requests', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, userId, action }),
   });
-
-  const result = await response.json();
-  if (!response.ok || !result?.success) throw new Error(result?.error || "Request failed");
-  return result.data as BookingRequest;
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Failed to update booking request');
+  return json.data;
 }
