@@ -40,16 +40,17 @@ export const BOOKING_REQUEST_LABELS: Record<BookingRequestStatus, string> = {
 };
 
 export const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const APPROVAL_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours for host to approve
 
 export function paymentDeadlineFor(decidedAt: string) {
   const time = new Date(decidedAt).getTime();
   return Number.isNaN(time) ? null : new Date(time + PAYMENT_WINDOW_MS).toISOString();
 }
 
-/** The host must approve before the booking start date, or the request lapses. */
-export function approvalDeadlineFor(startDate: string) {
-  const start = new Date(startDate).getTime();
-  return Number.isNaN(start) ? null : new Date(start).toISOString();
+/** 24-hour window for the host to approve a request from creation. */
+export function approvalDeadlineFor(createdAt: string) {
+  const time = new Date(createdAt).getTime();
+  return Number.isNaN(time) ? null : new Date(time + APPROVAL_WINDOW_MS).toISOString();
 }
 
 export function deriveRequestStatus(

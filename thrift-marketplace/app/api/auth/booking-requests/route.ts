@@ -30,7 +30,11 @@ export async function GET(request: Request) {
     }
 
     const db = dbService.readDb();
-    let requests = db.bookingRequests || [];
+    const listings = db.listings || [];
+    const validListingIds = new Set(listings.map((item: any) => item.id));
+
+    // Filter out orphaned booking requests where the listing no longer exists
+    let requests = (db.bookingRequests || []).filter((item: any) => validListingIds.has(item.listingId));
 
     if (userId) {
       requests = requests.filter((item: any) => item.ownerId === userId || item.renterId === userId);
