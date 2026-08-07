@@ -1,4 +1,4 @@
-﻿// app/search/page.tsx
+﻿// app/browse/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
@@ -257,7 +257,7 @@ function SearchContent() {
     }
   };
 
-  // Filter the active listings coming from the API[cite: 1]
+  // Filter the active listings coming from the API
   const query = searchQuery.trim().toLowerCase();
   const cityName = selectedCity.split(",")[0].trim().toLowerCase();
 
@@ -268,7 +268,10 @@ function SearchContent() {
         [listingTitle(item), item.category, item.description]
           .filter(Boolean)
           .some((field) => field && field.toLowerCase().includes(query));
-      const matchesCategory = selectedCategory === "All Categories" || item.category === selectedCategory;
+      const matchesCategory =  
+        selectedCategory === "All Categories" ||  
+        [item.category, item.propertyType]  
+          .some((f) => f && f.toLowerCase() === selectedCategory.toLowerCase().replace(/s$/, ''));
       const matchesCity =
         selectedCity === ALL_LOCATIONS ||
         listingLocation(item).toLowerCase().includes(cityName);
