@@ -173,6 +173,10 @@ const hostMetrics = (listings: ListingSummary[], earnings: number) => [
 ];
 
 function RequestSummary({ request, caption }: { request: BookingRequest; caption: string }) {
+  const nights = nightsBetween(request.startDate, request.endDate);
+  const perNight = request.totalAmount / Math.max(1, request.days || nights);
+  const calculatedTotal = perNight * nights;
+
   return (
     <div className="flex gap-3">
       {request.listingImage ? (
@@ -188,9 +192,7 @@ function RequestSummary({ request, caption }: { request: BookingRequest; caption
         <p className="text-[11px] text-slate-400">{caption}</p>
         <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
         <p className="text-[11px] text-slate-500">
-          {formatDay(request.startDate)} – {formatDay(request.endDate)} ·{" "}
-          {nightsBetween(request.startDate, request.endDate)}d · ₹  
-          {request.totalAmount.toLocaleString("en-IN")}
+          {formatDay(request.startDate)} – {formatDay(request.endDate)} · {nights}d · ₹{calculatedTotal.toLocaleString("en-IN")}
         </p>
       </div>
     </div>
@@ -576,15 +578,24 @@ function ViewBookingContent() {
                 ) : (
                   incoming.map((request) => {
                     const liveStatus = deriveRequestStatus(request, now);
+                    const nights = nightsBetween(request.startDate, request.endDate);
+                    const perNight = request.totalAmount / Math.max(1, request.days || nights);
+                    const calculatedTotal = perNight * nights;
+
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
                         <RequestSummary request={request} caption={`${request.renterName} wants to rent`} />
 
-                        {liveStatus === "pending" ? (
-                          <div className="space-y-2">
-                            <p className="text-[11px] font-semibold text-amber-600">
-                              Approve within {formatCountdown(request.approvalDeadline, now)} or it lapses.
-                            </p>
+                        {liveStatus === "pending" && (
+                          <div className="space-y-3">
+                            <div className="rounded-xl bg-blue-50 border border-blue-200 p-3">
+                              <p className="text-[11px] font-bold text-blue-700 flex items-center gap-1">
+                                <Bell className="w-3.5 h-3.5" /> New request — {request.renterName} wants these dates
+                              </p>
+                              <p className="text-[11px] text-blue-600 mt-0.5">
+                                Approve before {formatDeadline(request.approvalDeadline)}
+                              </p>
+                            </div>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => actOnRequest(request.id, "approve")}
@@ -600,21 +611,52 @@ function ViewBookingContent() {
                               </button>
                             </div>
                           </div>
-                        ) : liveStatus === "paid" ? (  
+                        )}
+
+                        {liveStatus === "approved" && (
+                          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-0.5">
+                            <p className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" /> You approved this
+                            </p>
+                            <p className="text-[11px] text-amber-600">
+                              Waiting for the renter to pay by {formatDeadline(request.paymentDeadline)}
+                            </p>
+                          </div>
+                        )}
+
+                        {liveStatus === "paid" && (  
                           <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-0.5">  
-                            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">  
+                            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">  
                               <CheckCircle2 className="w-3.5 h-3.5" /> Booking confirmed — payment received  
                             </p>  
                             <p className="text-[11px] text-emerald-600">  
-                              {request.renterName} · {formatDay(request.startDate)} – {formatDay(request.endDate)} · ₹{request.totalAmount.toLocaleString("en-IN")}  
+                              {formatDay(request.startDate)} – {formatDay(request.endDate)} · ₹{calculatedTotal.toLocaleString("en-IN")}  
                             </p>  
                           </div>  
-                        ) : (  
-                          <p className="text-[11px] font-semibold text-slate-500">  
-                            {BOOKING_REQUEST_LABELS[liveStatus]}  
-                            {liveStatus === "approved" &&  
-                              ` · pay by ${formatDeadline(request.paymentDeadline)}`}  
-                          </p>  
+                        )}
+
+                        {liveStatus === "declined" && (
+                          <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                              <X className="w-3.5 h-3.5" /> You declined this request
+                            </p>
+                          </div>
+                        )}
+
+                        {liveStatus === "expired" && (
+                          <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5" /> This request expired
+                            </p>
+                          </div>
+                        )}
+
+                        {liveStatus === "cancelled" && (
+                          <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                              <X className="w-3.5 h-3.5" /> Renter cancelled this request
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
@@ -634,53 +676,91 @@ function ViewBookingContent() {
                 ) : (
                   outgoing.map((request) => {
                     const liveStatus = deriveRequestStatus(request, now);
+                    const nights = nightsBetween(request.startDate, request.endDate);
+                    const perNight = request.totalAmount / Math.max(1, request.days || nights);
+                    const calculatedTotal = perNight * nights;
+
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
                         <RequestSummary request={request} caption="You requested" />
 
+                        {liveStatus === "pending" && (
+                          <div className="space-y-3">
+                            <div className="rounded-xl bg-indigo-50 border border-indigo-200 p-3 space-y-0.5">
+                              <p className="text-[11px] font-bold text-indigo-700 flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" /> Request sent
+                              </p>
+                              <p className="text-[11px] text-indigo-600">
+                                Awaiting host approval before {formatDeadline(request.approvalDeadline)}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => actOnRequest(request.id, "cancel")}
+                              className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                              Cancel request
+                            </button>
+                          </div>
+                        )}
+
+                        {liveStatus === "approved" && (
+                          <div className="space-y-3">
+                            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-0.5">
+                              <p className="text-[11px] font-bold text-amber-700 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" /> Approved by host
+                              </p>
+                              <p className="text-[11px] text-amber-600">
+                                Pay within {formatCountdown(request.paymentDeadline, now)} or the approval lapses.
+                              </p>
+                            </div>
+                            <Link
+                              href={`/booking?requestId=${request.id}`}
+                              className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
+                            >
+                              Pay ₹{calculatedTotal.toLocaleString("en-IN")} now
+                            </Link>
+                            <button
+                              onClick={() => actOnRequest(request.id, "cancel")}
+                              className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                              Cancel request
+                            </button>
+                          </div>
+                        )}
+
                         {liveStatus === "paid" && (  
                           <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 space-y-0.5">  
-                            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">  
+                            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">  
                               <CheckCircle2 className="w-3.5 h-3.5" /> Booking confirmed — payment complete  
                             </p>  
                             <p className="text-[11px] text-emerald-600">  
-                              {formatDay(request.startDate)} – {formatDay(request.endDate)} · ₹{request.totalAmount.toLocaleString("en-IN")}  
+                              {formatDay(request.startDate)} – {formatDay(request.endDate)} · ₹{calculatedTotal.toLocaleString("en-IN")}  
                             </p>  
                           </div>  
                         )}
 
-                        {liveStatus !== "paid" && (
-                          <>
-                            <p className="text-[11px] font-semibold text-slate-500">
-                              {BOOKING_REQUEST_LABELS[liveStatus]}
-                              {liveStatus === "pending" &&
-                                request.approvalDeadline &&
-                                ` · host has ${formatCountdown(request.approvalDeadline, now)} to approve`}
+                        {liveStatus === "declined" && (
+                          <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                              <X className="w-3.5 h-3.5" /> Host declined your request
                             </p>
+                          </div>
+                        )}
 
-                            {liveStatus === "approved" && (
-                              <div className="space-y-2">
-                                <p className="text-[11px] font-semibold text-amber-600">
-                                  Pay within {formatCountdown(request.paymentDeadline, now)} or the approval lapses.
-                                </p>
-                                <Link
-                                  href={`/booking?requestId=${request.id}`}
-                                  className="block text-center rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors"
-                                >
-                                  Pay ₹{request.totalAmount.toLocaleString("en-IN")} now
-                                </Link>
-                              </div>
-                            )}
+                        {liveStatus === "expired" && (
+                          <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5" /> This request expired before payment
+                            </p>
+                          </div>
+                        )}
 
-                            {(liveStatus === "pending" || liveStatus === "approved") && (
-                              <button
-                                onClick={() => actOnRequest(request.id, "cancel")}
-                                className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                              >
-                                Cancel request
-                              </button>
-                            )}
-                          </>
+                        {liveStatus === "cancelled" && (
+                          <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                              <X className="w-3.5 h-3.5" /> You cancelled this request
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
