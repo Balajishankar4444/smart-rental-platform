@@ -4,7 +4,7 @@ import path from "path";
 import { ListingRental } from "@/utils/listings";
 
 const USERS_PATH = path.join(process.cwd(), "data", "users.json");
-const PRODUCTS_PATH = path.join(process.cwd(), "data", "products.json");
+const PRODUCTS_PATH = path.join(process.cwd(), "data", "product.json");
 const BOOKINGS_PATH = path.join(process.cwd(), "data", "booking-requests.json");
 
 export interface StoredListingRecord {

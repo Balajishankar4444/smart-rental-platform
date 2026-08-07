@@ -25,7 +25,7 @@ export function useBookingRequests() {
     if (!user) return;
 
     let cancelled = false;
-    fetchBookingRequests(user.id)
+    fetchBookingRequests({ userId: user.id })
       .then((requests) => {
         if (!cancelled) setLoaded({ userId: user.id, requests });
       })

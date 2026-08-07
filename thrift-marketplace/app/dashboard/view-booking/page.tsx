@@ -293,7 +293,7 @@ function ViewBookingContent() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 flex-1 w-full space-y-8">
         
-        {/* Header & Cleaned Tab Navigation Switcher */}
+        {/* Header & Tab Navigation Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/60 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
@@ -313,7 +313,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Hosting
+              My Listings
             </button>
             <button
               onClick={() => setActiveTab("rentals")}
@@ -323,7 +323,7 @@ function ViewBookingContent() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Stays
+              My Rentals
             </button>
             <button
               onClick={() => setActiveTab("notifications")}
@@ -348,8 +348,8 @@ function ViewBookingContent() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Properties & Listings</h2>
-                <p className="text-xs text-slate-500">Manage your rooms and properties available for guests.</p>
+                <h2 className="text-lg font-bold text-slate-900">Inventory & Listings</h2>
+                <p className="text-xs text-slate-500">Manage your active gear available for sharing.</p>
               </div>
               <Link href="/list-item">
                 <RippleButton className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all cursor-pointer">
@@ -451,8 +451,8 @@ function ViewBookingContent() {
         {activeTab === "rentals" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Booking Management</h2>
-              <p className="text-xs text-slate-500">Monitor active bookings, check-in dates, and check-out schedules.</p>
+              <h2 className="text-lg font-bold text-slate-900">Active Bookings</h2>
+              <p className="text-xs text-slate-500">Monitor your ongoing rentals and scheduled returns.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -564,7 +564,7 @@ function ViewBookingContent() {
                       {request.status === "pending" ? (
                         <div className="space-y-2">
                           <p className="text-[11px] font-semibold text-amber-600">
-                            Approve before {formatDeadline(request.approvalDeadline)} or the request lapses.
+                            Approve before {formatDeadline(request.approvalDeadline) !== "—" ? formatDeadline(request.approvalDeadline) : "the deadline"} or the request lapses.
                           </p>
                           <div className="flex gap-2">
                             <button
