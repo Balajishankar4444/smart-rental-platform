@@ -22,22 +22,26 @@ export function withStatus(product: StoredProduct) {
 }
 
 export function toSummary(detailed: StoredProduct): ListingSummary {
+  const d = detailed as Record<string, any>;
   return {
-    id: detailed.id,
-    userId: detailed.userId,
-    productName: detailed.productName,
-    category: detailed.category,
-    propertyType: detailed.propertyType,
-    brand: detailed.brand,
-    dailyPrice: detailed.dailyPrice,
-    images: detailed.images,
-    primaryImageIndex: detailed.primaryImageIndex,
-    city: detailed.city,
-    status: detailed.status,
-    rental: detailed.rental,
-    createdAt: detailed.createdAt,
-    latitude: detailed.latitude,
-    longitude: detailed.longitude,
-    instantBooking: detailed.instantBooking,
+    id: d.id,
+    userId: d.userId,
+    productName: d.productName,
+    category: d.category,
+    propertyType: d.propertyType,
+    brand: d.brand,
+    dailyPrice: d.dailyPrice,
+    images: d.images,
+    primaryImageIndex: d.primaryImageIndex,
+    city: d.city,
+    status: d.status,
+    rental: d.rental,
+    createdAt: d.createdAt,
+    latitude: d.latitude,
+    longitude: d.longitude,
+    instantBooking: d.instantBooking,
+    state: d.state,
+    numGuests: d.numGuests ?? d.maxGuests,
+    petsAllowed: d.petsAllowed ?? d.petFriendly,
   };
 }
