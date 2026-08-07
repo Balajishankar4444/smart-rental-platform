@@ -29,9 +29,6 @@ const CATEGORIES = [
   { name: "Shared Rooms", icon: (isSelected: boolean) => <BedDouble className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
   { name: "Private Rooms", icon: (isSelected: boolean) => <DoorClosed className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
   { name: "Apartments", icon: (isSelected: boolean) => <Building2 className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
-  { name: "Student Housing", icon: (isSelected: boolean) => <GraduationCap className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
-  { name: "Business Stays", icon: (isSelected: boolean) => <Briefcase className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
-  { name: "Backpacker Rooms", icon: (isSelected: boolean) => <Backpack className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
   { name: "Family Stays", icon: (isSelected: boolean) => <Users className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
   { name: "Pet Friendly", icon: (isSelected: boolean) => <Dog className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#2563EB]"}`} /> },
 ];

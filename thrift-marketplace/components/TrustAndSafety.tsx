@@ -6,16 +6,6 @@ import { ShieldCheck, Lock, CheckCircle2, Headphones, Star, KeyRound } from "luc
 
 const TRUST_FEATURES = [
   {
-    icon: ShieldCheck,
-    title: "Verified Hosts",
-    description: "Every host completes mandatory identity checks and listing verifications.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Verified Guests",
-    description: "All guests go through profile checks before their booking is confirmed.",
-  },
-  {
     icon: Lock,
     title: "Secure Payments",
     description: "Transactions and deposits are held securely and handled via trusted gateways.",
@@ -27,14 +17,14 @@ const TRUST_FEATURES = [
   },
   {
     icon: Star,
-    title: "Reviews & Ratings",
-    description: "Transparent feedback system helps maintain high standards for everyone.",
+    title: "Easy Booking Management",
+    description: "Manage listings, booking requests, and payments from one simple dashboard.",
   },
   {
-    icon: Headphones,
-    title: "24/7 Support",
-    description: "Our dedicated support team is available round the clock to assist you.",
-  },
+  icon: Headphones,
+  title: "Help When You Need It",
+  description: "Get assistance with your rentals, listings, and booking process whenever you need support.",
+},
 ];
 
 export const TrustAndSafety = () => {

@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { 
   Home, Building2, MapPin, Calendar, DollarSign, Eye, RefreshCw, X, UploadCloud, 
   Trash2, Star, Zap, AlertCircle, Check, ArrowRight, ArrowLeft, Save, ShieldCheck, 
-  Info, Sparkles, Users, BedDouble, Clock, Coffee
+  Info, Sparkles, Users, BedDouble, Clock, Coffee, ChevronDown
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -35,7 +35,6 @@ interface ListingFormState {
 
   dailyPrice: string; // Price per Night
   securityDeposit: string;
-  cleaningFee: string;
 
   availableFrom: string;
   availableTo: string;
@@ -84,6 +83,9 @@ function ListItemContent() {
   const [savingDraft, setSavingDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
 
+  // State for custom dropdown visibility
+  const [isPropertyTypeOpen, setIsPropertyTypeOpen] = useState(false);
+
   // Form State
   const [form, setForm] = useState<ListingFormState>({
     propertyType: "Private Room",
@@ -101,7 +103,6 @@ function ListItemContent() {
 
     dailyPrice: "850",
     securityDeposit: "2500",
-    cleaningFee: "500",
 
     availableFrom: "2026-09-01",
     availableTo: "2027-09-01",
@@ -389,17 +390,62 @@ function ListItemContent() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
+                      {/* CUSTOM THEMED PROPERTY TYPE DROPDOWN */}
+                      <div className="relative">
                         <label className="block text-sm font-bold text-gray-800 mb-2">Property Type *</label>
-                        <select 
-                          value={form.propertyType}
-                          onChange={(e) => updateField("propertyType", e.target.value as PropertyType)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"
+                        <div 
+                          onClick={() => setIsPropertyTypeOpen(!isPropertyTypeOpen)}
+                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer flex items-center justify-between select-none transition-all hover:border-blue-300"
                         >
-                          <option value="Private Room">Private Room</option>
-                          <option value="Shared Room">Shared Room</option>
-                          <option value="Apartment">Apartment</option>
-                        </select>
+                          <span className="flex items-center gap-2">
+                            {form.propertyType === "Apartment" && <Building2 className="w-4 h-4 text-[#2563EB]" />}
+                            {form.propertyType === "Private Room" && <Home className="w-4 h-4 text-[#2563EB]" />}
+                            {form.propertyType === "Shared Room" && <Users className="w-4 h-4 text-[#2563EB]" />}
+                            {form.propertyType || "Select property type"}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isPropertyTypeOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+                        </div>
+
+                        <AnimatePresence>
+                          {isPropertyTypeOpen && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setIsPropertyTypeOpen(false)} 
+                              />
+                              <motion.div 
+                                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-20 p-1.5 space-y-1"
+                              >
+                                {(["Private Room", "Shared Room", "Apartment"] as PropertyType[]).map((type) => (
+                                  <div
+                                    key={type}
+                                    onClick={() => {
+                                      updateField("propertyType", type);
+                                      setIsPropertyTypeOpen(false);
+                                    }}
+                                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all ${
+                                      form.propertyType === type 
+                                        ? "bg-blue-50 text-[#2563EB]" 
+                                        : "text-gray-700 hover:bg-gray-100/80"
+                                    }`}
+                                  >
+                                    <span className="flex items-center gap-2.5">
+                                      {type === "Apartment" && <Building2 className="w-4 h-4" />}
+                                      {type === "Private Room" && <Home className="w-4 h-4" />}
+                                      {type === "Shared Room" && <Users className="w-4 h-4" />}
+                                      {type}
+                                    </span>
+                                    {form.propertyType === type && <Check className="w-4 h-4 text-[#2563EB]" />}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       <div>
@@ -567,27 +613,6 @@ function ListItemContent() {
                           />
                         </div>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Cleaning Fee (₹)</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            value={form.cleaningFee}
-                            onChange={(e) => updateField("cleaningFee", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Estimated Monthly Income</label>
-                        <div className="px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-800">Potential Payout (20 nights)</span>
-                          <span className="text-base font-extrabold text-emerald-700">₹{(Number(form.dailyPrice || 0) * 20).toLocaleString()} / mo</span>
-                        </div>
-                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -607,44 +632,72 @@ function ListItemContent() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Available From *</label>
-                        <input 
-                          type="date" 
-                          value={form.availableFrom}
-                          onChange={(e) => updateField("availableFrom", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
+                      <div className="relative">
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[6px] rounded-2xl">
+                          <span className="px-3 py-1 bg-gray-900 text-white text-xs font-extrabold uppercase tracking-widest rounded-full shadow-md">
+                            Coming Soon
+                          </span>
+                        </div>
+                        <div className="filter blur-[6px] select-none pointer-events-none">
+                          <label className="block text-sm font-bold text-gray-800 mb-2">Available From *</label>
+                          <input 
+                            type="date" 
+                            value={form.availableFrom}
+                            onChange={(e) => updateField("availableFrom", e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs"
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Available To *</label>
-                        <input 
-                          type="date" 
-                          value={form.availableTo}
-                          onChange={(e) => updateField("availableTo", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
+                      <div className="relative">
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[6px] rounded-2xl">
+                          <span className="px-3 py-1 bg-gray-900 text-white text-xs font-extrabold uppercase tracking-widest rounded-full shadow-md">
+                            Coming Soon
+                          </span>
+                        </div>
+                        <div className="filter blur-[6px] select-none pointer-events-none">
+                          <label className="block text-sm font-bold text-gray-800 mb-2">Available To *</label>
+                          <input 
+                            type="date" 
+                            value={form.availableTo}
+                            onChange={(e) => updateField("availableTo", e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs"
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Minimum Stay *</label>
-                        <input 
-                          type="text" 
-                          value={form.minStay}
-                          onChange={(e) => updateField("minStay", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
+                      <div className="relative">
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[6px] rounded-2xl">
+                          <span className="px-3 py-1 bg-gray-900 text-white text-xs font-extrabold uppercase tracking-widest rounded-full shadow-md">
+                            Coming Soon
+                          </span>
+                        </div>
+                        <div className="filter blur-[6px] select-none pointer-events-none">
+                          <label className="block text-sm font-bold text-gray-800 mb-2">Minimum Stay *</label>
+                          <input 
+                            type="text" 
+                            value={form.minStay}
+                            onChange={(e) => updateField("minStay", e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs"
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Maximum Stay *</label>
-                        <input 
-                          type="text" 
-                          value={form.maxStay}
-                          onChange={(e) => updateField("maxStay", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
+                      <div className="relative">
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[6px] rounded-2xl">
+                          <span className="px-3 py-1 bg-gray-900 text-white text-xs font-extrabold uppercase tracking-widest rounded-full shadow-md">
+                            Coming Soon
+                          </span>
+                        </div>
+                        <div className="filter blur-[6px] select-none pointer-events-none">
+                          <label className="block text-sm font-bold text-gray-800 mb-2">Maximum Stay *</label>
+                          <input 
+                            type="text" 
+                            value={form.maxStay}
+                            onChange={(e) => updateField("maxStay", e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs"
+                          />
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -700,7 +753,7 @@ function ListItemContent() {
                         />
                       </label>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                         {form.images.map((imgUrl, idx) => (
                           <div key={idx} className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-square bg-gray-100">
                             <img src={imgUrl} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
@@ -829,7 +882,7 @@ function ListItemContent() {
                               {form.propertyType || "Private Room"}
                             </span>
                             <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                              <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
+                              <ShieldCheck className="w-3.5 h-3.5" /> Trusted Host
                             </span>
                           </div>
                           <h3 className="text-xl font-extrabold text-gray-900 font-heading">
@@ -955,10 +1008,10 @@ function ListItemContent() {
               <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center gap-2 text-[#2563EB]">
                   <ShieldCheck className="w-4 h-4" />
-                  <h4 className="font-bold text-xs uppercase tracking-wider">Host Protection Guarantee</h4>
+                  <h4 className="font-bold text-xs uppercase tracking-wider">Secure Payment Release</h4>
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  Every booking on RentIt is covered up to ₹50,000 against property damage or incidents with verified guest ID checks.
+                  Payments are released to the host only after successful OTP verification, adding an extra layer of trust for both guests and hosts.
                 </p>
               </div>
 

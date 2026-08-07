@@ -126,7 +126,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ item, onClose })
                   <div className="mt-6 p-4 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-center gap-3">
                     <ShieldCheck className="h-6 w-6 text-[#2563EB] shrink-0" />
                     <p className="text-xs text-blue-900 font-medium">
-                      Backed by RentIt Guarantee up to ₹50,000 for loss or structural damage.
+                      Secure payments with OTP verification ensure a trusted experience for both hosts and guests.
                     </p>
                   </div>
                 </div>
