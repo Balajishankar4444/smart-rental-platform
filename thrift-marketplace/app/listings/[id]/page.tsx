@@ -328,7 +328,7 @@ function toProductDetail(listing: StoredListing): ProductDetail {
       rentalsCompleted: 0,
       responseTime: "—",
       memberSince: "—",
-      languages: listing.ownerLanguage ? [listing.ownerLanguage] : [],
+      language: listing.ownerLanguage || "",
       verified: Boolean(listing.ownerVerified),
       age: listing.ownerAge || "",
       location: listing.ownerLocation || "",
@@ -984,17 +984,23 @@ export default function ProductDetailPage() {
 
               {/* Languages Spoken Section */}
               {product.owner.languages && product.owner.languages.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-2">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Languages Spoken</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {product.owner.languages.map((lang) => (
-                      <span key={lang} className="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-xl shadow-xs flex items-center gap-1">
-                        🌐 {lang}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+  <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-2">
+    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">
+      Languages Spoken
+    </span>
+
+    <div className="flex flex-wrap gap-1.5">
+      {product.owner.languages.map((lang) => (
+        <span
+          key={lang}
+          className="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-xl shadow-xs flex items-center gap-1"
+        >
+          🌐 {lang}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
 
               {/* About Section */}
               {product.owner.bio && (

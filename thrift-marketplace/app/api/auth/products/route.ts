@@ -42,6 +42,7 @@ export async function GET(request: Request) {
         ...item,
         ownerName: owner?.fullName || "Verified lender",
         ownerAvatar: owner?.avatar || "",
+        ownerLanguage: owner?.language || "",
       };
     };
 
@@ -65,6 +66,7 @@ export async function GET(request: Request) {
   ...detailedProduct,
   ownerName: owner?.fullName || "",
   ownerAvatar: owner?.avatar || "",
+  ownerLanguage: owner?.language || "",
   ownerCoverPhoto: owner?.coverPhoto || "",
   ownerBio: owner?.bio || "",
   ownerGender: owner?.gender || "",
