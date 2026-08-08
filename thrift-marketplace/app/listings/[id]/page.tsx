@@ -7,18 +7,13 @@ import {
   Star,
   ShieldCheck,
   Zap,
-  Check,
-  X,
   Calendar,
   ChevronLeft,
   ChevronRight,
   MapPin,
   Heart,
   Share2,
-  MessageSquare,
   Maximize2,
-  Send,
-  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -105,6 +100,7 @@ interface ProductDetail {
     gender?: string;
     bio?: string;
     activeItemsCount?: number;
+    location?: string;
   };
   specs: {
     weight: string;
@@ -167,20 +163,21 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
       visitors: true,
     },
     owner: {
-      name: "King maki",
+      name: "Aarav Sharma",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
       coverPhoto: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
       rating: 4.9,
       rentalsCompleted: 120,
       responseTime: "Under 15 mins",
       memberSince: "January 2024",
-      languages: ["English", "German"],
+      languages: ["English", "German", "Hindi", "Tamil"],
       verified: true,
-      profession: "Student",
+      profession: "tester",
       age: 26,
       gender: "Male",
-      bio: "I am uncle.sds",
-      activeItemsCount: 9,
+      location: "Stuttgart, Germany",
+      bio: "Tech enthusiast, passionate traveler, and verified lender on RentIt.",
+      activeItemsCount: 8,
     },
     specs: {
       weight: "658 g",
@@ -217,6 +214,7 @@ interface StoredListing {
   ownerProfession?: string;
   ownerLanguage?: string;
   ownerVerified?: boolean;
+  ownerLocation?: string;
   productName?: string;
   ownerAge?: string | number;
   ownerActiveItemsCount?: number;
@@ -326,15 +324,15 @@ function toProductDetail(listing: StoredListing): ProductDetail {
       bio: listing.ownerBio || "",
       gender: listing.ownerGender || "",
       profession: listing.ownerProfession || "",
-      language: listing.ownerLanguage || "",
       rating: 0,
       rentalsCompleted: 0,
       responseTime: "—",
       memberSince: "—",
-      languages: listing.ownerLanguage
-  ? [listing.ownerLanguage]
-  : [],
+      languages: listing.ownerLanguage ? [listing.ownerLanguage] : [],
       verified: Boolean(listing.ownerVerified),
+      age: listing.ownerAge || "",
+      location: listing.ownerLocation || "",
+      activeItemsCount: listing.ownerActiveItemsCount || 8,
     },
     specs: {
       weight: listing.weight || "—",
@@ -385,10 +383,6 @@ export default function ProductDetailPage() {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [messageText, setMessageText] = useState("");
-  const [messageSent, setMessageSent] = useState(false);
 
   const { user, authStatus } = useAuth();
   const isAuthenticated = Boolean(user);
@@ -409,7 +403,6 @@ export default function ProductDetailPage() {
     return formatDateString(now.getFullYear(), now.getMonth(), now.getDate());
   }, []);
 
-  // Set initial activeImageIdx only if images exist
   useEffect(() => {
     if (product && product.images.length > 0) {
       setActiveImageIdx(0);
@@ -480,23 +473,6 @@ export default function ProductDetailPage() {
       return;
     }
     if (productId) toggleFavorite(productId);
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
-  };
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!messageText.trim()) return;
-    setMessageSent(true);
-    setTimeout(() => {
-      setMessageSent(false);
-      setMessageText("");
-      setIsContactModalOpen(false);
-    }, 2000);
   };
 
   const calculateDays = () => {  
@@ -576,8 +552,6 @@ export default function ProductDetailPage() {
     }
   };
 
-  const bookingUrl = `/listings/${productId}?startDate=${startDate}&endDate=${endDate}`;
-
   const handleProceedToBook = async () => {  
     if (!isAuthenticated || !user) { setIsLoginModalOpen(true); return; }  
     if (!startDate || !endDate) {  
@@ -613,10 +587,6 @@ export default function ProductDetailPage() {
     } finally {
       setIsRequesting(false);
     }
-  };
-
-  const handleNavigateToLoginPage = () => {
-    router.push(`/login?redirect=${encodeURIComponent(bookingUrl)}`);
   };
 
   if (isLoadingProduct) {
@@ -802,7 +772,7 @@ export default function ProductDetailPage() {
 
           </div>
 
-          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering & Owner Profile Card Below */}
+          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering & Profile Preview UI Match Below */}
           <div className="lg:col-span-5 space-y-6 sticky top-20">
             <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-4">
               <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
@@ -810,9 +780,6 @@ export default function ProductDetailPage() {
                   <span className="text-2xl font-extrabold text-slate-900">₹{product.dailyPrice}</span>
                   <span className="text-xs text-slate-500 font-medium"> / day</span>
                 </div>
-                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  
-                </span>
               </div>
 
               {/* Date Picker Trigger */}
@@ -955,70 +922,95 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Host Profile Banner */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-md">
-              <div className="flex items-center gap-3">
-                {product.owner.avatar ? (
-                  <img
-                    src={product.owner.avatar}
-                    alt={product.owner.name}
-                    className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-500">
-                    {product.owner.name.charAt(0).toUpperCase()}
+            {/* Host Profile Card - Matched precisely to Profile Preview UI expectation */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-md relative space-y-5">
+              {/* Top Section with Avatar & Total Items Badge */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative">
+                    <img
+                      src={product.owner.avatar}
+                      alt={product.owner.name}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 shadow-xs"
+                    />
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
                   </div>
-                )}
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-slate-900 truncate">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
                       {product.owner.name}
-                    </h4>
-
-                    {product.owner.verified && (
-                      <span className="text-[10px] font-semibold text-emerald-600">
-                        ✓ Verified
-                      </span>
-                    )}
+                    </h3>
+                    <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                      {product.owner.profession} in {product.owner.location || product.city}
+                    </p>
                   </div>
+                </div>
 
-                  <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
-                    {product.owner.profession && (
-                      <p>{product.owner.profession}</p>
-                    )}
-
-                    {product.owner.gender && (
-                      <p>{product.owner.gender}</p>
-                    )}
-
-                    {product.owner.languages && product.owner.languages.length > 0 && (
-                      <p>Speaks {product.owner.languages.join(", ")}</p>
-                    )}
-                  </div>
+                <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl text-center shadow-xs">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Total Items</span>
+                  <span className="text-xs font-extrabold text-slate-900 block mt-0.5">{product.owner.activeItemsCount || 8} active</span>
                 </div>
               </div>
 
-              {product.owner.bio && (
-                <p className="mt-3 text-[11px] leading-relaxed text-slate-600">
-                  {product.owner.bio}
-                </p>
+              {/* Attribute Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Location</span>
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                    <MapPin className="w-3 h-3 text-[#2563EB] shrink-0" /> {product.owner.location || product.city}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Profession</span>
+                  <span className="text-xs font-bold text-slate-800 block truncate">
+                    💼 {product.owner.profession || "—"}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Age</span>
+                  <span className="text-xs font-bold text-slate-800 block truncate">
+                    🎂 {product.owner.age ? `${product.owner.age} yrs` : "—"}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Gender</span>
+                  <span className="text-xs font-bold text-slate-800 block truncate">
+                    👤 {product.owner.gender || "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Languages Spoken Section */}
+              {product.owner.languages && product.owner.languages.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-2">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Languages Spoken</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {product.owner.languages.map((lang) => (
+                      <span key={lang} className="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-xl shadow-xs flex items-center gap-1">
+                        🌐 {lang}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
 
-              <button
-                onClick={() => setIsContactModalOpen(true)}
-                className="mt-3 w-full px-3 py-2 rounded-xl border border-slate-200 font-bold text-xs hover:bg-slate-50 text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-[#2563EB]" />
-                Chat with host
-              </button>
+              {/* About Section */}
+              {product.owner.bio && (
+                <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-1.5">
+                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">About</span>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {product.owner.bio}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Additional modals and footer omitted for brevity (unchanged) */}
-      {/* ... (rest of your code remains the same) */}
+      <Footer />
     </div>
   );
 }
