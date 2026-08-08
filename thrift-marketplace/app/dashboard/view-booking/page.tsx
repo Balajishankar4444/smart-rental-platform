@@ -749,29 +749,10 @@ function ViewBookingContent() {
                   <Bell className="w-4 h-4 text-blue-600" /> Hosting — Guest Reservation Requests
                 </h3>
 
-                {incoming.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
-                    <div className="flex gap-3">
-                      <img
-                        src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800"
-                        alt="Cozy Modern Room"
-                        className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-slate-400">Alex wants to book your room</p>
-                        <p className="text-sm font-bold text-slate-900 line-clamp-1">Cozy Modern Room with Balcony</p>
-                        <p className="text-[11px] text-slate-500">
-                          1st - 15th Aug · 15 nights · ₹18,000
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <p className="text-[11px] font-semibold text-emerald-700">
-                        Booking confirmed — payment received. 1st - 15th Aug · ₹18,000
-                      </p>
-                    </div>
-                  </div>
+                {incoming.length === 0 ? (  
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-10 text-center text-xs text-slate-500">  
+                    No incoming reservation requests yet.  
+                  </div>  
                 ) : (
                   incoming.map((request) => {
                     const liveStatus = deriveRequestStatus(request, now);
