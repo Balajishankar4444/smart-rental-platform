@@ -239,6 +239,19 @@ interface StoredListing {
   visitorsAllowed?: boolean;
 }
 
+function expandRange(start: string, end: string): string[] {
+  const out: string[] = [];
+  const d = new Date(start);
+  const last = new Date(end);
+
+  while (d <= last) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+
+  return out;
+}
+
 function toProductDetail(listing: StoredListing): ProductDetail {
   const images: string[] = listing.images?.length
     ? listing.images
@@ -357,6 +370,7 @@ export default function ProductDetailPage() {
 
   const [startDate, setStartDate] = useState(() => searchParams.get("startDate") || "");  
   const [endDate, setEndDate] = useState(() => searchParams.get("endDate") || "");
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
   
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(7);
@@ -388,6 +402,29 @@ export default function ProductDetailPage() {
   }, [productId, mockProduct]);
 
   useEffect(() => {
+  if (!productId) return;
+
+  fetch(`/api/auth/booking-requests?listingId=${encodeURIComponent(productId)}`)
+    .then((response) => response.json())
+    .then((result) => {
+      if (!result?.success || !Array.isArray(result.data)) return;
+
+      const days = new Set<string>();
+
+      result.data.forEach(
+        (booking: { startDate: string; endDate: string }) => {
+          expandRange(booking.startDate, booking.endDate).forEach((day) => {
+            days.add(day);
+          });
+        }
+      );
+
+      setBlockedDates(days);
+    })
+    .catch(() => {});
+}, [productId]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
         setIsCalendarOpen(false);
@@ -403,24 +440,7 @@ export default function ProductDetailPage() {
 
   const isWishlisted = productId ? isFavorite(productId) : false;
 
-  const blockedDates = React.useMemo(() => {
-    const set = new Set<string>();
-    if (product?.rental && typeof product.rental === "object") {
-      const start = new Date(product.rental.startDate);
-      const end = new Date(product.rental.endDate);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        const curr = new Date(start);
-        while (curr <= end) {
-          const year = curr.getFullYear();
-          const month = String(curr.getMonth() + 1).padStart(2, "0");
-          const day = String(curr.getDate()).padStart(2, "0");
-          set.add(`${year}-${month}-${day}`);
-          curr.setDate(curr.getDate() + 1);
-        }
-      }
-    }
-    return set;
-  }, [product]);
+  
 
   const handleWishlistToggle = () => {
     if (!isAuthenticated) {
@@ -692,7 +712,7 @@ export default function ProductDetailPage() {
                   {product.propertyType}
                 </span>
                 <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
+                  <ShieldCheck className="w-3.5 h-3.5" /> 
                 </span>
               </div>
               

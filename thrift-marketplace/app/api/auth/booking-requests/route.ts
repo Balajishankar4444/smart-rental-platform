@@ -46,8 +46,21 @@ export async function GET(request: Request) {
     }
 
     const data = requests
-      .map(withDerivedStatus)
-      .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
+  .map(withDerivedStatus)
+  .filter((item: any) => {
+    // When fetching by listing, only expose live bookings
+    if (listingId) {
+      return (
+        item.status === 'pending' ||
+        item.status === 'approved' ||
+        item.status === 'paid'
+      );
+    }
+
+    // User-based requests keep the existing behavior
+    return true;
+  })
+  .sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
