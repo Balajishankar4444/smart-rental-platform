@@ -19,6 +19,7 @@ export interface User {
   coverPhoto: string;
   bio: string;
   gender: string;
+  profession: string;  
   dob: string;
   governmentId: string;
   governmentVerified: boolean;

@@ -10,6 +10,13 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  MapPin,
+  GraduationCap,
+  Cake,
+  User as UserIcon,
+  Briefcase,
+  Sparkles,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -25,7 +32,6 @@ import {
   listingDailyPrice,
   ListingSummary,
   LISTING_STATUS_LABELS,
-  rentalDays,
 } from "@/utils/listings";
 
 interface ProfileForm {
@@ -36,6 +42,9 @@ interface ProfileForm {
   avatar: string;
   address: string;
   city: string;
+  state: string;  
+  gender: string;  
+  profession: string; 
 }
 
 const EMPTY_FORM: ProfileForm = {
@@ -46,6 +55,9 @@ const EMPTY_FORM: ProfileForm = {
   avatar: "",
   address: "",
   city: "",
+  state: "",  
+  gender: "",  
+  profession: "", 
 };
 
 const formatDay = (value?: string) => {
@@ -213,12 +225,198 @@ function CustomDatePicker({
   );
 }
 
+// Custom Themed Dropdown Component matching your exact UI theme
+function CustomGenderSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const options = [
+    { label: "Female", value: "female" },
+    { label: "Male", value: "male" },
+    { label: "Other", value: "other" },
+  ];
+
+  const selectedLabel = value
+    ? options.find((opt) => opt.value === value)?.label || value
+    : "Select";
+
+  return (
+    <div className="space-y-1.5 relative" ref={containerRef}>
+      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 block">
+        Gender <span className="text-red-500">*</span>
+      </span>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full rounded-xl border border-slate-200/60 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 cursor-pointer flex items-center justify-between"
+      >
+        <span className={value ? "text-slate-900" : "text-slate-400"}>
+          {selectedLabel}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-blue-600" : ""
+          }`}
+        />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1.5 w-full rounded-xl border border-slate-200/80 bg-white shadow-xl py-1 overflow-hidden animate-fadeIn">
+          {options.map((opt) => (
+            <div
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`px-3 py-2 text-sm font-medium cursor-pointer transition-colors ${
+                value === opt.value
+                  ? "bg-blue-50 text-blue-600 font-semibold"
+                  : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Clean Compact Preview Banner (No duplicate fields, no badges, perfectly spaced)
+function ProfilePreviewBanner({
+  form,
+  userAge,
+  listingsCount,
+  rentalsCount,
+}: {
+  form: ProfileForm;
+  userAge: number | null;
+  listingsCount: number;
+  rentalsCount: number;
+}) {
+  const [isBioExpanded, setIsBioExpanded] = useState(false);
+  const bioText = form.bio || "";
+  const shouldTruncateBio = bioText.length > 120;
+  const displayedBio = shouldTruncateBio && !isBioExpanded ? `${bioText.slice(0, 120)}...` : bioText;
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 sm:p-8 space-y-6">
+      {/* Top Section: Avatar + Name + Clean Activity Counter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 pb-5 border-b border-slate-100">
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            {form.avatar ? (
+              <img
+                src={form.avatar}
+                alt={form.fullName || "User Avatar"}
+                className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover border-2 border-white shadow-sm bg-white"
+              />
+            ) : (
+              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center text-slate-400 font-bold text-xl">
+                {form.fullName ? form.fullName.charAt(0).toUpperCase() : "?"}
+              </div>
+            )}
+            <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" title="Active"></div>
+          </div>
+
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              {form.fullName || "King maki"}
+            </h2>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
+              {form.profession || "Student"} {form.city ? `in ${form.city}` : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="text-left sm:text-right bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-100 w-full sm:w-auto flex sm:flex-col justify-between items-center sm:items-end">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Items</span>
+          <span className="text-sm font-bold text-slate-800">{listingsCount + rentalsCount} active</span>
+        </div>
+      </div>
+
+      {/* Grid Details Cards (Single source of truth for each attribute) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-3 rounded-2xl bg-slate-50/60 border border-slate-100 space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Location</span>
+          <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">{form.city || "Munich"}</span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-50/60 border border-slate-100 space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Profession</span>
+          <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+            <Briefcase className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">{form.profession || "Student"}</span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-50/60 border border-slate-100 space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Age</span>
+          <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+            <Cake className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">{userAge !== null ? `${userAge} yrs` : "26 yrs"}</span>
+          </div>
+        </div>
+
+        <div className="p-3 rounded-2xl bg-slate-50/60 border border-slate-100 space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Gender</span>
+          <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+            <UserIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate capitalize">{form.gender || "Male"}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* About Section */}
+      {bioText && (
+        <div className="space-y-1.5 pt-1">
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">About</h4>
+          <p className="text-xs sm:text-sm text-slate-700 leading-relaxed bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
+            {displayedBio}
+            {shouldTruncateBio && (
+              <button
+                type="button"
+                onClick={() => setIsBioExpanded(!isBioExpanded)}
+                className="ml-2 text-blue-600 font-semibold hover:underline inline-flex items-center cursor-pointer"
+              >
+                {isBioExpanded ? "Show less" : "Read more"}
+              </button>
+            )}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProfileContent() {
   const { user, updateUser } = useAuth();
   const { incoming, outgoing } = useBookingRequests();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
+  const [savedForm, setSavedForm] = useState<ProfileForm>(EMPTY_FORM);
+
   const [listings, setListings] = useState<ListingSummary[]>([]);
   const [rentals, setRentals] = useState<ListingSummary[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -234,7 +432,7 @@ function ProfileContent() {
       .then((result) => {
         if (cancelled) return;
         const profile = result?.data as Partial<ProfileForm> | null;
-        setForm({
+        const initialData: ProfileForm = {
           ...EMPTY_FORM,
           fullName: profile?.fullName || user.name || "",
           avatar: profile?.avatar || user.avatar || "",
@@ -243,7 +441,12 @@ function ProfileContent() {
           bio: profile?.bio || "",
           address: profile?.address || "",
           city: profile?.city || "",
-        });
+          state: profile?.state || "",  
+          gender: profile?.gender || "",  
+          profession: profile?.profession || "", 
+        };
+        setForm(initialData);
+        setSavedForm(initialData);
       })
       .catch((err) => console.error("Failed to load profile", err));
 
@@ -288,6 +491,19 @@ function ProfileContent() {
     event.preventDefault();
     if (!user) return;
 
+    if (
+      !form.fullName.trim() ||
+      !form.phone.trim() ||
+      !form.dob.trim() ||
+      !form.address.trim() ||
+      !form.city.trim() ||
+      !form.gender.trim() ||
+      !form.profession.trim()
+    ) {
+      setError("Please fill in all required fields before saving.");
+      return;
+    }
+
     setIsSaving(true);
     setError("");
 
@@ -304,6 +520,7 @@ function ProfileContent() {
       }
 
       updateUser({ name: form.fullName, avatar: form.avatar });
+      setSavedForm({ ...form });
       setSavedAt(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save your profile");
@@ -318,253 +535,291 @@ function ProfileContent() {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 5);
 
-  const userAge = calculateAge(form.dob);
+  const savedUserAge = calculateAge(savedForm.dob);
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans text-slate-900 flex flex-col">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-28 pb-16 flex-1 space-y-6">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-28 pb-16 flex-1 space-y-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Your profile</h1>
           <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            Manage your personal details and view your rental activity summary.
+            Edit your personal details on the left and see your live saved marketplace profile preview on the right.
           </p>
         </div>
 
-        <form
-          onSubmit={handleSave}
-          className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-5 sm:p-6 space-y-5"
-        >
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              {form.avatar ? (
-                <img
-                  src={form.avatar}
-                  alt={form.fullName}
-                  className="h-16 w-16 rounded-2xl object-cover border border-slate-200"
-                />
-              ) : (
-                <div className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 font-bold text-lg">
-                  {form.fullName ? form.fullName.charAt(0).toUpperCase() : "?"}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Change profile photo"
-                className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-blue-700 transition-colors"
-              >
-                <Camera className="h-3.5 w-3.5" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                className="hidden"
-              />
-            </div>
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold truncate">{form.fullName || user?.name}</p>
-                {userAge !== null && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold text-[10px] border border-blue-100">
-                    {userAge} yrs old
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                Full name
-              </span>
-              <input
-                value={form.fullName}
-                onChange={(event) => handleChange("fullName", event.target.value)}
-                required
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
-              />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                Phone number
-              </span>
-              <input
-                value={form.phone}
-                onChange={(event) => handleChange("phone", event.target.value)}
-                placeholder="+91 98765 43210"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
-              />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 flex items-center justify-between">
-                <span>Date of Birth</span>
-                {userAge !== null && (
-                  <span className="text-blue-600 font-semibold lowercase">
-                    {userAge} years old
-                  </span>
-                )}
-              </span>
-              <CustomDatePicker
-                value={form.dob}
-                onChange={(dateStr) => handleChange("dob", dateStr)}
-              />
-            </label>
-
-            <label className="space-y-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                City
-              </span>
-              <input
-                value={form.city}
-                onChange={(event) => handleChange("city", event.target.value)}
-                placeholder="e.g. Mumbai"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
-              />
-            </label>
-
-            <label className="space-y-1.5 sm:col-span-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                Address
-              </span>
-              <input
-                value={form.address}
-                onChange={(event) => handleChange("address", event.target.value)}
-                placeholder="Where renters collect items or your location"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
-              />
-            </label>
-
-            <label className="space-y-1.5 sm:col-span-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                About you / Bio
-              </span>
-              <textarea
-                value={form.bio}
-                onChange={(event) => handleChange("bio", event.target.value)}
-                rows={3}
-                placeholder="A line or two about yourself or the gear you share"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all resize-none"
-              />
-            </label>
-          </div>
-
-          {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-xs font-bold text-white transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+        {/* Two-Column Layout: Left (Editing Form), Right (Live Saved Preview) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Profile Editor Form */}
+          <div className="lg:col-span-6">
+            <form
+              onSubmit={handleSave}
+              className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-5 sticky top-28"
             >
-              {isSaving ? "Saving..." : "Save changes"}
-            </button>
-
-            {savedAt > 0 && !isSaving && (
-              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 animate-fadeIn">
-                <Check className="w-3.5 h-3.5" /> Saved successfully
-              </span>
-            )}
-          </div>
-        </form>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold">Rental activity</h2>
-              <Link
-                href="/dashboard/view-booking?tab=notifications"
-                className="text-[11px] font-semibold text-blue-600 hover:underline"
-              >
-                {pendingForMe > 0 ? `${pendingForMe} to review` : "View all"}
-              </Link>
-            </div>
-
-            {recentActivity.length === 0 ? (
-              <p className="text-xs text-slate-500 py-6 text-center">
-                No rental requests yet.
-              </p>
-            ) : (
-              recentActivity.map((request) => (
-                <div
-                  key={request.id}
-                  className="flex items-center justify-between gap-3 border-b border-slate-100 last:border-0 pb-2.5 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold truncate">{request.listingTitle}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {request.ownerId === user?.id ? `${request.renterName} · ` : "You · "}
-                      {formatDay(request.startDate)} – {formatDay(request.endDate)}
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-600 shrink-0">
-                    {BOOKING_REQUEST_LABELS[request.status]}
-                  </span>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Edit Profile Details</h3>
+                  <p className="text-xs text-slate-500">Update your information across Rentit.</p>
                 </div>
-              ))
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold">Your items</h2>
-              <Link
-                href="/dashboard/view-booking"
-                className="text-[11px] font-semibold text-blue-600 hover:underline"
-              >
-                Manage
-              </Link>
-            </div>
-
-            {listings.length === 0 ? (
-              <div className="py-6 text-center space-y-2">
-                <p className="text-xs text-slate-500">You have not listed anything yet.</p>
-                <Link
-                  href="/list-item"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline"
-                >
-                  <Plus className="w-3.5 h-3.5" /> List an item
-                </Link>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    {form.avatar ? (
+                      <img
+                        src={form.avatar}
+                        alt={form.fullName}
+                        className="h-12 w-12 rounded-xl object-cover border border-slate-200"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 font-bold text-sm">
+                        {form.fullName ? form.fullName.charAt(0).toUpperCase() : "?"}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      aria-label="Change profile photo"
+                      className="absolute -bottom-1 -right-1 h-6 w-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-blue-700 transition-colors"
+                    >
+                      <Camera className="h-3 w-3" />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
               </div>
-            ) : (
-              listings.slice(0, 5).map((listing) => (
-                <div
-                  key={listing.id}
-                  className="flex items-center justify-between gap-3 border-b border-slate-100 last:border-0 pb-2.5 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold truncate">
-                      {String(listing.productName || "Listing")}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      ₹{listingDailyPrice(listing).toLocaleString("en-IN")}/day
-                      {listing.rental ? ` · ${rentalDays(listing.rental)} day booking` : ""}
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-600 shrink-0">
-                    {LISTING_STATUS_LABELS[listing.status]}
-                  </span>
-                </div>
-              ))
-            )}
 
-            <div className="pt-1">
-              <Link
-                href="/saved"
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-blue-600 transition-colors"
-              >
-                <Heart className="w-3.5 h-3.5" /> Your favorites
-              </Link>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Full name <span className="text-red-500">*</span>
+                  </span>
+                  <input
+                    value={form.fullName}
+                    onChange={(event) => handleChange("fullName", event.target.value)}
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Phone number <span className="text-red-500">*</span>
+                  </span>
+                  <input
+                    value={form.phone}
+                    onChange={(event) => handleChange("phone", event.target.value)}
+                    placeholder="+91 98765 43210"
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 flex items-center justify-between">
+                    <span>Date of Birth <span className="text-red-500">*</span></span>
+                    {calculateAge(form.dob) !== null && (
+                      <span className="text-blue-600 font-semibold lowercase">
+                        {calculateAge(form.dob)} years old
+                      </span>
+                    )}
+                  </span>
+                  <CustomDatePicker
+                    value={form.dob}
+                    onChange={(dateStr) => handleChange("dob", dateStr)}
+                  />
+                </label>
+
+                <label className="space-y-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    City <span className="text-red-500">*</span>
+                  </span>
+                  <input
+                    value={form.city}
+                    onChange={(event) => handleChange("city", event.target.value)}
+                    placeholder="e.g. Munich"
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
+                  />
+                </label>
+
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Address <span className="text-red-500">*</span>
+                  </span>
+                  <input
+                    value={form.address}
+                    onChange={(event) => handleChange("address", event.target.value)}
+                    placeholder="Where renters collect items or your location"
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
+                  />
+                </label>
+
+                <CustomGenderSelect
+                  value={form.gender}
+                  onChange={(val) => handleChange("gender", val)}
+                />
+     
+                <label className="space-y-1.5">  
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">  
+                    Profession <span className="text-red-500">*</span> 
+                  </span>  
+                  <input  
+                    value={form.profession}  
+                    onChange={(event) => handleChange("profession", event.target.value)}  
+                    placeholder="e.g. Photographer, Student, Engineer"  
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"  
+                  />  
+                </label>
+
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    About you / Bio <span className="text-slate-400 font-normal">(Optional)</span>
+                  </span>
+                  <textarea
+                    value={form.bio}
+                    onChange={(event) => handleChange("bio", event.target.value)}
+                    rows={3}
+                    placeholder="A line or two about yourself or the gear you share"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all resize-none"
+                  />
+                </label>
+              </div>
+
+              {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-3 text-xs font-bold text-white transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                >
+                  {isSaving ? "Saving..." : "Save changes"}
+                </button>
+
+                {savedAt > 0 && !isSaving && (
+                  <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 animate-fadeIn">
+                    <Check className="w-3.5 h-3.5" /> Saved successfully
+                  </span>
+                )}
+              </div>
+            </form>
           </div>
+
+          {/* Right Column: Live Saved Profile Preview */}
+          <div className="lg:col-span-6 space-y-6 sticky top-28">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Live Profile Preview</h3>
+              <span className="text-xs text-slate-400">Updates immediately after clicking Save</span>
+            </div>
+
+            <ProfilePreviewBanner
+              form={savedForm}
+              userAge={savedUserAge}
+              listingsCount={listings.length}
+              rentalsCount={rentals.length}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold">Rental activity</h2>
+                  <Link
+                    href="/dashboard/view-booking?tab=notifications"
+                    className="text-[11px] font-semibold text-blue-600 hover:underline"
+                  >
+                    {pendingForMe > 0 ? `${pendingForMe} to review` : "View all"}
+                  </Link>
+                </div>
+
+                {recentActivity.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4 text-center">
+                    No rental requests yet.
+                  </p>
+                ) : (
+                  recentActivity.map((request) => (
+                    <div
+                      key={request.id}
+                      className="flex items-center justify-between gap-3 border-b border-slate-100 last:border-0 pb-2.5 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate">{request.listingTitle}</p>
+                        <p className="text-[11px] text-slate-500">
+                          {request.ownerId === user?.id ? `${request.renterName} · ` : "You · "}
+                          {formatDay(request.startDate)} – {formatDay(request.endDate)}
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-600 shrink-0">
+                        {BOOKING_REQUEST_LABELS[request.status]}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold">Your items</h2>
+                  <Link
+                    href="/dashboard/view-booking"
+                    className="text-[11px] font-semibold text-blue-600 hover:underline"
+                  >
+                    Manage
+                  </Link>
+                </div>
+
+                {listings.length === 0 ? (
+                  <div className="py-4 text-center space-y-2">
+                    <p className="text-xs text-slate-500">You have not listed anything yet.</p>
+                    <Link
+                      href="/list-item"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> List an item
+                    </Link>
+                  </div>
+                ) : (
+                  listings.slice(0, 3).map((listing) => (
+                    <div
+                      key={listing.id}
+                      className="flex items-center justify-between gap-3 border-b border-slate-100 last:border-0 pb-2.5 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate">
+                          {String(listing.productName || "Listing")}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          ₹{listingDailyPrice(listing).toLocaleString("en-IN")}/day
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-600 shrink-0">
+                        {LISTING_STATUS_LABELS[listing.status]}
+                      </span>
+                    </div>
+                  ))
+                )}
+
+                <div className="pt-1">
+                  <Link
+                    href="/saved"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+                  >
+                    <Heart className="w-3.5 h-3.5" /> Your favorites
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </main>
 
