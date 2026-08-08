@@ -4,18 +4,7 @@ import { getUsers, saveUsers } from '@/services/DbService';
 import { User } from '@/types/user';
 
 // The fields the profile screen owns; everything else on the user record is left alone
-const EDITABLE_FIELDS = [
-  'fullName',
-  'phone',
-  'bio',
-  'avatar',
-  'coverPhoto',
-  'address',
-  'city',
-  'state',
-  'gender',
-  'profession'
-] as const;
+const EDITABLE_FIELDS = ['fullName', 'phone', 'bio', 'avatar', 'address', 'city', 'state', 'dob'] as const;
 
 type EditableField = (typeof EDITABLE_FIELDS)[number];
 
@@ -125,6 +114,7 @@ export async function PUT(request: Request) {
         age: '',
         gender: '',  
         profession: '',
+        dob: '',
         ...updates,
       } as User & { dob?: string; age?: string };
       users.push(saved);
