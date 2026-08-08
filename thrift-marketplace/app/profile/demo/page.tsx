@@ -17,6 +17,8 @@ import {
   User as UserIcon,
   Briefcase,
   Sparkles,
+  Globe,
+  X,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -44,7 +46,8 @@ interface ProfileForm {
   city: string;
   state: string;  
   gender: string;  
-  profession: string; 
+  profession: string;
+  languages: string[];
 }
 
 const EMPTY_FORM: ProfileForm = {
@@ -57,8 +60,43 @@ const EMPTY_FORM: ProfileForm = {
   city: "",
   state: "",  
   gender: "",  
-  profession: "", 
+  profession: "",
+  languages: [],
 };
+
+const AVAILABLE_LANGUAGES = [
+  // Major International Languages
+  "English",
+  "German",
+  "French",
+  "Spanish",
+  "Italian",
+  "Dutch",
+  "Portuguese",
+  // Scheduled Indian Languages
+  "Hindi",
+  "Bengali",
+  "Marathi",
+  "Telugu",
+  "Tamil",
+  "Gujarati",
+  "Urdu",
+  "Kannada",
+  "Odia",
+  "Malayalam",
+  "Punjabi",
+  "Assamese",
+  "Maithili",
+  "Sanskrit",
+  "Kashmiri",
+  "Nepali",
+  "Sindhi",
+  "Dogri",
+  "Konkani",
+  "Manipuri",
+  "Bodo",
+  "Santali",
+];
 
 const formatDay = (value?: string) => {
   if (!value) return "—";
@@ -225,6 +263,123 @@ function CustomDatePicker({
   );
 }
 
+// Custom Multi-select Languages Dropdown with Search & Done button matching your theme
+function CustomLanguagesSelect({
+  selectedLanguages = [],
+  onChange,
+}: {
+  selectedLanguages: string[];
+  onChange: (langs: string[]) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const safeLanguages = Array.isArray(selectedLanguages) ? selectedLanguages : [];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleLanguage = (lang: string) => {
+    if (safeLanguages.includes(lang)) {
+      onChange(safeLanguages.filter((l) => l !== lang));
+    } else {
+      onChange([...safeLanguages, lang]);
+    }
+  };
+
+  const filteredLanguages = AVAILABLE_LANGUAGES.filter((lang) =>
+    lang.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const displayText =
+    safeLanguages.length > 0
+      ? safeLanguages.join(", ")
+      : "Select languages spoken";
+
+  return (
+    <div className="space-y-1.5 relative sm:col-span-2" ref={containerRef}>
+      <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500 block">
+        Languages Spoken <span className="text-slate-400 font-normal">(Includes all Indian & major global languages)</span>
+      </span>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full rounded-xl border border-slate-200/60 bg-white px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 cursor-pointer flex items-center justify-between"
+      >
+        <span className={safeLanguages.length > 0 ? "text-slate-900 truncate pr-2" : "text-slate-400"}>
+          {displayText}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-blue-600" : ""
+          }`}
+        />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1.5 w-full rounded-2xl border border-slate-200/80 bg-white shadow-xl p-3 space-y-2 animate-fadeIn">
+          {/* Search bar for quickly finding specific languages */}
+          <input
+            type="text"
+            placeholder="Search language..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500 bg-slate-50/50"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+            {filteredLanguages.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-3">No languages found</p>
+            ) : (
+              filteredLanguages.map((lang) => {
+                const isChecked = safeLanguages.includes(lang);
+                return (
+                  <div
+                    key={lang}
+                    onClick={() => toggleLanguage(lang)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium cursor-pointer transition-colors ${
+                      isChecked ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    <span>{lang}</span>
+                    <div
+                      className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
+                        isChecked ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                      }`}
+                    >
+                      {isChecked && <Check className="w-3 h-3" />}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs text-slate-400 font-medium">
+              {safeLanguages.length} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Custom Themed Dropdown Component matching your exact UI theme
 function CustomGenderSelect({
   value,
@@ -299,7 +454,7 @@ function CustomGenderSelect({
   );
 }
 
-// Clean Compact Preview Banner (No duplicate fields, no badges, perfectly spaced)
+// Clean Compact Preview Banner
 function ProfilePreviewBanner({
   form,
   userAge,
@@ -312,9 +467,11 @@ function ProfilePreviewBanner({
   rentalsCount: number;
 }) {
   const [isBioExpanded, setIsBioExpanded] = useState(false);
-  const bioText = form.bio || "";
+  const bioText = form?.bio || "";
   const shouldTruncateBio = bioText.length > 120;
   const displayedBio = shouldTruncateBio && !isBioExpanded ? `${bioText.slice(0, 120)}...` : bioText;
+
+  const languagesList = Array.isArray(form?.languages) && form.languages.length > 0 ? form.languages : ["English", "German", "Hindi", "Tamil"];
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 sm:p-8 space-y-6">
@@ -322,15 +479,15 @@ function ProfilePreviewBanner({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 pb-5 border-b border-slate-100">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
-            {form.avatar ? (
+            {form?.avatar ? (
               <img
                 src={form.avatar}
-                alt={form.fullName || "User Avatar"}
+                alt={form?.fullName || "User Avatar"}
                 className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover border-2 border-white shadow-sm bg-white"
               />
             ) : (
               <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center text-slate-400 font-bold text-xl">
-                {form.fullName ? form.fullName.charAt(0).toUpperCase() : "?"}
+                {form?.fullName ? form.fullName.charAt(0).toUpperCase() : "?"}
               </div>
             )}
             <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 border-2 border-white" title="Active"></div>
@@ -338,10 +495,10 @@ function ProfilePreviewBanner({
 
           <div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              {form.fullName || "King maki"}
+              {form?.fullName || "Balaji Shankar"}
             </h2>
             <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
-              {form.profession || "Student"} {form.city ? `in ${form.city}` : ""}
+              {form?.profession || "Software Test Engineer"} {form?.city ? `in ${form.city}` : ""}
             </p>
           </div>
         </div>
@@ -352,13 +509,13 @@ function ProfilePreviewBanner({
         </div>
       </div>
 
-      {/* Grid Details Cards (Single source of truth for each attribute) */}
+      {/* Grid Details Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 rounded-2xl bg-slate-50/60 border border-slate-100 space-y-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Location</span>
           <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
             <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate">{form.city || "Munich"}</span>
+            <span className="truncate">{form?.city || "Germany"}</span>
           </div>
         </div>
 
@@ -366,7 +523,7 @@ function ProfilePreviewBanner({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Profession</span>
           <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
             <Briefcase className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate">{form.profession || "Student"}</span>
+            <span className="truncate">{form?.profession || "Software Test Engineer"}</span>
           </div>
         </div>
 
@@ -382,8 +539,24 @@ function ProfilePreviewBanner({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Gender</span>
           <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
             <UserIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate capitalize">{form.gender || "Male"}</span>
+            <span className="truncate capitalize">{form?.gender || "Male"}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Languages Section */}
+      <div className="p-4 rounded-2xl bg-slate-50/60 border border-slate-100 space-y-2">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Languages Spoken</span>
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          {languagesList.map((lang) => (
+            <span
+              key={lang}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 shadow-xs"
+            >
+              <Globe className="w-3 h-3 text-blue-600" />
+              {lang}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -443,7 +616,8 @@ function ProfileContent() {
           city: profile?.city || "",
           state: profile?.state || "",  
           gender: profile?.gender || "",  
-          profession: profile?.profession || "", 
+          profession: profile?.profession || "",
+          languages: Array.isArray(profile?.languages) ? profile.languages : ["English", "German", "Hindi", "Tamil"],
         };
         setForm(initialData);
         setSavedForm(initialData);
@@ -475,7 +649,7 @@ function ProfileContent() {
     };
   }, [user]);
 
-  const handleChange = (field: keyof ProfileForm, value: string) =>
+  const handleChange = (field: keyof ProfileForm, value: any) =>
     setForm((current) => ({ ...current, [field]: value }));
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -615,7 +789,7 @@ function ProfileContent() {
                   <input
                     value={form.phone}
                     onChange={(event) => handleChange("phone", event.target.value)}
-                    placeholder="+91 98765 43210"
+                    placeholder="+49 1234 567890"
                     required
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
                   />
@@ -643,7 +817,7 @@ function ProfileContent() {
                   <input
                     value={form.city}
                     onChange={(event) => handleChange("city", event.target.value)}
-                    placeholder="e.g. Munich"
+                    placeholder="e.g. Sindelfingen / Kassel"
                     required
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500 transition-all"
                   />
@@ -674,11 +848,17 @@ function ProfileContent() {
                   <input  
                     value={form.profession}  
                     onChange={(event) => handleChange("profession", event.target.value)}  
-                    placeholder="e.g. Photographer, Student, Engineer"  
+                    placeholder="e.g. Software Test Engineer"  
                     required
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"  
                   />  
                 </label>
+
+                {/* Custom Multi-select Languages Dropdown with Search & Done button */}
+                <CustomLanguagesSelect
+                  selectedLanguages={form.languages}
+                  onChange={(langs) => handleChange("languages", langs)}
+                />
 
                 <label className="space-y-1.5 sm:col-span-2">
                   <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
