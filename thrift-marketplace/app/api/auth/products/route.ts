@@ -61,10 +61,11 @@ export async function GET(request: Request) {
       const detailedProduct = withStatus(product);
       const owner = users.find((u: any) => u.id === detailedProduct.userId || u.email === detailedProduct.userId);
       
-      const payload = {
-        ...detailedProduct,
-        ownerName: owner?.fullName || "Verified lender",
-        ownerAvatar: owner?.avatar || "",
+      const payload = {  
+        ...detailedProduct,  
+        ownerName: owner?.fullName || "",  
+        ownerAvatar: owner?.avatar || "",  
+        ownerCoverPhoto: owner?.coverPhoto || "",   
       };
 
       return NextResponse.json({ success: true, data: payload }, { status: 200 });

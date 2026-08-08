@@ -93,12 +93,18 @@ interface ProductDetail {
   owner: {
     name: string;
     avatar: string;
+    coverPhoto?: string;
     rating: number;
     rentalsCompleted: number;
     responseTime: string;
     memberSince: string;
     languages: string[];
     verified: boolean;
+    profession?: string;
+    age?: string | number;
+    gender?: string;
+    bio?: string;
+    activeItemsCount?: number;
   };
   specs: {
     weight: string;
@@ -161,14 +167,20 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
       visitors: true,
     },
     owner: {
-      name: "Aarav Sharma",
+      name: "King maki",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
+      coverPhoto: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
       rating: 4.9,
       rentalsCompleted: 120,
       responseTime: "Under 15 mins",
       memberSince: "January 2024",
-      languages: ["English", "Hindi"],
+      languages: ["English", "German"],
       verified: true,
+      profession: "Student",
+      age: 26,
+      gender: "Male",
+      bio: "I am uncle.sds",
+      activeItemsCount: 9,
     },
     specs: {
       weight: "658 g",
@@ -199,6 +211,13 @@ interface StoredListing {
   userId?: string;
   ownerName?: string;
   ownerAvatar?: string;
+  ownerCoverPhoto?: string;  
+  ownerVerified?: boolean;
+  ownerProfession?: string;
+  ownerAge?: string | number;
+  ownerGender?: string;
+  ownerBio?: string;
+  ownerActiveItemsCount?: number;
   productName?: string;
   category?: string;
   brand?: string;
@@ -253,7 +272,7 @@ function expandRange(start: string, end: string): string[] {
 }
 
 function toProductDetail(listing: StoredListing): ProductDetail {
-  const images: string[] = listing.images?.length
+  const resolvedImages = listing.images?.length
     ? listing.images
     : ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200"];
 
@@ -273,7 +292,7 @@ function toProductDetail(listing: StoredListing): ProductDetail {
     lateFee: Number(listing.lateReturnFee) || 0,
     rating: 0,
     reviewsCount: 0,
-    images,
+    images: resolvedImages,
     city: listing.city || "",
     area: listing.address || "",
     distance: [listing.city, listing.state].filter(Boolean).join(", "),
@@ -299,15 +318,21 @@ function toProductDetail(listing: StoredListing): ProductDetail {
       pets: Boolean(listing.petsAllowed),
       visitors: Boolean(listing.visitorsAllowed),
     },
-    owner: {
-      name: listing.ownerName || "Listing owner",
-      avatar: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
-      rating: 0,
-      rentalsCompleted: 0,
-      responseTime: "—",
-      memberSince: "—",
-      languages: [],
-      verified: false,
+    owner: {  
+      name: listing.ownerName || "Listing owner",  
+      avatar: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",  
+      coverPhoto: listing.ownerCoverPhoto || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",  
+      rating: 0,  
+      rentalsCompleted: 0,  
+      responseTime: "—",  
+      memberSince: "—",  
+      languages: [],  
+      verified: Boolean(listing.ownerVerified),
+      profession: listing.ownerProfession || "Student",
+      age: listing.ownerAge || 26,
+      gender: listing.ownerGender || "Male",
+      bio: listing.ownerBio || "I am owner",
+      activeItemsCount: listing.ownerActiveItemsCount || 9,
     },
     specs: {
       weight: listing.weight || "—",
@@ -440,8 +465,6 @@ export default function ProductDetailPage() {
 
   const isWishlisted = productId ? isFavorite(productId) : false;
 
-  
-
   const handleWishlistToggle = () => {
     if (!isAuthenticated) {
       setIsLoginModalOpen(true);
@@ -477,10 +500,8 @@ export default function ProductDetailPage() {
   };
 
   const rentalDays = calculateDays();
-  const effectiveDays = rentalDays > 0 ? rentalDays : 2;
+  const effectiveDays = rentalDays > 0 ? rentalDays : 0;
   const rentalCost = effectiveDays * (product?.dailyPrice ?? 850);
-  const securityDeposit = 2500;
-  const grandTotal = rentalCost + securityDeposit;
 
   const getDaysInMonth = (year: number, month: number) => {
     const firstDayIndex = new Date(year, month, 1).getDay();
@@ -685,6 +706,7 @@ export default function ProductDetailPage() {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-zoom-in"
                   onClick={() => setIsFullscreenOpen(true)}
                 />
+
                 <button
                   onClick={() => setIsFullscreenOpen(true)}
                   aria-label="Fullscreen gallery"
@@ -769,173 +791,239 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src={product.owner.avatar} alt={product.owner.name} className="w-10 h-10 rounded-full object-cover" />
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Hosted by {product.owner.name}</h4>
-                  <p className="text-[10px] text-slate-500">Responds {product.owner.responseTime} • {product.distance}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsContactModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 font-bold text-xs hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer"
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-[#2563EB]" /> Chat
-              </button>
-            </div>
           </div>
 
-          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering */}
-          <div className="lg:col-span-5 bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-4 sticky top-20">
-            <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
-              <div>
-                <span className="text-2xl font-extrabold text-slate-900">₹{product.dailyPrice}</span>
-                <span className="text-xs text-slate-500 font-medium"> / day</span>
-              </div>
-              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                
-              </span>
-            </div>
-
-            {/* Date Picker Trigger */}
-            <div className="space-y-1 relative" ref={calendarRef}>
-              <label className="text-[11px] font-bold text-slate-700">Select Dates</label>
-              <div
-                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between cursor-pointer hover:border-[#2563EB] transition-colors text-xs"
-              >
-                <div className="flex items-center gap-2 font-bold text-slate-800">
-                  <Calendar className="w-3.5 h-3.5 text-[#2563EB]" />
-                  <span>
-                    {startDate && endDate
-                      ? `${formatDisplayDate(startDate)} → ${formatDisplayDate(endDate)}`
-                      : "Select check-in & check-out"}
-                  </span>
+          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering & Owner Profile Card Below */}
+          <div className="lg:col-span-5 space-y-6 sticky top-20">
+            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-4">
+              <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <span className="text-2xl font-extrabold text-slate-900">₹{product.dailyPrice}</span>
+                  <span className="text-xs text-slate-500 font-medium"> / day</span>
                 </div>
-                <span className="font-extrabold text-[#2563EB]">{rentalDays > 0 ? `${rentalDays}d` : "—"}</span>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  
+                </span>
               </div>
 
-              {/* Popup Calendar Dropdown with Blocked Date Support */}
-              <AnimatePresence>
-                {isCalendarOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 5 }}
-                    className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-xl p-3 shadow-xl border border-slate-100 space-y-3"
-                  >
-                    <div className="flex items-center justify-between pb-1">
-                      <button
-                        onClick={() => {
-                          if (currentMonth === 0) {
-                            setCurrentMonth(11);
-                            setCurrentYear(currentYear - 1);
-                          } else {
-                            setCurrentMonth(currentMonth - 1);
-                          }
-                        }}
-                        className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="text-xs font-bold text-slate-800">
-                        {MONTH_NAMES[currentMonth]} {currentYear}
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (currentMonth === 11) {
-                            setCurrentMonth(0);
-                            setCurrentYear(currentYear + 1);
-                          } else {
-                            setCurrentMonth(currentMonth + 1);
-                          }
-                        }}
-                        className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1 text-center">
-                      {WEEKDAYS.map((wd) => (
-                        <span key={wd} className="text-[9px] font-extrabold text-slate-400 py-0.5">
-                          {wd}
-                        </span>
-                      ))}
-                      {getDaysInMonth(currentYear, currentMonth).map((d, i) => {
-                        const isBlocked = blockedDates.has(d.dateStr);
-                        const isPast = d.dateStr < todayStr;
-                        const isSelected = d.dateStr === startDate || d.dateStr === endDate;
-                        const isInRange = startDate && endDate && d.dateStr > startDate && d.dateStr < endDate;
-
-                        return (
-                          <button
-                            key={i}
-                            disabled={!d.isCurrentMonth || isBlocked || isPast}
-                            onClick={() => handleDateClick(d.dateStr)}
-                            className={`py-1 text-[11px] rounded-md transition-all ${
-                              !d.isCurrentMonth
-                                ? "text-slate-200 cursor-not-allowed"
-                                : isPast
-                                ? "line-through text-slate-200 cursor-not-allowed"
-                                : isBlocked
-                                ? "opacity-40 blur-[1px] line-through cursor-not-allowed bg-slate-100 text-slate-400 font-normal"
-                                : isSelected
-                                ? "bg-[#2563EB] text-white font-bold cursor-pointer"
-                                : isInRange
-                                ? "bg-blue-50 text-[#2563EB] font-semibold cursor-pointer"
-                                : "hover:bg-slate-100 text-slate-700 cursor-pointer"
-                            }`}
-                          >
-                            {d.day}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Cost Breakdown */}
-            <div className="space-y-2 pt-1 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>₹{product.dailyPrice} × {effectiveDays} days</span>
-                <span className="font-bold text-slate-800">₹{rentalCost}</span>
-              </div>
-              <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-extrabold text-slate-900">
-                <span>Total Amount Due</span>
-                <span className="text-[#2563EB]">₹{rentalCost}</span>
-              </div>
-            </div>
-
-            {requestSent ? (
-              <div className="space-y-2 text-center">
-                <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2.5 px-3">
-                  Request sent. The owner has to approve these dates before you pay.
-                </p>
-                <Link
-                  href="/dashboard/view-booking?tab=notifications"
-                  className="block text-xs font-semibold text-[#2563EB]"
+              {/* Date Picker Trigger */}
+              <div className="space-y-1 relative" ref={calendarRef}>
+                <label className="text-[11px] font-bold text-slate-700">Select Dates</label>
+                <div
+                  onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between cursor-pointer hover:border-[#2563EB] transition-colors text-xs"
                 >
-                  Track it in notifications
-                </Link>
-              </div>
-            ) : (
-              <button
-                onClick={handleProceedToBook}
-                disabled={isCheckingAuth || isRequesting}
-                className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Zap className="w-3.5 h-3.5 fill-current" />
-                {isRequesting ? "Sending request..." : "Request these dates"}
-              </button>
-            )}
+                  <div className="flex items-center gap-2 font-bold text-slate-800">
+                    <Calendar className="w-3.5 h-3.5 text-[#2563EB]" />
+                    <span>
+                      {startDate && endDate
+                        ? `${formatDisplayDate(startDate)} → ${formatDisplayDate(endDate)}`
+                        : "Select check-in & check-out"}
+                    </span>
+                  </div>
+                  <span className="font-extrabold text-[#2563EB]">{rentalDays > 0 ? `${rentalDays}d` : "—"}</span>
+                </div>
 
-            {requestError && (
-              <p className="text-[11px] font-semibold text-red-600 text-center">{requestError}</p>
-            )}
+                {/* Popup Calendar Dropdown with Blocked Date Support */}
+                <AnimatePresence>
+                  {isCalendarOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 5 }}
+                      className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-xl p-3 shadow-xl border border-slate-100 space-y-3"
+                    >
+                      <div className="flex items-center justify-between pb-1">
+                        <button
+                          onClick={() => {
+                            if (currentMonth === 0) {
+                              setCurrentMonth(11);
+                              setCurrentYear(currentYear - 1);
+                            } else {
+                              setCurrentMonth(currentMonth - 1);
+                            }
+                          }}
+                          className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs font-bold text-slate-800">
+                          {MONTH_NAMES[currentMonth]} {currentYear}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (currentMonth === 11) {
+                              setCurrentMonth(0);
+                              setCurrentYear(currentYear + 1);
+                            } else {
+                              setCurrentMonth(currentMonth + 1);
+                            }
+                          }}
+                          className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-1 text-center">
+                        {WEEKDAYS.map((wd) => (
+                          <span key={wd} className="text-[9px] font-extrabold text-slate-400 py-0.5">
+                            {wd}
+                          </span>
+                        ))}
+                        {getDaysInMonth(currentYear, currentMonth).map((d, i) => {
+                          const isBlocked = blockedDates.has(d.dateStr);
+                          const isPast = d.dateStr < todayStr;
+                          const isSelected = d.dateStr === startDate || d.dateStr === endDate;
+                          const isInRange = startDate && endDate && d.dateStr > startDate && d.dateStr < endDate;
+
+                          return (
+                            <button
+                              key={i}
+                              disabled={!d.isCurrentMonth || isBlocked || isPast}
+                              onClick={() => handleDateClick(d.dateStr)}
+                              className={`py-1 text-[11px] rounded-md transition-all ${
+                                !d.isCurrentMonth
+                                  ? "text-slate-200 cursor-not-allowed"
+                                  : isPast
+                                  ? "line-through text-slate-200 cursor-not-allowed"
+                                  : isBlocked
+                                  ? "opacity-40 blur-[1px] line-through cursor-not-allowed bg-slate-100 text-slate-400 font-normal"
+                                  : isSelected
+                                  ? "bg-[#2563EB] text-white font-bold cursor-pointer"
+                                  : isInRange
+                                  ? "bg-blue-50 text-[#2563EB] font-semibold cursor-pointer"
+                                  : "hover:bg-slate-100 text-slate-700 cursor-pointer"
+                              }`}
+                            >
+                              {d.day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Cost Breakdown */}
+              <div className="space-y-2 pt-1 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>₹{product.dailyPrice} × {effectiveDays} days</span>
+                  <span className="font-bold text-slate-800">₹{rentalCost}</span>
+                </div>
+                <div className="border-t border-slate-100 pt-2 flex justify-between text-sm font-extrabold text-slate-900">
+                  <span>Total Amount Due</span>
+                  <span className="text-[#2563EB]">₹{rentalCost}</span>
+                </div>
+              </div>
+
+              {requestSent ? (
+                <div className="space-y-2 text-center">
+                  <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl py-2.5 px-3">
+                    Request sent. The owner has to approve these dates before you pay.
+                  </p>
+                  <Link
+                    href="/dashboard/view-booking?tab=notifications"
+                    className="block text-xs font-semibold text-[#2563EB]"
+                  >
+                    Track it in notifications
+                  </Link>
+                </div>
+              ) : (
+                <button
+                  onClick={handleProceedToBook}
+                  disabled={isCheckingAuth || isRequesting}
+                  className="w-full bg-[#2563EB] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  {isRequesting ? "Sending request..." : "Request these dates"}
+                </button>
+              )}
+
+              {requestError && (
+                <p className="text-[11px] font-semibold text-red-600 text-center">{requestError}</p>
+              )}
+            </div>
+
+            {/* Owner Profile Card matching theme styling */}
+            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-6">
+              {/* Header: Avatar, Name, Subtitle, and Total Items Badge */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <img
+                      src={product.owner.avatar}
+                      alt={product.owner.name}
+                      className="w-14 h-14 rounded-full object-cover border border-slate-200 shadow-xs"
+                    />
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-slate-900 tracking-tight">{product.owner.name}</h2>
+                    <p className="text-xs text-slate-500 font-medium">Listing Host</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50/60 border border-blue-100 rounded-xl px-4 py-2.5 text-right shadow-2xs">
+                  <span className="block text-[10px] font-bold text-[#2563EB] uppercase tracking-wider">Total items</span>
+                  <span className="text-xs font-extrabold text-slate-900">{product.owner.activeItemsCount ?? 9} active</span>
+                </div>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* Attributes Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-900">
+                    <MapPin className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
+                    <span className="truncate">{product.city || "Munich"}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Profession</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-900">
+                    <span className="text-[#2563EB]">💼</span>
+                    <span className="truncate">{product.owner.profession || "Student"}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Age</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-900">
+                    <span>🎂</span>
+                    <span className="truncate">{product.owner.age || 26} yrs</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gender</span>
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-900">
+                    <span className="text-[#2563EB]">👤</span>
+                    <span className="truncate">{product.owner.gender || "Male"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* About Section */}
+              <div className="space-y-2">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">About Host</span>
+                <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3.5 text-xs text-slate-700 leading-relaxed">
+                  {product.owner.bio || "I am owner"}
+                </div>
+              </div>
+
+              {/* Chat action button */}
+              <button
+                onClick={() => setIsContactModalOpen(true)}
+                className="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-[#2563EB]" /> Chat with {product.owner.name}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -993,7 +1081,7 @@ export default function ProductDetailPage() {
           >
             <button
               onClick={() => setIsFullscreenOpen(false)}
-              className="absolute top-6 right-6 z-50 text-white bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-md transition-colors cursor-pointer"
+              className="absolute top-6 right-6 z-50 text-white bg-white/15 hover:bg-white/25 p-3 rounded-full backdrop-blur-md transition-colors cursor-pointer"
             >
               <X className="w-6 h-6" />
             </button>
