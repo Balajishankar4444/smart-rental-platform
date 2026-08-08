@@ -1,3 +1,4 @@
+// app/profile/page.ts (or your exact profile page file path)
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -604,7 +605,15 @@ function ProfileContent() {
       .then((response) => response.json())
       .then((result) => {
         if (cancelled) return;
-        const profile = result?.data as Partial<ProfileForm> | null;
+        const profile = result?.data as Partial<ProfileForm> & { language?: string[] } | null;
+        
+        // Safely extract languages from either `languages` or fallback to backend `language` key
+        const resolvedLangs = Array.isArray(profile?.languages)
+          ? profile.languages
+          : Array.isArray(profile?.language)
+          ? profile.language
+          : [];
+
         const initialData: ProfileForm = {
           ...EMPTY_FORM,
           fullName: profile?.fullName || user.name || "",
@@ -617,7 +626,7 @@ function ProfileContent() {
           state: profile?.state || "",  
           gender: profile?.gender || "",  
           profession: profile?.profession || "",
-          languages: Array.isArray(profile?.languages) ? profile.languages : [],
+          languages: resolvedLangs,
         };
         setForm(initialData);
         setSavedForm(initialData);
@@ -685,7 +694,12 @@ function ProfileContent() {
       const response = await fetch("/api/auth/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, email: user.email, ...form }),
+        body: JSON.stringify({ 
+          userId: user.id, 
+          email: user.email, 
+          ...form,
+          language: form.languages, // Ensure backend schema key receives the array safely
+        }),
       });
 
       const result = await response.json();
