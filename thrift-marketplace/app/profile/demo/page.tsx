@@ -47,7 +47,7 @@ interface ProfileForm {
   state: string;  
   gender: string;  
   profession: string;
-  languages: string;
+  languages: string[];
 }
 
 const EMPTY_FORM: ProfileForm = {
@@ -471,7 +471,7 @@ function ProfilePreviewBanner({
   const shouldTruncateBio = bioText.length > 120;
   const displayedBio = shouldTruncateBio && !isBioExpanded ? `${bioText.slice(0, 120)}...` : bioText;
 
-  const languagesList = Array.isArray(form?.languages) && form.languages.length > 0 ? form.languages : ["English", "German", "Hindi", "Tamil"];
+  const languagesList = Array.isArray(form?.languages) ? form.languages : [];
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 sm:p-8 space-y-6">
@@ -617,7 +617,7 @@ function ProfileContent() {
           state: profile?.state || "",  
           gender: profile?.gender || "",  
           profession: profile?.profession || "",
-          language: profile?.language || "",
+          languages: Array.isArray(profile?.languages) ? profile.languages : [],
         };
         setForm(initialData);
         setSavedForm(initialData);
