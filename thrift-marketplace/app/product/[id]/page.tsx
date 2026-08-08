@@ -995,7 +995,7 @@ function ListItemContent() {
                               {form.category || "Electronics"}
                             </span>
                             <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                              <ShieldCheck className="w-3.5 h-3.5" /> Verified Host
+                              <ShieldCheck className="w-3.5 h-3.5" />
                             </span>
                           </div>
                           <h3 className="text-xl font-extrabold text-gray-900 font-heading">

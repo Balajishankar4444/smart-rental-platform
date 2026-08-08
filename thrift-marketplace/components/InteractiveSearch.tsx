@@ -7,29 +7,40 @@ import { Search, MapPin, Calendar, X, TrendingUp, ChevronDown, ChevronLeft, Chev
 import { useRouter } from "next/navigation";
 
 const PLACEHOLDERS = [
-  "What do you want to rent?",
-  "Search Sony A7 IV Camera...",
-  "Search PS5 DualSense Consoles...",
-  "Search DJI Mavic 3 Drones...",
-  "Search Ather Electric Scooters...",
+  "Where do you want to stay?",
+  "Find a bed, room, or shared space...",
+  "Looking for a sofa or sleeping space...",
+  "Search private rooms & shared spaces...",
+  "Find affordable places near you...",
 ];
 
-const POPULAR_SEARCHES = ["Sony Alpha", "PlayStation 5", "DJI Mini 3", "Camp Tent", "Power Tools"];
+const POPULAR_SEARCHES = [
+  "Bed Space",
+  "Shared Room",
+  "Private Room",
+  "Sofa",
+  "Entire Space",
+];
 
 const ALL_LOCATIONS = "All Locations";
 
-const INDIAN_CITIES = [
+const GERMAN_CITIES = [
   ALL_LOCATIONS,
-  "Bengaluru, KA", "Mumbai, MH", "Delhi, DL", "Hyderabad, TS", "Chennai, TN",
-  "Kolkata, WB", "Pune, MH", "Ahmedabad, GJ", "Jaipur, RJ", "Surat, GJ",
-  "Lucknow, UP", "Kanpur, UP", "Nagpur, MH", "Indore, MP", "Thane, MH",
-  "Bhopal, MP", "Visakhapatnam, AP", "Patna, BR", "Vadodara, GJ", "Ghaziabad, UP",
-  "Ludhiana, PB", "Agra, UP", "Nashik, MH", "Faridabad, HR", "Meerut, UP",
-  "Rajkot, GJ", "Kalyan-Dombivli, MH", "Vasai-Virar, MH", "Varanasi, UP", "Srinagar, JK",
-  "Aurangabad, MH", "Dhanbad, JH", "Amritsar, PB", "Navi Mumbai, MH", "Allahabad (Prayagraj), UP",
-  "Ranchi, JH", "Howrah, WB", "Coimbatore, TN", "Jabalpur, MP", "Gwalior, MP",
-  "Vijayawada, AP", "Jodhpur, RJ", "Madurai, TN", "Raipur, CG", "Kota, RJ",
-  "Guwahati, AS", "Chandigarh, CH", "Solapur, MH", "Hubli-Dharwad, KA", "Mysore, KA",
+  "Berlin, BE",
+  "Munich, BY",
+  "Hamburg, HH",
+  "Cologne, NW",
+  "Frankfurt, HE",
+  "Stuttgart, BW",
+  "Düsseldorf, NW",
+  "Leipzig, SN",
+  "Dortmund, NW",
+  "Essen, NW",
+  "Bremen, HB",
+  "Dresden, SN",
+  "Hanover, NI",
+  "Nuremberg, BY",
+  "Heidelberg, BW",
 ];
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -95,7 +106,7 @@ export const InteractiveSearch = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredCities = INDIAN_CITIES.filter((city) =>
+  const filteredCities = GERMAN_CITIES.filter((city) =>
     city.toLowerCase().includes(locationSearch.toLowerCase())
   );
 

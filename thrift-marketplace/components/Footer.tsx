@@ -23,7 +23,7 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
-              Germany's trusted room-sharing network connecting verified hosts with trustworthy guests.
+              Germany's trusted room-sharing network connecting trusted hosts with trustworthy guests.
             </p>
           </div>
 

@@ -260,12 +260,6 @@ export const Navbar = () => {
                         </div>
                       </div>
 
-                      <div className="px-3 py-1 pb-2">
-                        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50/80 px-2.5 py-1 text-[10px] font-bold text-blue-600 border border-blue-100/50">
-                          <ShieldCheck className="h-3 w-3 text-blue-500" />
-                          Verified Account
-                        </div>
-                      </div>
 
                       <div className="space-y-0.5 border-t border-gray-100/80 pt-2 pb-1">
                         <Link

@@ -27,7 +27,7 @@ function toItemDetail(listing: ListingSummary): ItemDetail {
     reviews: 0,
     location: listingLocation(listing),
     distance: listing.subcategory || "",
-    owner: listing.ownerName || "Verified host",
+    owner: listing.ownerName || "host",
     ownerBadge: listing.instantBooking ? "Instant Booking" : "Request to Book",
     ownerImage: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
     image: listingImage(listing),
