@@ -187,8 +187,8 @@ function ListItemContent() {
         ...form,
         userId: user.id,
         category: "Rooms",
-        maxGuests: Number(form.numGuests), // Explicitly structured for backend filter queries
-        petsAllowed: Boolean(form.petsAllowed) // Explicitly structured boolean for backend filter queries
+        maxGuests: Number(form.numGuests), 
+        petsAllowed: Boolean(form.petsAllowed) 
       };
 
       const response = await fetch("/api/auth/products", {
@@ -205,8 +205,8 @@ function ListItemContent() {
         localStorage.removeItem("rentit_listing_draft");
         setIsSubmitted(true);
         
-        // Capture newly created product ID for dynamic routing (fallback to insertedId if needed)
-        const newId = result.id || result.productId || result._id || result.insertedId;
+        // Capture newly created product ID properly from the response shape (result.data.id or direct property)[cite: 2]
+        const newId = result?.data?.id || result.id || result.productId || result._id || result.insertedId;
         if (newId) {
           setCreatedProductId(newId);
         }
@@ -365,10 +365,14 @@ function ListItemContent() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button 
                 onClick={() => {
-                  if (createdProductId) {
+                  if (
+                    createdProductId && 
+                    createdProductId !== "null" && 
+                    createdProductId !== "undefined"
+                  ) {
                     router.push(`/listings/${createdProductId}`);
                   } else {
-                    router.push(`/listings/${createdProductId}`);
+                    router.push(`/listings`);
                   }
                 }}
                 className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold shadow-lg shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"

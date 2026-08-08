@@ -113,8 +113,14 @@ const RippleButton: React.FC<RippleButtonProps> = ({ children, className = "", o
   );
 };
 
-const rentalMetrics = (rentals: ListingSummary[], outgoingRequests: BookingRequest[], now: string) => {
-  const activeBookingsCount = rentals.filter((item) => item.status === "rented").length;
+const rentalMetrics = (
+  rentals: ListingSummary[],
+  outgoingRequests: BookingRequest[],
+  now: string,
+  onFilterClick: (filter: string) => void,
+  activeFilter: string
+) => {
+  const activeBookingsCount = rentals.length;
   const pendingApprovalsCount = outgoingRequests.filter((req) => deriveRequestStatus(req, now) === "pending").length;
 
   const totalSpend = outgoingRequests
@@ -127,6 +133,7 @@ const rentalMetrics = (rentals: ListingSummary[], outgoingRequests: BookingReque
 
   return [
     {
+      id: "active-bookings",
       label: "Active Bookings",
       value: String(activeBookingsCount),
       icon: KeyRound,
@@ -134,6 +141,7 @@ const rentalMetrics = (rentals: ListingSummary[], outgoingRequests: BookingReque
       bg: "bg-blue-50/80",
     },
     {
+      id: "pending-approvals",
       label: "Pending Approvals",
       value: String(pendingApprovalsCount),
       icon: Calendar,
@@ -141,6 +149,7 @@ const rentalMetrics = (rentals: ListingSummary[], outgoingRequests: BookingReque
       bg: "bg-indigo-50/80",
     },
     {
+      id: "total-spend",
       label: "Total Spend",
       value: `₹${totalSpend.toLocaleString("en-IN")}`,
       icon: DollarSign,
@@ -150,7 +159,13 @@ const rentalMetrics = (rentals: ListingSummary[], outgoingRequests: BookingReque
   ];
 };
 
-const hostMetrics = (listings: ListingSummary[], incomingRequests: BookingRequest[], now: string) => {
+const hostMetrics = (
+  listings: ListingSummary[],
+  incomingRequests: BookingRequest[],
+  now: string,
+  onFilterClick: (filter: string) => void,
+  activeFilter: string
+) => {
   const availableRoomsCount = listings.filter((item) => item.status === "active").length;
   const currentlyRentedCount = listings.filter((item) => item.status === "rented").length;
 
@@ -164,6 +179,7 @@ const hostMetrics = (listings: ListingSummary[], incomingRequests: BookingReques
 
   return [
     {
+      id: "available",
       label: "Available Rooms",
       value: String(availableRoomsCount),
       icon: CheckCircle2,
@@ -171,6 +187,7 @@ const hostMetrics = (listings: ListingSummary[], incomingRequests: BookingReques
       bg: "bg-emerald-50/80",
     },
     {
+      id: "rented",
       label: "Currently Rented",
       value: String(currentlyRentedCount),
       icon: Building2,
@@ -178,6 +195,7 @@ const hostMetrics = (listings: ListingSummary[], incomingRequests: BookingReques
       bg: "bg-blue-50/80",
     },
     {
+      id: "total-earnings",
       label: "Total Earnings",
       value: `₹${totalEarnings.toLocaleString("en-IN")}`,
       icon: DollarSign,
@@ -193,24 +211,24 @@ function RequestSummary({ request, caption }: { request: BookingRequest; caption
   const calculatedTotal = perNight * nights;
 
   return (
-    <div className="flex gap-3">
+    <Link href={`/listings/${request.listingId}`} className="flex gap-3 group">
       {request.listingImage ? (
         <img
           src={request.listingImage}
           alt={request.listingTitle}
-          className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0"
+          className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0 group-hover:opacity-90 transition-opacity"
         />
       ) : (
         <div className="w-14 h-14 rounded-xl bg-slate-100 shrink-0" />
       )}
       <div className="min-w-0">
         <p className="text-[11px] text-slate-400">{caption}</p>
-        <p className="text-sm font-bold text-slate-900 line-clamp-1">{request.listingTitle}</p>
+        <p className="text-sm font-bold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">{request.listingTitle}</p>
         <p className="text-[11px] text-slate-500">
           {formatDay(request.startDate)} - {formatDay(request.endDate)} · {nights} nights · ₹{calculatedTotal.toLocaleString("en-IN")}
         </p>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -255,6 +273,10 @@ function ViewBookingContent() {
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
+
+  // Filter state for listings & rentals tabs
+  const [listingFilter, setListingFilter] = useState<string>("all");
+  const [rentalFilter, setRentalFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!user) return;
@@ -326,6 +348,20 @@ function ViewBookingContent() {
 
   const pendingOutgoingRequests = outgoing.filter((req) => deriveRequestStatus(req, now) === "pending");
 
+  // Filtered lists logic
+  const filteredListings = myListings.filter((item) => {
+    if (listingFilter === "available") return item.status === "active";
+    if (listingFilter === "rented") return item.status === "rented";
+    return true;
+  });
+
+  const filteredRentals = myRentals.filter((item) => {
+    if (rentalFilter === "pending-approvals") {
+      return false; // Hide active rentals when filtering by pending approvals
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-900 flex flex-col font-sans">
       <Navbar />
@@ -345,7 +381,7 @@ function ViewBookingContent() {
 
           <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
             <button
-              onClick={() => setActiveTab("listings")}
+              onClick={() => { setActiveTab("listings"); setListingFilter("all"); }}
               className={`px-4 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
                 activeTab === "listings"
                   ? "bg-white text-blue-600 shadow-xs"
@@ -355,7 +391,7 @@ function ViewBookingContent() {
               My Room Listings
             </button>
             <button
-              onClick={() => setActiveTab("rentals")}
+              onClick={() => { setActiveTab("rentals"); setRentalFilter("all"); }}
               className={`px-4 py-2 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
                 activeTab === "rentals"
                   ? "bg-white text-blue-600 shadow-xs"
@@ -390,18 +426,35 @@ function ViewBookingContent() {
                 <h2 className="text-lg font-bold text-slate-900">Your Property Listings</h2>
                 <p className="text-xs text-slate-500">Manage your rooms, update availability, and review guest reservation requests.</p>
               </div>
-              <Link href="/list-item">
-                <RippleButton className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all cursor-pointer">
-                  <Plus className="w-4 h-4" /> Host a Room
-                </RippleButton>
-              </Link>
+              <div className="flex items-center gap-3">
+                {listingFilter !== "all" && (
+                  <button
+                    onClick={() => setListingFilter("all")}
+                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Clear Filter
+                  </button>
+                )}
+                <Link href="/list-item">
+                  <RippleButton className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-xs text-xs transition-all cursor-pointer">
+                    <Plus className="w-4 h-4" /> Host a Room
+                  </RippleButton>
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {hostMetrics(myListings, incoming, now).map((metric, idx) => {
+              {hostMetrics(myListings, incoming, now, setListingFilter, listingFilter).map((metric) => {
                 const IconComponent = metric.icon;
+                const isSelected = listingFilter === metric.id;
                 return (
-                  <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
+                  <div
+                    key={metric.id}
+                    onClick={() => setListingFilter(metric.id === "total-earnings" ? "all" : metric.id)}
+                    className={`bg-white p-4 rounded-xl border transition-all cursor-pointer shadow-xs flex items-center justify-between ${
+                      isSelected ? "border-blue-600 ring-2 ring-blue-600/10 bg-blue-50/20" : "border-slate-200/60 hover:border-slate-300"
+                    }`}
+                  >
                     <div>
                       <span className="text-xs font-medium text-slate-500">{metric.label}</span>
                       <div className="text-xl font-bold text-slate-900 mt-0.5">{metric.value}</div>
@@ -419,52 +472,19 @@ function ViewBookingContent() {
                 <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                 <p className="text-xs font-medium text-slate-500">Loading your room listings...</p>
               </div>
-            ) : myListings.length === 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
-                  <div>
-                    <div className="relative h-44 bg-slate-100 shrink-0">
-                      <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800" alt="Cozy Private Room" className="w-full h-full object-cover" />
-                      <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-                        Rented
-                      </span>
-                    </div>
-                    <div className="p-5 pb-3">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                        <span>Private Room</span>
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> City Center</span>
-                      </div>
-                      <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">Cozy Modern Room with Balcony</h3>
-                      <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹1,200 <span className="text-[11px] font-normal text-slate-500">/ night</span></div>
-                    </div>
-                  </div>
-
-                  <div className="p-5 pt-0 flex flex-col gap-3">
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Stay Duration</span>
-                        <span className="font-semibold text-slate-800">
-                          7th – 22nd Aug (15 nights)
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-400 block text-[10px]">Total</span>
-                        <span className="font-bold text-blue-600">₹18,000</span>
-                      </div>
-                    </div>
-
-                    <RippleButton
-                      onClick={() => markReturned("mock-id")}
-                      className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-center"
-                    >
-                      Complete stay / check-out
-                    </RippleButton>
-                  </div>
-                </div>
+            ) : filteredListings.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-16 text-center text-xs text-slate-500 space-y-3">
+                <p>No room listings match this filter.</p>
+                <button
+                  onClick={() => setListingFilter("all")}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors cursor-pointer"
+                >
+                  Show All Listings
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myListings.map((listing) => {
+                {filteredListings.map((listing) => {
                   const isRented = listing.status === "rented";
                   const isActive = listing.status === "active";
                   const isCompleted = listing.status === "completed";
@@ -481,19 +501,21 @@ function ViewBookingContent() {
                       }`}
                     >
                       <div>
-                        <div className="relative h-44 bg-slate-100 shrink-0">
-                          <img src={listingImage(listing)} alt={listingTitle(listing)} className="w-full h-full object-cover" />
+                        <Link href={`/listings/${listing.id}`} className="relative h-44 bg-slate-100 shrink-0 block group">
+                          <img src={listingImage(listing)} alt={listingTitle(listing)} className="w-full h-full object-cover group-hover:opacity-95 transition-opacity" />
                           <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[listing.status] || STATUS_BADGE_STYLES.active}`}>
                             {LISTING_STATUS_LABELS[listing.status] || "Active"}
                           </span>
-                        </div>
+                        </Link>
 
                         <div className="p-5 pb-3">
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                             <span>{listing.category || "Private Room"}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(listing)}</span>
                           </div>
-                          <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">{listingTitle(listing)}</h3>
+                          <Link href={`/listings/${listing.id}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600 transition-colors">
+                            {listingTitle(listing)}
+                          </Link>
                           <div className="text-blue-600 font-extrabold text-sm mt-1.5">₹{listing.dailyPrice || 1200} <span className="text-[11px] font-normal text-slate-500">/ night</span></div>
                         </div>
                       </div>
@@ -551,16 +573,33 @@ function ViewBookingContent() {
         {/* TAB 2: RENTALS / BOOKED STAYS */}
         {activeTab === "rentals" && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Your Stays & Bookings</h2>
-              <p className="text-xs text-slate-500">Monitor your active room bookings and upcoming check-in dates.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Your Stays & Bookings</h2>
+                <p className="text-xs text-slate-500">Monitor your active room bookings and upcoming check-in dates.</p>
+              </div>
+              {rentalFilter !== "all" && (
+                <button
+                  onClick={() => setRentalFilter("all")}
+                  className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                >
+                  Clear Filter
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {rentalMetrics(myRentals, outgoing, now).map((metric, idx) => {
+              {rentalMetrics(myRentals, outgoing, now, setRentalFilter, rentalFilter).map((metric) => {
                 const IconComponent = metric.icon;
+                const isSelected = rentalFilter === metric.id;
                 return (
-                  <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-xs flex items-center justify-between">
+                  <div
+                    key={metric.id}
+                    onClick={() => setRentalFilter(metric.id === "total-spend" ? "all" : metric.id)}
+                    className={`bg-white p-4 rounded-xl border transition-all cursor-pointer shadow-xs flex items-center justify-between ${
+                      isSelected ? "border-blue-600 ring-2 ring-blue-600/10 bg-blue-50/20" : "border-slate-200/60 hover:border-slate-300"
+                    }`}
+                  >
                     <div>
                       <span className="text-xs font-medium text-slate-500">{metric.label}</span>
                       <div className="text-xl font-bold text-slate-900 mt-0.5">{metric.value}</div>
@@ -573,8 +612,8 @@ function ViewBookingContent() {
               })}
             </div>
 
-            {/* Pending Approvals Section for Rentals */}
-            {pendingOutgoingRequests.length > 0 && (
+            {/* Pending Approvals Section for Rentals (shown only if filter is 'all' or 'pending-approvals') */}
+            {(rentalFilter === "all" || rentalFilter === "pending-approvals") && pendingOutgoingRequests.length > 0 && (
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {pendingOutgoingRequests.map((request) => {
@@ -585,19 +624,21 @@ function ViewBookingContent() {
                     return (
                       <div key={request.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
                         <div>
-                          <div className="relative h-44 bg-slate-100 shrink-0">
-                            <img src={request.listingImage || "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800"} alt={request.listingTitle} className="w-full h-full object-cover" />
+                          <Link href={`/listings/${request.listingId}`} className="relative h-44 bg-slate-100 shrink-0 block group">
+                            <img src={request.listingImage || "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800"} alt={request.listingTitle} className="w-full h-full object-cover group-hover:opacity-95 transition-opacity" />
                             <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-amber-50 text-amber-700 border-amber-200">
                               Pending Approval
                             </span>
-                          </div>
+                          </Link>
 
                           <div className="p-5 pb-3">
                             <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                               <span>Pending Request</span>
                               <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Booking Request</span>
                             </div>
-                            <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">{request.listingTitle}</h3>
+                            <Link href={`/listings/${request.listingId}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600 transition-colors">
+                              {request.listingTitle}
+                            </Link>
                           </div>
                         </div>
 
@@ -629,54 +670,19 @@ function ViewBookingContent() {
               </div>
             )}
 
-            {myRentals.length === 0 && pendingOutgoingRequests.length === 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
-                  <div>
-                    <div className="relative h-44 bg-slate-100 shrink-0">
-                      <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800" alt="Apartment Rental" className="w-full h-full object-cover" />
-                      <span className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-                        Rented
-                      </span>
-                    </div>
-
-                    <div className="p-5 pb-3">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                        <span>Entire Apartment</span>
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Downtown</span>
-                      </div>
-                      <Link href="#" className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600">
-                        Spacious Studio Apartment near Metro
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="p-5 pt-0 flex flex-col gap-3">
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Stay Duration</span>
-                        <span className="font-semibold text-slate-800">
-                          7th – 22nd Aug (15 nights)
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-400 block text-[10px]">Total</span>
-                        <span className="font-bold text-blue-600">₹18,000</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => markReturned("mock-id")}
-                      className="w-full rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                    >
-                      Check out / End stay
-                    </button>
-                  </div>
-                </div>
+            {filteredRentals.length === 0 && (rentalFilter !== "pending-approvals" || pendingOutgoingRequests.length === 0) ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-16 text-center text-xs text-slate-500 space-y-3">
+                <p>No stays or rentals match this filter.</p>
+                <button
+                  onClick={() => setRentalFilter("all")}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors cursor-pointer"
+                >
+                  Show All Stays
+                </button>
               </div>
-            ) : myRentals.length > 0 && (
+            ) : filteredRentals.length > 0 && rentalFilter !== "pending-approvals" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myRentals.map((rental) => {
+                {filteredRentals.map((rental) => {
                   const startDate = rental.rental?.startDate || (rental as any).startDate;
                   const endDate = rental.rental?.endDate || (rental as any).endDate;
                   const nights = startDate && endDate ? nightsBetween(startDate, endDate) : 15;  
@@ -685,19 +691,19 @@ function ViewBookingContent() {
                   return (
                     <div key={rental.id} className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden flex flex-col justify-between">
                       <div>
-                        <div className="relative h-44 bg-slate-100 shrink-0">
-                          <img src={listingImage(rental)} alt={listingTitle(rental)} className="w-full h-full object-cover" />
+                        <Link href={`/listings/${rental.id}`} className="relative h-44 bg-slate-100 shrink-0 block group">
+                          <img src={listingImage(rental)} alt={listingTitle(rental)} className="w-full h-full object-cover group-hover:opacity-95 transition-opacity" />
                           <span className={`absolute top-3 right-3 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_BADGE_STYLES[rental.status] || STATUS_BADGE_STYLES.active}`}>
                             {LISTING_STATUS_LABELS[rental.status] || "Active"}
                           </span>
-                        </div>
+                        </Link>
 
                         <div className="p-5 pb-3">
                           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
                             <span>{rental.category || "Private Room"}</span>
                             <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {listingLocation(rental)}</span>
                           </div>
-                          <Link href={`/listings/${rental.id}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600">
+                          <Link href={`/listings/${rental.id}`} className="font-bold text-slate-900 text-base leading-snug line-clamp-2 hover:text-blue-600 transition-colors">
                             {listingTitle(rental)}
                           </Link>
                         </div>
@@ -824,20 +830,20 @@ function ViewBookingContent() {
 
                 {outgoing.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs p-4 space-y-3">
-                    <div className="flex gap-3">
+                    <Link href="/listings/mock-id" className="flex gap-3 group">
                       <img
                         src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800"
                         alt="Spacious Studio Apartment"
-                        className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0"
+                        className="w-14 h-14 rounded-xl object-cover bg-slate-100 shrink-0 group-hover:opacity-90 transition-opacity"
                       />
                       <div className="min-w-0">
                         <p className="text-[11px] text-slate-400">You requested stay</p>
-                        <p className="text-sm font-bold text-slate-900 line-clamp-1">Spacious Studio Apartment near Metro</p>
+                        <p className="text-sm font-bold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">Spacious Studio Apartment near Metro</p>
                         <p className="text-[11px] text-slate-500">
                           1st - 15th Aug · 15 nights · ₹18,000
                         </p>
                       </div>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <p className="text-[11px] font-semibold text-emerald-700">
