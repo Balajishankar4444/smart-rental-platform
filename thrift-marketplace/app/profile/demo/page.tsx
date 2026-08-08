@@ -47,7 +47,7 @@ interface ProfileForm {
   state: string;  
   gender: string;  
   profession: string;
-  languages: string[];
+  languages: string;
 }
 
 const EMPTY_FORM: ProfileForm = {
@@ -617,7 +617,7 @@ function ProfileContent() {
           state: profile?.state || "",  
           gender: profile?.gender || "",  
           profession: profile?.profession || "",
-          languages: Array.isArray(profile?.languages) ? profile.languages : ["English", "German", "Hindi", "Tamil"],
+          language: profile?.language || "",
         };
         setForm(initialData);
         setSavedForm(initialData);
