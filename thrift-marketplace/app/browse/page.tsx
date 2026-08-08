@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Search, SlidersHorizontal, MapPin, ShieldCheck, Zap, 
+  Search, SlidersHorizontal, MapPin, Zap, 
   Package, Sparkles, 
   Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart,
   BedDouble, DoorClosed, Building2, Users, Dog
@@ -114,6 +114,20 @@ function SearchContent() {
   const [instantBookOnly, setInstantBookOnly] = useState(false);
   const [sortBy, setSortBy] = useState("recommended");
   
+  // Dynamic filter states
+  const [selectedGender, setSelectedGender] = useState("Any");
+  const [selectedBedType, setSelectedBedType] = useState("Any");
+  const [selectedLanguage, setSelectedLanguage] = useState("Any");
+
+  // Custom UI dropdown states for the sidebar filters
+  const [isGenderOpen, setIsGenderOpen] = useState(false);
+  const [isBedOpen, setIsBedOpen] = useState(false);
+  const [isLangOpen, setIsLangOpen] = useState(false);
+
+  const genderRef = useRef<HTMLDivElement>(null);
+  const bedRef = useRef<HTMLDivElement>(null);
+  const langRef = useRef<HTMLDivElement>(null);
+
   const [selectedCity, setSelectedCity] = useState(searchParams.get("location") || ALL_LOCATIONS);
   const [listings, setListings] = useState<ListingSummary[]>([]);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
@@ -131,6 +145,35 @@ function SearchContent() {
   const sortRef = useRef<HTMLDivElement>(null);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const calendarDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Extract dynamic options from the fetched listings backend data
+  const genderOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    listings.forEach((item: any) => {
+      if (item.genderPreference) set.add(item.genderPreference);
+    });
+    return ["Any", ...Array.from(set)];
+  }, [listings]);
+
+  const bedTypeOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    listings.forEach((item: any) => {
+      if (item.bedType) set.add(item.bedType);
+    });
+    return ["Any", ...Array.from(set)];
+  }, [listings]);
+
+  const languageOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    listings.forEach((item: any) => {
+      if (Array.isArray(item.languagesSpoken)) {
+        item.languagesSpoken.forEach((l: string) => set.add(l));
+      } else if (typeof item.languagesSpoken === "string") {
+        set.add(item.languagesSpoken);
+      }
+    });
+    return ["Any", ...Array.from(set)];
+  }, [listings]);
 
   useEffect(() => {
     const q = searchParams.get("q");
@@ -180,6 +223,15 @@ function SearchContent() {
       }
       if (calendarDropdownRef.current && !calendarDropdownRef.current.contains(event.target as Node)) {
         setIsCalendarOpen(false);
+      }
+      if (genderRef.current && !genderRef.current.contains(event.target as Node)) {
+        setIsGenderOpen(false);
+      }
+      if (bedRef.current && !bedRef.current.contains(event.target as Node)) {
+        setIsBedOpen(false);
+      }
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
+        setIsLangOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -257,7 +309,7 @@ function SearchContent() {
   const cityName = selectedCity.split(",")[0].trim().toLowerCase();
 
   const filteredListings = listings
-    .filter((item) => {
+    .filter((item: any) => {
       const matchesSearch =
         !query ||
         [listingTitle(item), item.category, item.propertyType]
@@ -280,6 +332,15 @@ function SearchContent() {
       const matchesPrice = priceRange >= MAX_PRICE || listingDailyPrice(item) <= priceRange;
       const matchesInstant = !instantBookOnly || item.instantBooking;
 
+      // Filter matching backend data fields
+      const matchesGender = selectedGender === "Any" || (item.genderPreference && item.genderPreference.toLowerCase() === selectedGender.toLowerCase());
+      const matchesBedType = selectedBedType === "Any" || (item.bedType && item.bedType.toLowerCase() === selectedBedType.toLowerCase());
+      const matchesLanguage = selectedLanguage === "Any" || (
+        Array.isArray(item.languagesSpoken)
+          ? item.languagesSpoken.some((l: string) => l.toLowerCase() === selectedLanguage.toLowerCase())
+          : item.languagesSpoken && item.languagesSpoken.toLowerCase() === selectedLanguage.toLowerCase()
+      );
+
       const center = cityCenter(selectedCity);
       const km = center && item.latitude && item.longitude
         ? distanceKm(center.latitude, center.longitude, Number(item.latitude), Number(item.longitude))
@@ -288,10 +349,10 @@ function SearchContent() {
         selectedCity === ALL_LOCATIONS || km === null || km <= maxDistance;
 
       const matchesDates =  
-  !startDate || !endDate || !item.rental ||  
-  !datesOverlap(startDate, endDate, item.rental.startDate, item.rental.endDate); 
+        !startDate || !endDate || !item.rental ||  
+        !datesOverlap(startDate, endDate, item.rental.startDate, item.rental.endDate); 
   
-return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesDates;
+      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesGender && matchesBedType && matchesLanguage && matchesDates;
     })
     .sort((a, b) => {
       if (sortBy === "price-low") return listingDailyPrice(a) - listingDailyPrice(b);
@@ -305,7 +366,7 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
 
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
         
-        <section className="relative z-30 mx-auto max-w-full mb-8">
+        <section className="relative z-35 mx-auto max-w-full mb-8">
           <div className="rounded-[28px] glass-panel bg-white/95 p-4 lg:p-5 shadow-2xl shadow-blue-900/10 border border-white/85">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-center">
               
@@ -553,41 +614,26 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
       </div>
     </section>
 
-    <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8">
-      {user && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-slate-900 shadow-xs">
-          {user.photoURL ? (
-            <img 
-              src={user.photoURL} 
-              alt={user.displayName || "Host"} 
-              className="w-5 h-5 rounded-full object-cover ring-2 ring-blue-400/50 shadow-xs" 
-            />
-          ) : (
-            <div className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-blue-400/50">
-              {user.displayName?.charAt(0) || user.email?.charAt(0) || "H"}
-            </div>
-          )}
-          <span className="truncate max-w-[140px] font-bold">{user.displayName || user.email || "Host Account"}</span>
-        </div>
-      )}
-
-      {CATEGORIES.map((cat) => {
-        const isSelected = selectedCategory === cat.name;
-        return (
-          <button
-            key={cat.name}
-            onClick={() => setSelectedCategory(cat.name)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 cursor-pointer ${
-              isSelected 
-                ? "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white shadow-md shadow-blue-500/25 scale-105" 
-                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            }`}
-          >
-            {cat.icon(isSelected)}
-            <span>{cat.name}</span>
-          </button>
-        );
-      })}
+    <div className="w-full max-w-[1440px] mx-auto mb-8 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 min-w-max px-1">
+        {CATEGORIES.map((cat) => {
+          const isSelected = selectedCategory === cat.name;
+          return (
+            <button
+              key={cat.name}
+              onClick={() => setSelectedCategory(cat.name)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 cursor-pointer ${
+                isSelected 
+                  ? "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white shadow-md shadow-blue-500/25 scale-105" 
+                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              {cat.icon(isSelected)}
+              <span>{cat.name}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -606,6 +652,9 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
               setInstantBookOnly(false);
               setSelectedCity(ALL_LOCATIONS);
               setSearchQuery("");
+              setSelectedGender("Any");
+              setSelectedBedType("Any");
+              setSelectedLanguage("Any");
             }}
             className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
           >
@@ -648,21 +697,130 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
           />
         </div>
 
-        <div className="space-y-4 pt-4 border-t border-slate-100">
-          <label className="text-sm font-bold text-slate-800 block">Preferences</label>
-          
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-500" /> Instant Book
-            </span>
-            <input 
-              type="checkbox" 
-              checked={instantBookOnly}
-              onChange={(e) => setInstantBookOnly(e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB] cursor-pointer"
-            />
-          </label>
+        {/* Gender Preference Custom Dropdown */}
+        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={genderRef}>
+          <label className="text-sm font-bold text-slate-800 block">Gender Preference</label>
+          <div 
+            onClick={() => setIsGenderOpen(!isGenderOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-slate-700 hover:border-[#2563EB] transition-all cursor-pointer"
+          >
+            <span>{selectedGender}</span>
+            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+          </div>
 
+          <AnimatePresence>
+            {isGenderOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-48 overflow-y-auto"
+              >
+                {genderOptions.map((opt) => {
+                  const isSelected = selectedGender === opt;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        setSelectedGender(opt);
+                        setIsGenderOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isSelected ? "bg-blue-50 text-[#2563EB]" : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{opt}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Bed Type Custom Dropdown */}
+        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={bedRef}>
+          <label className="text-sm font-bold text-slate-800 block">Bed Type</label>
+          <div 
+            onClick={() => setIsBedOpen(!isBedOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-slate-700 hover:border-[#2563EB] transition-all cursor-pointer"
+          >
+            <span>{selectedBedType}</span>
+            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+          </div>
+
+          <AnimatePresence>
+            {isBedOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-48 overflow-y-auto"
+              >
+                {bedTypeOptions.map((opt) => {
+                  const isSelected = selectedBedType === opt;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        setSelectedBedType(opt);
+                        setIsBedOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isSelected ? "bg-blue-50 text-[#2563EB]" : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{opt}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Language Spoken Custom Dropdown */}
+        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={langRef}>
+          <label className="text-sm font-bold text-slate-800 block">Language Spoken</label>
+          <div 
+            onClick={() => setIsLangOpen(!isLangOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-slate-700 hover:border-[#2563EB] transition-all cursor-pointer"
+          >
+            <span>{selectedLanguage}</span>
+            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+          </div>
+
+          <AnimatePresence>
+            {isLangOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-48 overflow-y-auto"
+              >
+                {languageOptions.map((opt) => {
+                  const isSelected = selectedLanguage === opt;
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        setSelectedLanguage(opt);
+                        setIsLangOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isSelected ? "bg-blue-50 text-[#2563EB]" : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{opt}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -697,6 +855,9 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
                 setSearchQuery("");
                 setStartDate("");
                 setEndDate("");
+                setSelectedGender("Any");
+                setSelectedBedType("Any");
+                setSelectedLanguage("Any");
               }}
               className="px-6 py-2.5 bg-[#2563EB] text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all cursor-pointer"
             >
@@ -705,7 +866,7 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredListings.map((item) => {
+            {filteredListings.map((item: any) => {
               const id = item.id || "";
               const fav = isFavorite(id);
               const price = listingDailyPrice(item);
