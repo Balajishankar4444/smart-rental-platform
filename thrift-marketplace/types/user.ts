@@ -16,6 +16,7 @@ export interface User {
   password?: string; // Stored securely/mocked for local layer
   phone: string;
   avatar: string;
+  language: string;
   coverPhoto: string;
   bio: string;
   gender: string;
