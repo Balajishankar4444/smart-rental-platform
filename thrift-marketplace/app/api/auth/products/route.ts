@@ -61,12 +61,19 @@ export async function GET(request: Request) {
       const detailedProduct = withStatus(product);
       const owner = users.find((u: any) => u.id === detailedProduct.userId || u.email === detailedProduct.userId);
       
-      const payload = {  
-        ...detailedProduct,  
-        ownerName: owner?.fullName || "",  
-        ownerAvatar: owner?.avatar || "",  
-        ownerCoverPhoto: owner?.coverPhoto || "",   
-      };
+      const payload = {
+  ...detailedProduct,
+  ownerName: owner?.fullName || "",
+  ownerAvatar: owner?.avatar || "",
+  ownerCoverPhoto: owner?.coverPhoto || "",
+  ownerBio: owner?.bio || "",
+  ownerGender: owner?.gender || "",
+  ownerProfession: owner?.profession || "",
+  ownerAge: owner?.age || "",
+  ownerActiveItemsCount: products.filter(
+    (item: any) => item.userId === detailedProduct.userId
+  ).length,
+};
 
       return NextResponse.json({ success: true, data: payload }, { status: 200 });
     }

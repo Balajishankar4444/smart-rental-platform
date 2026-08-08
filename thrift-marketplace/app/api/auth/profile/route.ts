@@ -4,7 +4,18 @@ import { getUsers, saveUsers } from '@/services/DbService';
 import { User } from '@/types/user';
 
 // The fields the profile screen owns; everything else on the user record is left alone
-const EDITABLE_FIELDS = ['fullName', 'phone', 'bio', 'avatar', 'address', 'city', 'state', 'gender', 'profession'] as const;
+const EDITABLE_FIELDS = [
+  'fullName',
+  'phone',
+  'bio',
+  'avatar',
+  'coverPhoto',
+  'address',
+  'city',
+  'state',
+  'gender',
+  'profession'
+] as const;
 
 type EditableField = (typeof EDITABLE_FIELDS)[number];
 
@@ -14,17 +25,20 @@ export interface ProfilePayload {
   email: string;
   phone: string;
   bio: string;
-  avatar: string;
-  address: string;
-  city: string;
-  state: string;
-  dob: string;
-  age: string;
-  gender: string;  
-  profession: string;  
+  avatar: '',
+coverPhoto: '',
+address: '',
+city: '',
+state: '',
+dob: '',
+age: '',
+gender: '',
+profession: '',
 }
 
-function toPayload(user: User & { dob?: string; age?: string }): ProfilePayload {
+function toPayload(
+  user: User & { dob?: string; age?: string; coverPhoto?: string }
+): ProfilePayload {
   return {
     id: user.id,
     fullName: user.fullName || '',
@@ -32,11 +46,12 @@ function toPayload(user: User & { dob?: string; age?: string }): ProfilePayload 
     phone: user.phone || '',
     bio: user.bio || '',
     avatar: user.avatar || '',
+    coverPhoto: user.coverPhoto || '',
     address: user.address || '',
     city: user.city || '',
     state: user.state || '',
-    gender: user.gender || '',  
-    profession: user.profession || '', 
+    gender: user.gender || '',
+    profession: user.profession || '',
     dob: user.dob || '',
     age: user.age || '',
   };

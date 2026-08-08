@@ -495,10 +495,10 @@ function ProfilePreviewBanner({
 
           <div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              {form?.fullName || "Balaji Shankar"}
+              {form?.fullName || ""}
             </h2>
             <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
-              {form?.profession || "Software Test Engineer"} {form?.city ? `in ${form.city}` : ""}
+              {form?.profession || ""} {form?.city ? `in ${form.city}` : ""}
             </p>
           </div>
         </div>
@@ -523,7 +523,7 @@ function ProfilePreviewBanner({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Profession</span>
           <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
             <Briefcase className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate">{form?.profession || "Software Test Engineer"}</span>
+            <span className="truncate">{form?.profession || ""}</span>
           </div>
         </div>
 
@@ -531,7 +531,7 @@ function ProfilePreviewBanner({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Age</span>
           <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
             <Cake className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate">{userAge !== null ? `${userAge} yrs` : "26 yrs"}</span>
+            <span className="truncate">{userAge !== null ? `${userAge} yrs` : ""}</span>
           </div>
         </div>
 
@@ -539,7 +539,7 @@ function ProfilePreviewBanner({
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Gender</span>
           <div className="text-xs sm:text-sm font-semibold text-slate-800 flex items-center gap-1.5 truncate">
             <UserIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-            <span className="truncate capitalize">{form?.gender || "Male"}</span>
+            <span className="truncate capitalize">{form?.gender || ""}</span>
           </div>
         </div>
       </div>
@@ -848,7 +848,7 @@ function ProfileContent() {
                   <input  
                     value={form.profession}  
                     onChange={(event) => handleChange("profession", event.target.value)}  
-                    placeholder="e.g. Software Test Engineer"  
+                    placeholder="e.g. Student"  
                     required
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"  
                   />  
