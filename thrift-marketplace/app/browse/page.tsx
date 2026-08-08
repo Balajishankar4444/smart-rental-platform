@@ -107,7 +107,7 @@ function SearchContent() {
   const [selectedBedType, setSelectedBedType] = useState("Any");
   const [selectedLanguage, setSelectedLanguage] = useState("Any");
 
-  // Dropdown open states for mobile / modern UI filter popups
+  // Dropup open states for modern UI filter popups
   const [isGenderOpen, setIsGenderOpen] = useState(false);
   const [isBedTypeOpen, setIsBedTypeOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
@@ -630,7 +630,7 @@ function SearchContent() {
           </div>
         </div>
 
-        {/* Gender Preference Custom Theme Dropdown Filter */}
+        {/* Gender Preference Custom Theme Dropup Filter */}
         <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={genderRef}>  
           <label className="text-sm font-bold text-slate-800 block">Gender Preference</label>  
           <div 
@@ -638,16 +638,16 @@ function SearchContent() {
             className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-[#2563EB] hover:bg-white transition-all shadow-sm"
           >
             <span className="font-semibold text-slate-700">{selectedGender}</span>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isGenderOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isGenderOpen ? "rotate-0 text-[#2563EB]" : "rotate-180"}`} />
           </div>
 
           <AnimatePresence>
             {isGenderOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                initial={{ opacity: 0, scale: 0.95, y: -8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1"
+                exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                className="absolute left-0 right-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1"
               >
                 {["Any", "Male", "Female", "Other"].map((gender) => {
                   const isSelected = selectedGender === gender;
@@ -674,7 +674,7 @@ function SearchContent() {
           </AnimatePresence>
         </div>
 
-        {/* Bed Type Custom Theme Dropdown Filter */}
+        {/* Bed Type Custom Theme Dropup Filter */}
         <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={bedTypeRef}>  
           <label className="text-sm font-bold text-slate-800 block">Bed Type</label>  
           <div 
@@ -682,16 +682,16 @@ function SearchContent() {
             className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-[#2563EB] hover:bg-white transition-all shadow-sm"
           >
             <span className="font-semibold text-slate-700">{selectedBedType}</span>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isBedTypeOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isBedTypeOpen ? "rotate-0 text-[#2563EB]" : "rotate-180"}`} />
           </div>
 
           <AnimatePresence>
             {isBedTypeOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                initial={{ opacity: 0, scale: 0.95, y: -8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1"
+                exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                className="absolute left-0 right-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1"
               >
                 {["Any", "Sofa", "Ground", "Separate Bed", "Shared Bed"].map((bed) => {
                   const isSelected = selectedBedType === bed;
@@ -718,7 +718,7 @@ function SearchContent() {
           </AnimatePresence>
         </div>
 
-        {/* Language Spoken Custom Theme Dropdown Filter */}
+        {/* Language Spoken Custom Theme Dropup Filter */}
         <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={languageRef}>  
           <label className="text-sm font-bold text-slate-800 block">Language Spoken</label>  
           <div 
@@ -726,16 +726,16 @@ function SearchContent() {
             className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-[#2563EB] hover:bg-white transition-all shadow-sm"
           >
             <span className="font-semibold text-slate-700">{selectedLanguage}</span>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isLanguageOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isLanguageOpen ? "rotate-0 text-[#2563EB]" : "rotate-180"}`} />
           </div>
 
           <AnimatePresence>
             {isLanguageOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                initial={{ opacity: 0, scale: 0.95, y: -8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-56 overflow-y-auto"
+                exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                className="absolute left-0 right-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-56 overflow-y-auto"
               >
                 {["Any", "English", "Hindi", "Tamil", "Telugu", "German"].map((lang) => {
                   const isSelected = selectedLanguage === lang;

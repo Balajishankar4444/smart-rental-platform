@@ -13,12 +13,13 @@ function withStatus(product: any) {
 
 function toSummary(product: any) {
   const detailed = withStatus(product);
+
   return {
     id: detailed.id,
     userId: detailed.userId,
     productName: detailed.productName,
     category: detailed.category,
-    propertyType: detailed.propertyType, // <--- Add this line here
+    propertyType: detailed.propertyType,
     brand: detailed.brand,
     dailyPrice: detailed.dailyPrice,
     images: detailed.images,
@@ -27,6 +28,9 @@ function toSummary(product: any) {
     status: detailed.status,
     rental: detailed.rental,
     createdAt: detailed.createdAt,
+
+    // Keep fields required by Browse filters
+    bedType: detailed.bedType || "",
   };
 }
 
@@ -37,16 +41,32 @@ export async function GET(request: Request) {
     const users = db.users || [];
 
     const attachOwner = (item: any) => {
-      const owner = users.find((u: any) => u.id === item.userId || u.email === item.userId);
-      return {
-        ...item,
-        ownerName: owner ? `${owner.firstName || ""} ${owner.lastName || ""}`.trim() || owner.email : "Unknown Host",
+  const owner = users.find(
+    (u: any) => u.id === item.userId || u.email === item.userId
+  );
+
+  const ownerLanguage = Array.isArray(owner?.language)
+    ? owner.language
+    : owner?.language
+      ? [owner.language]
+      : [];
+
+  return {
+    ...item,
+
+    ownerName: owner
+      ? `${owner.firstName || ""} ${owner.lastName || ""}`.trim() ||
+        owner.email
+      : "Unknown Host",
+
     ownerAvatar: owner?.avatar || "",
     ownerGender: owner?.gender || "",
-    ownerLanguage: owner?.language || [],
+    ownerLanguage,
+
+    // Keep product bed type
     bedType: item.bedType || "",
-      };
-    };
+  };
+};
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -68,7 +88,11 @@ export async function GET(request: Request) {
   ...detailedProduct,
   ownerName: owner?.fullName || "",
   ownerAvatar: owner?.avatar || "",
-  ownerLanguage: owner?.language || "",
+  ownerLanguage: Array.isArray(owner?.language)
+  ? owner.language
+  : owner?.language
+  ? [owner.language]
+  : [],
   ownerCoverPhoto: owner?.coverPhoto || "",
   ownerBio: owner?.bio || "",
   ownerGender: owner?.gender || "",
@@ -137,10 +161,16 @@ export async function POST(request: Request) {
     const summary = toSummary(productWithMeta);
     const owner = users.find((u: any) => u.id === summary.userId || u.email === summary.userId);
     const data = {
-      ...summary,
-      ownerName: owner?.fullName || "Verified lender",
-      ownerAvatar: owner?.avatar || "",
-    };
+  ...summary,
+  ownerName: owner?.fullName || "Verified lender",
+  ownerAvatar: owner?.avatar || "",
+  ownerGender: owner?.gender || "",
+  ownerLanguage: Array.isArray(owner?.language)
+    ? owner.language
+    : owner?.language
+      ? [owner.language]
+      : [],
+};
 
     return NextResponse.json(
       {
@@ -219,10 +249,16 @@ export async function PATCH(request: Request) {
     const summary = toSummary(product);
     const owner = users.find((u: any) => u.id === summary.userId || u.email === summary.userId);
     const data = {
-      ...summary,
-      ownerName: owner?.fullName || "Verified lender",
-      ownerAvatar: owner?.avatar || "",
-    };
+  ...summary,
+  ownerName: owner?.fullName || "Verified lender",
+  ownerAvatar: owner?.avatar || "",
+  ownerGender: owner?.gender || "",
+  ownerLanguage: Array.isArray(owner?.language)
+    ? owner.language
+    : owner?.language
+      ? [owner.language]
+      : [],
+};
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
@@ -261,10 +297,16 @@ export async function DELETE(request: Request) {
     const summary = toSummary(product);
     const owner = users.find((u: any) => u.id === summary.userId || u.email === summary.userId);
     const data = {
-      ...summary,
-      ownerName: owner?.fullName || "Verified lender",
-      ownerAvatar: owner?.avatar || "",
-    };
+  ...summary,
+  ownerName: owner?.fullName || "Verified lender",
+  ownerAvatar: owner?.avatar || "",
+  ownerGender: owner?.gender || "",
+  ownerLanguage: Array.isArray(owner?.language)
+    ? owner.language
+    : owner?.language
+      ? [owner.language]
+      : [],
+};
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
