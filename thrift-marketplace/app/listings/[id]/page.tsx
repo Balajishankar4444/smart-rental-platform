@@ -14,6 +14,10 @@ import {
   Heart,
   Share2,
   Maximize2,
+  Briefcase,
+  Cake,
+  User as UserIcon,
+  Globe,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -165,7 +169,7 @@ const MOCK_PRODUCTS: Record<string, ProductDetail> = {
     owner: {
       name: "Aarav Sharma",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
-      coverPhoto: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+      coverPhoto: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
       rating: 4.9,
       rentalsCompleted: 120,
       responseTime: "Under 15 mins",
@@ -275,6 +279,10 @@ function toProductDetail(listing: StoredListing): ProductDetail {
     ? listing.images
     : ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1200"];
 
+  const parsedLanguages = listing.ownerLanguage
+    ? String(listing.ownerLanguage).split(",").map((l) => l.trim()).filter(Boolean)
+    : ["English", "German"];
+
   return {
     id: listing.id,
     title: listing.productName || "Untitled listing",
@@ -320,7 +328,7 @@ function toProductDetail(listing: StoredListing): ProductDetail {
     owner: {
       name: listing.ownerName || "Listing owner",
       avatar: listing.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
-      coverPhoto: listing.ownerCoverPhoto || "",
+      coverPhoto: listing.ownerCoverPhoto || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
       bio: listing.ownerBio || "",
       gender: listing.ownerGender || "",
       profession: listing.ownerProfession || "",
@@ -328,7 +336,7 @@ function toProductDetail(listing: StoredListing): ProductDetail {
       rentalsCompleted: 0,
       responseTime: "—",
       memberSince: "—",
-      language: listing.ownerLanguage || "",
+      languages: parsedLanguages,
       verified: Boolean(listing.ownerVerified),
       age: listing.ownerAge || "",
       location: listing.ownerLocation || "",
@@ -636,7 +644,7 @@ export default function ProductDetailPage() {
                 {product.condition}
               </span>
               {product.instantBook && (
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-white flex items-center gap-1">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#2563EB] text-white flex items-center gap-1">
                   <Zap className="w-3 h-3 fill-current" /> Instant Book
                 </span>
               )}
@@ -648,7 +656,7 @@ export default function ProductDetailPage() {
 
           <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-1 text-xs font-semibold bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-xs">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <Star className="w-3.5 h-3.5 fill-[#2563EB] text-[#2563EB]" />
               <span>{product.rating}</span>
               <span className="text-slate-400">({product.reviewsCount})</span>
             </div>
@@ -712,8 +720,8 @@ export default function ProductDetailPage() {
                 <span className="px-3 py-1 bg-blue-50 text-[#2563EB] text-xs font-bold rounded-full">
                   {product.propertyType}
                 </span>
-                <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                  <ShieldCheck className="w-3.5 h-3.5" /> 
+                <span className="flex items-center gap-1 text-xs font-bold text-[#2563EB] bg-blue-50 px-2.5 py-1 rounded-full">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified Protection
                 </span>
               </div>
               
@@ -734,7 +742,7 @@ export default function ProductDetailPage() {
                 </div>
                 <div className="p-3 bg-gray-50 rounded-2xl">
                   <span className="text-xs text-gray-500 block">Check-in</span>
-                  <span className="text-xs font-bold text-blue-600 mt-0.5 block">{product.houseRules.checkIn}</span>
+                  <span className="text-xs font-bold text-[#2563EB] mt-0.5 block">{product.houseRules.checkIn}</span>
                 </div>
               </div>
             </div>
@@ -772,7 +780,7 @@ export default function ProductDetailPage() {
 
           </div>
 
-          {/* Right: Booking & Cost Calculator Box with Blocked-Date Filtering & Profile Preview UI Match Below */}
+          {/* Right: Booking & Cost Calculator Box with Host Profile Banner */}
           <div className="lg:col-span-5 space-y-6 sticky top-20">
             <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200/80 space-y-4">
               <div className="flex items-baseline justify-between border-b border-slate-100 pb-3">
@@ -922,95 +930,107 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Host Profile Card - Matched precisely to Profile Preview UI expectation */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-md relative space-y-5">
-              {/* Top Section with Avatar & Total Items Badge */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3.5">
-                  <div className="relative">
-                    <img
-                      src={product.owner.avatar}
-                      alt={product.owner.name}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 shadow-xs"
-                    />
-                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
-                      {product.owner.name}
-                    </h3>
-                    <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                      {product.owner.profession} in {product.owner.location || product.city}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl text-center shadow-xs">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Total Items</span>
-                  <span className="text-xs font-extrabold text-slate-900 block mt-0.5">{product.owner.activeItemsCount || 8} active</span>
-                </div>
+            {/* Host Profile Card with Default Blue Theme Cover Logo/Banner & Backend Known Languages */}
+            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-md relative space-y-5 pb-6">
+              {/* Cover Banner / Theme Color Blue Fallback */}
+              <div className="h-28 w-full relative bg-gradient-to-r from-blue-600 to-blue-800">
+                <img
+                  src={product.owner.coverPhoto || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=1200"}
+                  alt="Cover Banner"
+                  className="w-full h-full object-cover opacity-90"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
               </div>
 
-              {/* Attribute Cards Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Location</span>
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
-                    <MapPin className="w-3 h-3 text-[#2563EB] shrink-0" /> {product.owner.location || product.city}
-                  </span>
+              <div className="px-6 space-y-5 -mt-10 relative z-10">
+                {/* Top Section with Avatar & Total Items Badge */}
+                <div className="flex items-end justify-between">
+                  <div className="flex items-end gap-3.5">
+                    <div className="relative">
+                      <img
+                        src={product.owner.avatar}
+                        alt={product.owner.name}
+                        className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md bg-white"
+                      />
+                      <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-xs" />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/90 px-3 py-2 rounded-2xl text-center shadow-sm">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">TOTAL ITEMS</span>
+                    <span className="text-xs font-extrabold text-slate-900 block mt-0.5">{product.owner.activeItemsCount || 8} active</span>
+                  </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Profession</span>
-                  <span className="text-xs font-bold text-slate-800 block truncate">
-                    💼 {product.owner.profession || "—"}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Age</span>
-                  <span className="text-xs font-bold text-slate-800 block truncate">
-                    🎂 {product.owner.age ? `${product.owner.age} yrs` : "—"}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Gender</span>
-                  <span className="text-xs font-bold text-slate-800 block truncate">
-                    👤 {product.owner.gender || "—"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Languages Spoken Section */}
-              {product.owner.languages && product.owner.languages.length > 0 && (
-  <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-2">
-    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">
-      Languages Spoken
-    </span>
-
-    <div className="flex flex-wrap gap-1.5">
-      {product.owner.languages.map((lang) => (
-        <span
-          key={lang}
-          className="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-xl shadow-xs flex items-center gap-1"
-        >
-          🌐 {lang}
-        </span>
-      ))}
-    </div>
-  </div>
-)}
-
-              {/* About Section */}
-              {product.owner.bio && (
-                <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-1.5">
-                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">About</span>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {product.owner.bio}
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+                    {product.owner.name}
+                  </h3>
+                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                    {product.owner.profession} in {product.owner.location || product.city}
                   </p>
                 </div>
-              )}
+
+                {/* Attribute Cards Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">LOCATION</span>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                      <MapPin className="w-3 h-3 text-[#2563EB] shrink-0" /> {product.owner.location || product.city}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">PROFESSION</span>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                      <Briefcase className="w-3 h-3 text-[#2563EB] shrink-0" /> {product.owner.profession || "—"}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">AGE</span>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                      <Cake className="w-3 h-3 text-[#2563EB] shrink-0" /> {product.owner.age ? `${product.owner.age} yrs` : "—"}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-2xl space-y-1">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">GENDER</span>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                      <UserIcon className="w-3 h-3 text-[#2563EB] shrink-0" /> {product.owner.gender || "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Languages Known from Backend Section */}
+                {product.owner.languages && product.owner.languages.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-2">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+                      <Globe className="w-3 h-3 text-[#2563EB]" /> LANGUAGES KNOWN
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {product.owner.languages.map((lang) => (
+                        <span
+                          key={lang}
+                          className="text-xs font-semibold bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-xl shadow-xs"
+                        >
+                          {lang}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* About Section */}
+                {product.owner.bio && (
+                  <div className="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-1.5">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">ABOUT</span>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {product.owner.bio}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
