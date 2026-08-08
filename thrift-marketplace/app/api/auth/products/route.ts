@@ -69,7 +69,12 @@ export async function GET(request: Request) {
   ownerBio: owner?.bio || "",
   ownerGender: owner?.gender || "",
   ownerProfession: owner?.profession || "",
-  ownerAge: owner?.age || "",
+  ownerAge: owner?.dob  
+    ? Math.floor(  
+        (Date.now() - new Date(owner.dob).getTime()) /  
+          (365.25 * 24 * 60 * 60 * 1000)  
+      )  
+    : "",
   ownerActiveItemsCount: products.filter(
     (item: any) => item.userId === detailedProduct.userId
   ).length,
