@@ -42,7 +42,7 @@ interface ListingFormState {
   maxStay: string;
 
   numGuests: string;
-  numBeds: string;
+  bedType: "";
 
   amenities: {
     wifi: boolean;
@@ -85,6 +85,7 @@ function ListItemContent() {
 
   // State for custom dropdown visibility
   const [isPropertyTypeOpen, setIsPropertyTypeOpen] = useState(false);
+  const [isBedTypeOpen, setIsBedTypeOpen] = useState(false);
 
   // Form State
   const [form, setForm] = useState<ListingFormState>({
@@ -110,7 +111,7 @@ function ListItemContent() {
     maxStay: "90 Days",
 
     numGuests: "1",
-    numBeds: "1",
+    bedType: "Separate Bed",
 
     amenities: {
       wifi: true,
@@ -481,16 +482,19 @@ function ListItemContent() {
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Number of Beds *</label>
-                        <input 
-                          type="number" 
-                          min="1"
-                          value={form.numBeds}
-                          onChange={(e) => updateField("numBeds", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
-                      </div>
+                      <div>  
+  <label className="block text-sm font-bold text-gray-800 mb-2">Bed Type</label>  
+  <select  
+    value={form.bedType}  
+    onChange={(e) => updateField("bedType", e.target.value)}  
+    className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"  
+  >  
+    <option value="Sofa">Sofa</option>  
+    <option value="Ground">Ground</option>  
+    <option value="Separate Bed">Separate Bed</option>  
+    <option value="Shared Bed">Shared Bed</option>  
+  </select>  
+</div>
                     </div>
                   </motion.div>
                 )}
@@ -915,7 +919,7 @@ function ListItemContent() {
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
                           <span className="text-xs text-gray-500 block">Beds</span>
-                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.numBeds} Bed(s)</span>
+                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.bedType}</span>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
                           <span className="text-xs text-gray-500 block">Check-in</span>
