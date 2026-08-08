@@ -1,4 +1,4 @@
-﻿// app/browse/page.tsx
+﻿// thrift-marketplace/app/browse/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, Suspense } from "react";
@@ -62,18 +62,6 @@ const PLACEHOLDERS = [
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {  
-  const R = 6371;  
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;  
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;  
-  const a =  
-    Math.sin(dLat / 2) ** 2 +  
-    Math.cos((lat1 * Math.PI) / 180) *  
-      Math.cos((lat2 * Math.PI) / 180) *  
-      Math.sin(dLon / 2) ** 2;  
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));  
-}  
-  
 function cityCenter(cityLabel: string) {  
   const name = cityLabel.split(",")[0].trim().toLowerCase();  
   return CITIES.find((c) => c.name.toLowerCase() === name) || null;  
@@ -110,23 +98,23 @@ function SearchContent() {
     searchParams.get("category") || "All Categories"
   );
   const [priceRange, setPriceRange] = useState(MAX_PRICE);
-  const [maxDistance, setMaxDistance] = useState(50);
   const [instantBookOnly, setInstantBookOnly] = useState(false);
   const [sortBy, setSortBy] = useState("recommended");
   
-  // Dynamic filter states
+  // Filter state variables
+  const [selectedCondition, setSelectedCondition] = useState("All");
   const [selectedGender, setSelectedGender] = useState("Any");
   const [selectedBedType, setSelectedBedType] = useState("Any");
   const [selectedLanguage, setSelectedLanguage] = useState("Any");
 
-  // Custom UI dropdown states for the sidebar filters
+  // Dropdown open states for mobile / modern UI filter popups
   const [isGenderOpen, setIsGenderOpen] = useState(false);
-  const [isBedOpen, setIsBedOpen] = useState(false);
-  const [isLangOpen, setIsLangOpen] = useState(false);
+  const [isBedTypeOpen, setIsBedTypeOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
 
   const genderRef = useRef<HTMLDivElement>(null);
-  const bedRef = useRef<HTMLDivElement>(null);
-  const langRef = useRef<HTMLDivElement>(null);
+  const bedTypeRef = useRef<HTMLDivElement>(null);
+  const languageRef = useRef<HTMLDivElement>(null);
 
   const [selectedCity, setSelectedCity] = useState(searchParams.get("location") || ALL_LOCATIONS);
   const [listings, setListings] = useState<ListingSummary[]>([]);
@@ -145,35 +133,6 @@ function SearchContent() {
   const sortRef = useRef<HTMLDivElement>(null);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const calendarDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Extract dynamic options from the fetched listings backend data
-  const genderOptions = React.useMemo(() => {
-    const set = new Set<string>();
-    listings.forEach((item: any) => {
-      if (item.genderPreference) set.add(item.genderPreference);
-    });
-    return ["Any", ...Array.from(set)];
-  }, [listings]);
-
-  const bedTypeOptions = React.useMemo(() => {
-    const set = new Set<string>();
-    listings.forEach((item: any) => {
-      if (item.bedType) set.add(item.bedType);
-    });
-    return ["Any", ...Array.from(set)];
-  }, [listings]);
-
-  const languageOptions = React.useMemo(() => {
-    const set = new Set<string>();
-    listings.forEach((item: any) => {
-      if (Array.isArray(item.languagesSpoken)) {
-        item.languagesSpoken.forEach((l: string) => set.add(l));
-      } else if (typeof item.languagesSpoken === "string") {
-        set.add(item.languagesSpoken);
-      }
-    });
-    return ["Any", ...Array.from(set)];
-  }, [listings]);
 
   useEffect(() => {
     const q = searchParams.get("q");
@@ -227,11 +186,11 @@ function SearchContent() {
       if (genderRef.current && !genderRef.current.contains(event.target as Node)) {
         setIsGenderOpen(false);
       }
-      if (bedRef.current && !bedRef.current.contains(event.target as Node)) {
-        setIsBedOpen(false);
+      if (bedTypeRef.current && !bedTypeRef.current.contains(event.target as Node)) {
+        setIsBedTypeOpen(false);
       }
-      if (langRef.current && !langRef.current.contains(event.target as Node)) {
-        setIsLangOpen(false);
+      if (languageRef.current && !languageRef.current.contains(event.target as Node)) {
+        setIsLanguageOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -331,28 +290,17 @@ function SearchContent() {
         listingLocation(item).toLowerCase().includes(cityName);
       const matchesPrice = priceRange >= MAX_PRICE || listingDailyPrice(item) <= priceRange;
       const matchesInstant = !instantBookOnly || item.instantBooking;
+      const matchesCondition = selectedCondition === "All" || item.condition === selectedCondition;
 
-      // Filter matching backend data fields
-      const matchesGender = selectedGender === "Any" || (item.genderPreference && item.genderPreference.toLowerCase() === selectedGender.toLowerCase());
-      const matchesBedType = selectedBedType === "Any" || (item.bedType && item.bedType.toLowerCase() === selectedBedType.toLowerCase());
-      const matchesLanguage = selectedLanguage === "Any" || (
-        Array.isArray(item.languagesSpoken)
-          ? item.languagesSpoken.some((l: string) => l.toLowerCase() === selectedLanguage.toLowerCase())
-          : item.languagesSpoken && item.languagesSpoken.toLowerCase() === selectedLanguage.toLowerCase()
-      );
-
-      const center = cityCenter(selectedCity);
-      const km = center && item.latitude && item.longitude
-        ? distanceKm(center.latitude, center.longitude, Number(item.latitude), Number(item.longitude))
-        : null;
-      const matchesDistance =
-        selectedCity === ALL_LOCATIONS || km === null || km <= maxDistance;
+      const matchesGender = selectedGender === "Any" || item.ownerGender === selectedGender;
+      const matchesBedType = selectedBedType === "Any" || item.bedType === selectedBedType;
+      const matchesLanguage = selectedLanguage === "Any" || (item.ownerLanguage || []).includes(selectedLanguage);
 
       const matchesDates =  
         !startDate || !endDate || !item.rental ||  
         !datesOverlap(startDate, endDate, item.rental.startDate, item.rental.endDate); 
   
-      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesGender && matchesBedType && matchesLanguage && matchesDates;
+      return matchesSearch && matchesCategory && matchesCity && matchesPrice && matchesInstant && matchesCondition && matchesGender && matchesBedType && matchesLanguage && matchesDates;
     })
     .sort((a, b) => {
       if (sortBy === "price-low") return listingDailyPrice(a) - listingDailyPrice(b);
@@ -648,10 +596,10 @@ function SearchContent() {
             onClick={() => {
               setSelectedCategory("All Categories");
               setPriceRange(MAX_PRICE);
-              setMaxDistance(50);
               setInstantBookOnly(false);
               setSelectedCity(ALL_LOCATIONS);
               setSearchQuery("");
+              setSelectedCondition("All");
               setSelectedGender("Any");
               setSelectedBedType("Any");
               setSelectedLanguage("Any");
@@ -682,30 +630,15 @@ function SearchContent() {
           </div>
         </div>
 
-        <div className="space-y-3 pt-4 border-t border-slate-100">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-bold text-slate-800">Max distance from centre</label>
-            <span className="text-sm font-extrabold text-[#2563EB]">{maxDistance} km</span>
-          </div>
-          <input 
-            type="range" 
-            min="1" 
-            max="50" 
-            value={maxDistance}
-            onChange={(e) => setMaxDistance(Number(e.target.value))}
-            className="w-full accent-[#2563EB] cursor-pointer"
-          />
-        </div>
-
-        {/* Gender Preference Custom Dropdown */}
-        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={genderRef}>
-          <label className="text-sm font-bold text-slate-800 block">Gender Preference</label>
+        {/* Gender Preference Custom Theme Dropdown Filter */}
+        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={genderRef}>  
+          <label className="text-sm font-bold text-slate-800 block">Gender Preference</label>  
           <div 
             onClick={() => setIsGenderOpen(!isGenderOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-slate-700 hover:border-[#2563EB] transition-all cursor-pointer"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-[#2563EB] hover:bg-white transition-all shadow-sm"
           >
-            <span>{selectedGender}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="font-semibold text-slate-700">{selectedGender}</span>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isGenderOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
           </div>
 
           <AnimatePresence>
@@ -714,22 +647,24 @@ function SearchContent() {
                 initial={{ opacity: 0, scale: 0.95, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-48 overflow-y-auto"
+                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1"
               >
-                {genderOptions.map((opt) => {
-                  const isSelected = selectedGender === opt;
+                {["Any", "Male", "Female", "Other"].map((gender) => {
+                  const isSelected = selectedGender === gender;
                   return (
                     <button
-                      key={opt}
+                      key={gender}
                       onClick={() => {
-                        setSelectedGender(opt);
+                        setSelectedGender(gender);
                         setIsGenderOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                        isSelected ? "bg-blue-50 text-[#2563EB]" : "text-slate-700 hover:bg-slate-50"
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isSelected 
+                          ? "bg-blue-50 text-[#2563EB]" 
+                          : "text-slate-700 hover:bg-slate-50"
                       }`}
                     >
-                      <span>{opt}</span>
+                      <span>{gender}</span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
                     </button>
                   );
@@ -739,39 +674,41 @@ function SearchContent() {
           </AnimatePresence>
         </div>
 
-        {/* Bed Type Custom Dropdown */}
-        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={bedRef}>
-          <label className="text-sm font-bold text-slate-800 block">Bed Type</label>
+        {/* Bed Type Custom Theme Dropdown Filter */}
+        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={bedTypeRef}>  
+          <label className="text-sm font-bold text-slate-800 block">Bed Type</label>  
           <div 
-            onClick={() => setIsBedOpen(!isBedOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-slate-700 hover:border-[#2563EB] transition-all cursor-pointer"
+            onClick={() => setIsBedTypeOpen(!isBedTypeOpen)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-[#2563EB] hover:bg-white transition-all shadow-sm"
           >
-            <span>{selectedBedType}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="font-semibold text-slate-700">{selectedBedType}</span>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isBedTypeOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
           </div>
 
           <AnimatePresence>
-            {isBedOpen && (
+            {isBedTypeOpen && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-48 overflow-y-auto"
+                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1"
               >
-                {bedTypeOptions.map((opt) => {
-                  const isSelected = selectedBedType === opt;
+                {["Any", "Sofa", "Ground", "Separate Bed", "Shared Bed"].map((bed) => {
+                  const isSelected = selectedBedType === bed;
                   return (
                     <button
-                      key={opt}
+                      key={bed}
                       onClick={() => {
-                        setSelectedBedType(opt);
-                        setIsBedOpen(false);
+                        setSelectedBedType(bed);
+                        setIsBedTypeOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                        isSelected ? "bg-blue-50 text-[#2563EB]" : "text-slate-700 hover:bg-slate-50"
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isSelected 
+                          ? "bg-blue-50 text-[#2563EB]" 
+                          : "text-slate-700 hover:bg-slate-50"
                       }`}
                     >
-                      <span>{opt}</span>
+                      <span>{bed}</span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
                     </button>
                   );
@@ -781,39 +718,41 @@ function SearchContent() {
           </AnimatePresence>
         </div>
 
-        {/* Language Spoken Custom Dropdown */}
-        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={langRef}>
-          <label className="text-sm font-bold text-slate-800 block">Language Spoken</label>
+        {/* Language Spoken Custom Theme Dropdown Filter */}
+        <div className="space-y-2 pt-4 border-t border-slate-100 relative" ref={languageRef}>  
+          <label className="text-sm font-bold text-slate-800 block">Language Spoken</label>  
           <div 
-            onClick={() => setIsLangOpen(!isLangOpen)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-semibold text-slate-700 hover:border-[#2563EB] transition-all cursor-pointer"
+            onClick={() => setIsLanguageOpen(!isLanguageOpen)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm flex items-center justify-between cursor-pointer hover:border-[#2563EB] hover:bg-white transition-all shadow-sm"
           >
-            <span>{selectedLanguage}</span>
-            <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="font-semibold text-slate-700">{selectedLanguage}</span>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isLanguageOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
           </div>
 
           <AnimatePresence>
-            {isLangOpen && (
+            {isLanguageOpen && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-48 overflow-y-auto"
+                className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 p-2 space-y-1 max-h-56 overflow-y-auto"
               >
-                {languageOptions.map((opt) => {
-                  const isSelected = selectedLanguage === opt;
+                {["Any", "English", "Hindi", "Tamil", "Telugu", "German"].map((lang) => {
+                  const isSelected = selectedLanguage === lang;
                   return (
                     <button
-                      key={opt}
+                      key={lang}
                       onClick={() => {
-                        setSelectedLanguage(opt);
-                        setIsLangOpen(false);
+                        setSelectedLanguage(lang);
+                        setIsLanguageOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                        isSelected ? "bg-blue-50 text-[#2563EB]" : "text-slate-700 hover:bg-slate-50"
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        isSelected 
+                          ? "bg-blue-50 text-[#2563EB]" 
+                          : "text-slate-700 hover:bg-slate-50"
                       }`}
                     >
-                      <span>{opt}</span>
+                      <span>{lang}</span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
                     </button>
                   );
@@ -822,6 +761,7 @@ function SearchContent() {
             )}
           </AnimatePresence>
         </div>
+
       </div>
 
       <div className="lg:col-span-9 space-y-6">
@@ -849,12 +789,12 @@ function SearchContent() {
               onClick={() => {
                 setSelectedCategory("All Categories");
                 setPriceRange(MAX_PRICE);
-                setMaxDistance(50);
                 setInstantBookOnly(false);
                 setSelectedCity(ALL_LOCATIONS);
                 setSearchQuery("");
                 setStartDate("");
                 setEndDate("");
+                setSelectedCondition("All");
                 setSelectedGender("Any");
                 setSelectedBedType("Any");
                 setSelectedLanguage("Any");

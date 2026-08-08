@@ -19,25 +19,27 @@ export interface ListingRental {
 
 export interface ListingSummary {
   id: string;
-  userId: string;
-  productName: string;
+  title?: string;
+  name?: string;
+  description?: string;
   category?: string;
-  propertyType?: string;
-  brand?: string;
-  dailyPrice: number;
-  images: string[];
-  primaryImageIndex?: number;
-  primaryImage?: string;
+  condition?: string;
+  dailyPrice?: number;
+  price?: number;
+  images?: string[];
+  image?: string;
+  location?: string;
   city?: string;
-  state?: string;
-  status?: string;
-  rental?: boolean | ListingRental;
-  createdAt?: string;
-  latitude?: number;
-  longitude?: number;
-  instantBooking?: boolean;
-  numGuests?: string | number;
-  petsAllowed?: boolean;
+  status: ListingStatus;
+  rental?: {
+    startDate: string;
+    endDate: string;
+  };
+  ownerName?: string;
+  ownerAvatar?: string;
+  bedType?: string;
+  ownerGender?: string;
+  ownerLanguage?: string[];
 }
 
 const FALLBACK_IMAGE =

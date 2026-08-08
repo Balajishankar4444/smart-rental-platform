@@ -40,9 +40,11 @@ export async function GET(request: Request) {
       const owner = users.find((u: any) => u.id === item.userId || u.email === item.userId);
       return {
         ...item,
-        ownerName: owner?.fullName || "Verified lender",
-        ownerAvatar: owner?.avatar || "",
-        ownerLanguage: owner?.language || "",
+        ownerName: owner ? `${owner.firstName || ""} ${owner.lastName || ""}`.trim() || owner.email : "Unknown Host",
+    ownerAvatar: owner?.avatar || "",
+    ownerGender: owner?.gender || "",
+    ownerLanguage: owner?.language || [],
+    bedType: item.bedType || "",
       };
     };
 
