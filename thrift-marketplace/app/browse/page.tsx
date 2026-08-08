@@ -353,454 +353,447 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
                             {item}
                           </button>
                         ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="md:col-span-3 relative" ref={cityDropdownRef}>
-                <div 
-                  onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
-                  className="flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent hover:bg-gray-200/60 focus-within:border-[#2563EB] focus-within:bg-white transition-all cursor-pointer"
-                >
-                  <MapPin className="h-5 w-5 text-[#2563EB] shrink-0" />
-                  <div className="w-full overflow-hidden">
-                    <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Location</span>
-                    <span className="text-sm font-semibold text-gray-900 block truncate">{selectedCity}</span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
-                </div>
-
-                <AnimatePresence>
-                  {isCityDropdownOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-3 max-h-72 flex flex-col"
-                    >
-                      <input 
-                        type="text"
-                        placeholder="Search city in Germany..."
-                        value={citySearchQuery}
-                        onChange={(e) => setCitySearchQuery(e.target.value)}
-                        className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#2563EB] mb-2"
-                      />
-                      <div className="overflow-y-auto space-y-1 pr-1">
-                        {filteredCities.map((city) => (
-                          <button
-                            key={city}
-                            onClick={() => {
-                              setSelectedCity(city);
-                              setIsCityDropdownOpen(false);
-                              setCitySearchQuery("");
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                              selectedCity === city ? "bg-blue-50 text-[#2563EB]" : "text-gray-700 hover:bg-gray-100"
-                            }`}
-                          >
-                            {city}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="md:col-span-2 relative" ref={calendarDropdownRef}>
-                <div 
-                  onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-                  className="flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent hover:bg-gray-200/60 focus-within:border-[#2563EB] focus-within:bg-white transition-all cursor-pointer"
-                >
-                  <Calendar className="h-5 w-5 text-gray-400 shrink-0" />
-                  <div className="w-full overflow-hidden">
-                    <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Dates</span>
-                    <span className="text-sm font-semibold text-gray-900 block truncate">
-                      {startDate ? `${formatDisplayDate(startDate)} ${endDate ? `- ${formatDisplayDate(endDate)}` : ""}` : "Add dates"}
-                    </span>
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {isCalendarOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      className="absolute right-0 md:left-auto md:right-0 top-full mt-3 w-[340px] bg-white rounded-[24px] shadow-2xl border border-gray-100 z-50 p-5"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-bold text-gray-900">
-                          {MONTH_NAMES[currentMonth]} {currentYear}
-                        </h3>
-                        <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                          <button 
-                            onClick={prevMonth}
-                            aria-label="Previous month"
-                            className="p-1.5 rounded-lg text-gray-600 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </button>
-                          <button 
-                            onClick={nextMonth}
-                            aria-label="Next month"
-                            className="p-1.5 rounded-lg text-gray-600 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                        {WEEKDAYS.map((w) => (
-                          <span key={w} className="text-[11px] font-bold text-gray-400 uppercase">{w}</span>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-1 text-center">
-                        {getDaysInMonth(currentYear, currentMonth).map(({ day, dateStr, isCurrentMonth }, idx) => {
-                          const isSelected = dateStr === startDate || dateStr === endDate;
-                          const isInRange = startDate && endDate && dateStr > startDate && dateStr < endDate;
-                          const isPast = dateStr < todayStr;
-
-                          return (
-                            <button
-                              key={idx}
-                              disabled={isPast}
-                              onClick={() => handleDateClick(dateStr)}
-                              className={`h-9 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                                isPast
-                                  ? "text-gray-300 line-through cursor-not-allowed"
-                                  : isSelected 
-                                  ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105" 
-                                  : isInRange 
-                                  ? "bg-blue-50 text-[#2563EB] rounded-none" 
-                                  : isCurrentMonth 
-                                  ? "text-gray-800 hover:bg-gray-100" 
-                                  : "text-gray-300 hover:bg-gray-50"
-                              }`}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-100">
-                        <button 
-                          onClick={() => { setStartDate(""); setEndDate(""); }}
-                          className="text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                        <button 
-                          onClick={() => setIsCalendarOpen(false)}
-                          className="px-4 py-2 bg-[#2563EB] text-white rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors cursor-pointer"
-                        >
-                          Done
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="md:col-span-2 relative" ref={sortRef}>
-                <div
-                  onClick={() => setIsSortOpen(!isSortOpen)}
-                  className="flex items-center justify-between rounded-[18px] bg-gray-100/80 px-4 py-3.5 border border-transparent hover:bg-gray-200/60 cursor-pointer transition-all"
-                >
-                  <span className="text-sm font-semibold text-gray-800 truncate">{currentSortLabel}</span>
-                  <ArrowUpDown className="w-4 h-4 text-gray-400 shrink-0" />
-                </div>
-
-                <AnimatePresence>
-                  {isSortOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 8 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                      className="absolute right-0 top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 p-2 space-y-1"
-                    >
-                      {SORT_OPTIONS.map((option) => {
-                        const isSelected = sortBy === option.id;
-                        return (
-                          <button
-                            key={option.id}
-                            onClick={() => {
-                              setSortBy(option.id);
-                              setIsSortOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                              isSelected 
-                                ? "bg-blue-50 text-[#2563EB]" 
-                                : "text-slate-700 hover:bg-slate-50"
-                            }`}
-                          >
-                            <span>{option.label}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
-                          </button>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-        </section>
 
-        {/* Categories row styled to match user's category pill list, including the host badge as a direct selectable/scrollable pill element matching the exact layout */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8">
-          {user && (
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-slate-900 shadow-xs">
-              {user.photoURL ? (
-                <img 
-                  src={user.photoURL} 
-                  alt={user.displayName || "Host"} 
-                  className="w-5 h-5 rounded-full object-cover ring-2 ring-blue-400/50 shadow-xs" 
-                />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-blue-400/50">
-                  {user.displayName?.charAt(0) || user.email?.charAt(0) || "H"}
-                </div>
+            <div className="md:col-span-3 relative" ref={cityDropdownRef}>
+              <div 
+                onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
+                className="flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent hover:bg-gray-200/60 focus-within:border-[#2563EB] focus-within:bg-white transition-all cursor-pointer"
+              >
+                <MapPin className="h-5 w-5 text-[#2563EB] shrink-0" />
+                <div className="w-full overflow-hidden">
+                  <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Location</span>
+                  <span className="text-sm font-semibold text-gray-900 block truncate">{selectedCity}</span>
+              </div>
+              <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
+            </div>
+
+            <AnimatePresence>
+              {isCityDropdownOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-3 max-h-72 flex flex-col"
+                >
+                  <input 
+                    type="text"
+                    placeholder="Search city in Germany..."
+                    value={citySearchQuery}
+                    onChange={(e) => setCitySearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#2563EB] mb-2"
+                  />
+                  <div className="overflow-y-auto space-y-1 pr-1">
+                    {filteredCities.map((city) => (
+                      <button
+                        key={city}
+                        onClick={() => {
+                          setSelectedCity(city);
+                          setIsCityDropdownOpen(false);
+                          setCitySearchQuery("");
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                          selectedCity === city ? "bg-blue-50 text-[#2563EB]" : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
               )}
-              <span className="truncate max-w-[140px] font-bold">{user.displayName || user.email || "Host Account"}</span>
+            </AnimatePresence>
+          </div>
+
+          <div className="md:col-span-2 relative" ref={calendarDropdownRef}>
+            <div 
+              onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+              className="flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent hover:bg-gray-200/60 focus-within:border-[#2563EB] focus-within:bg-white transition-all cursor-pointer"
+            >
+              <Calendar className="h-5 w-5 text-gray-400 shrink-0" />
+              <div className="w-full overflow-hidden">
+                <span className="block text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Dates</span>
+                <span className="text-sm font-semibold text-gray-900 block truncate">
+                  {startDate ? `${formatDisplayDate(startDate)} ${endDate ? `- ${formatDisplayDate(endDate)}` : ""}` : "Add dates"}
+                </span>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {isCalendarOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="absolute right-0 md:left-auto md:right-0 top-full mt-3 w-[340px] bg-white rounded-[24px] shadow-2xl border border-gray-100 z-50 p-5"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-gray-900">
+                      {MONTH_NAMES[currentMonth]} {currentYear}
+                    </h3>
+                    <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                      <button 
+                        onClick={prevMonth}
+                        aria-label="Previous month"
+                        className="p-1.5 rounded-lg text-gray-600 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={nextMonth}
+                        aria-label="Next month"
+                        className="p-1.5 rounded-lg text-gray-600 hover:bg-white hover:shadow-sm transition-all cursor-pointer"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                    {WEEKDAYS.map((w) => (
+                      <span key={w} className="text-[11px] font-bold text-gray-400 uppercase">{w}</span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {getDaysInMonth(currentYear, currentMonth).map(({ day, dateStr, isCurrentMonth }, idx) => {
+                      const isSelected = dateStr === startDate || dateStr === endDate;
+                      const isInRange = startDate && endDate && dateStr > startDate && dateStr < endDate;
+                      const isPast = dateStr < todayStr;
+
+                      return (
+                        <button
+                          key={idx}
+                          disabled={isPast}
+                          onClick={() => handleDateClick(dateStr)}
+                          className={`h-9 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                            isPast
+                              ? "text-gray-300 line-through cursor-not-allowed"
+                              : isSelected 
+                              ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20 font-bold scale-105" 
+                              : isInRange 
+                              ? "bg-blue-50 text-[#2563EB] rounded-none" 
+                              : isCurrentMonth 
+                              ? "text-gray-800 hover:bg-gray-100" 
+                              : "text-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-5 pt-3 border-t border-gray-100">
+                    <button 
+                      onClick={() => { setStartDate(""); setEndDate(""); }}
+                      className="text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                    <button 
+                      onClick={() => setIsCalendarOpen(false)}
+                      className="px-4 py-2 bg-[#2563EB] text-white rounded-xl text-xs font-bold shadow-sm hover:bg-blue-700 transition-colors cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="md:col-span-2 relative" ref={sortRef}>
+            <div
+              onClick={() => setIsSortOpen(!isSortOpen)}
+              className="flex items-center justify-between rounded-[18px] bg-gray-100/80 px-4 py-3.5 border border-transparent hover:bg-gray-200/60 cursor-pointer transition-all"
+            >
+              <span className="text-sm font-semibold text-gray-800 truncate">{currentSortLabel}</span>
+              <ArrowUpDown className="w-4 h-4 text-gray-400 shrink-0" />
+            </div>
+
+            <AnimatePresence>
+              {isSortOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                  className="absolute right-0 top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 p-2 space-y-1"
+                >
+                  {SORT_OPTIONS.map((option) => {
+                    const isSelected = sortBy === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setSortBy(option.id);
+                          setIsSortOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                          isSelected 
+                            ? "bg-blue-50 text-[#2563EB]" 
+                            : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8">
+      {user && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-slate-900 shadow-xs">
+          {user.photoURL ? (
+            <img 
+              src={user.photoURL} 
+              alt={user.displayName || "Host"} 
+              className="w-5 h-5 rounded-full object-cover ring-2 ring-blue-400/50 shadow-xs" 
+            />
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-blue-400/50">
+              {user.displayName?.charAt(0) || user.email?.charAt(0) || "H"}
             </div>
           )}
+          <span className="truncate max-w-[140px] font-bold">{user.displayName || user.email || "Host Account"}</span>
+        </div>
+      )}
 
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.name;
-            return (
-              <button
-                key={cat.name}
-                onClick={() => setSelectedCategory(cat.name)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 cursor-pointer ${
-                  isSelected 
-                    ? "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white shadow-md shadow-blue-500/25 scale-105" 
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                {cat.icon(isSelected)}
-                <span>{cat.name}</span>
-              </button>
-            );
-          })}
+      {CATEGORIES.map((cat) => {
+        const isSelected = selectedCategory === cat.name;
+        return (
+          <button
+            key={cat.name}
+            onClick={() => setSelectedCategory(cat.name)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 cursor-pointer ${
+              isSelected 
+                ? "bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white shadow-md shadow-blue-500/25 scale-105" 
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            {cat.icon(isSelected)}
+            <span>{cat.name}</span>
+          </button>
+        );
+      })}
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+      <div className="hidden lg:block lg:col-span-3 bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80 sticky top-28 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-[#2563EB]" />
+            <h3 className="font-bold text-base text-slate-900">Filters</h3>
+          </div>
+          <button 
+            onClick={() => {
+              setSelectedCategory("All Categories");
+              setPriceRange(MAX_PRICE);
+              setMaxDistance(50);
+              setInstantBookOnly(false);
+              setSelectedCity(ALL_LOCATIONS);
+              setSearchQuery("");
+            }}
+            className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
+          >
+            Reset All
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-bold text-slate-800">Max Price / Night</label>
+            <span className="text-sm font-extrabold text-[#2563EB]">₹{priceRange} / night</span>
+          </div>
+          <input 
+            type="range" 
+            min="0" 
+            max={MAX_PRICE}
+            step="50"
+            value={priceRange}
+            onChange={(e) => setPriceRange(Number(e.target.value))}
+            className="w-full accent-[#2563EB] cursor-pointer"
+          />
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+            <span>0</span>
+            <span>₹20,000</span>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-bold text-slate-800">Max distance from centre</label>
+            <span className="text-sm font-extrabold text-[#2563EB]">{maxDistance} km</span>
+          </div>
+          <input 
+            type="range" 
+            min="1" 
+            max="50" 
+            value={maxDistance}
+            onChange={(e) => setMaxDistance(Number(e.target.value))}
+            className="w-full accent-[#2563EB] cursor-pointer"
+          />
+        </div>
+
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+          <label className="text-sm font-bold text-slate-800 block">Preferences</label>
           
-          <div className="hidden lg:block lg:col-span-3 bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80 sticky top-28 space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-[#2563EB]" />
-                <h3 className="font-bold text-base text-slate-900">Filters</h3>
-              </div>
-              <button 
-                onClick={() => {
-                  setSelectedCategory("All Categories");
-                  setPriceRange(MAX_PRICE);
-                  setMaxDistance(50);
-                  setInstantBookOnly(false);
-                  setSelectedCity(ALL_LOCATIONS);
-                  setSearchQuery("");
-                }}
-                className="text-xs font-bold text-[#2563EB] hover:underline cursor-pointer"
-              >
-                Reset All
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-slate-800">Max Price / Night</label>
-                <span className="text-sm font-extrabold text-[#2563EB]">₹{priceRange} / night</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" 
-                max={MAX_PRICE}
-                step="50"
-                value={priceRange}
-                onChange={(e) => setPriceRange(Number(e.target.value))}
-                className="w-full accent-[#2563EB] cursor-pointer"
-              />
-              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                <span>0</span>
-                <span>₹20,000</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-bold text-slate-800">Max distance from centre</label>
-                <span className="text-sm font-extrabold text-[#2563EB]">{maxDistance} km</span>
-              </div>
-              <input 
-                type="range" 
-                min="1" 
-                max="50" 
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                className="w-full accent-[#2563EB] cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <label className="text-sm font-bold text-slate-800 block">Preferences</label>
-              
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                  <Zap className="w-4 h-4 text-amber-500" /> Instant Book
-                </span>
-                <input 
-                  type="checkbox" 
-                  checked={instantBookOnly}
-                  onChange={(e) => setInstantBookOnly(e.target.checked)}
-                  className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB] cursor-pointer"
-                />
-              </label>
-
-            </div>
-          </div>
-
-          <div className="lg:col-span-9 space-y-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-600">
-                Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> rooms available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> {startDate && endDate ? <>for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span></> : ""}
-              </p>
-            </div>
-
-            {isLoadingListings ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
-                <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500">Loading rooms...</p>
-              </div>
-            ) : filteredListings.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm space-y-4">
-                <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mx-auto shadow-inner">
-                  <Search className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold font-heading text-slate-900">No matching rooms found in {selectedCity}</h3>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  Try switching your city location or dates using the picker above, adjusting your search filters, or increasing your max price range.
-                </p>
-                <button 
-                  onClick={() => {
-                    setSelectedCategory("All Categories");
-                    setPriceRange(MAX_PRICE);
-                    setMaxDistance(50);
-                    setInstantBookOnly(false);
-                    setSelectedCity(ALL_LOCATIONS);
-                    setSearchQuery("");
-                  }}
-                  className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold text-sm shadow-md shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
-                >
-                  Clear All Filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredListings.map((item) => {
-                  const center = cityCenter(selectedCity);
-                  const km =
-                    center && item.latitude && item.longitude
-                      ? distanceKm(center.latitude, center.longitude, Number(item.latitude), Number(item.longitude))
-                      : null;
-
-                  return (
-                    <motion.div 
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => {  
-                        const q = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";  
-                        window.location.href = `/listings/${item.id}${q}`;  
-                      }}
-                      className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer flex flex-col group"
-                    >
-                      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-                        <img 
-                          src={listingImage(item)} 
-                          alt={listingTitle(item)} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-3 left-3 flex flex-col gap-1">
-                          {item.instantBooking && (
-                            <span className="bg-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
-                              <Zap className="w-3 h-3 fill-current" /> Instant Book
-                            </span>
-                          )}
-                        </div>
-                        <div className="absolute bottom-3 left-3 bg-slate-900/70 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-[#2563EB]" /> {listingLocation(item)}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(item.id);
-                          }}
-                          aria-label={isFavorite(item.id) ? "Remove from favorites" : "Add to favorites"}
-                          aria-pressed={isFavorite(item.id)}
-                          className="absolute top-3 right-3 h-9 w-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md cursor-pointer"
-                        >
-                          <Heart
-                            className={`w-4 h-4 ${
-                              isFavorite(item.id) ? "fill-red-500 text-red-500" : "text-slate-600"
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-[#2563EB] bg-blue-50 px-2.5 py-0.5 rounded-full">
-                              {item.category}
-                            </span>
-                            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                              <ShieldCheck className="w-3.5 h-3.5" /> Available
-                            </span>
-                          </div>
-
-                          <h3 className="font-bold text-slate-900 text-base line-clamp-2 group-hover:text-[#2563EB] transition-colors">
-                            {listingTitle(item)}
-                          </h3>
-
-                          <div className="flex items-center gap-1 text-xs text-slate-500">  
-                            <MapPin className="w-3.5 h-3.5 text-[#2563EB]" />  
-                            <span>{item.city}</span>  
-                            {km !== null && (  
-                              <span className="font-semibold text-slate-700 truncate">  
-                                · {km.toFixed(1)} km from {selectedCity.split(",")[0]} centre  
-                              </span>  
-                            )}  
-                          </div>
-                        </div>
-
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                          <div>
-                            <span className="text-lg font-extrabold text-[#2563EB]">₹{listingDailyPrice(item)}</span>
-                            <span className="text-xs text-slate-500"> / night</span>
-                          </div>
-                          <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 group-hover:bg-gradient-to-r group-hover:from-[#2563EB] group-hover:to-[#4F46E5] group-hover:text-white transition-all">
-                            Book Now
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-amber-500" /> Instant Book
+            </span>
+            <input 
+              type="checkbox" 
+              checked={instantBookOnly}
+              onChange={(e) => setInstantBookOnly(e.target.checked)}
+              className="w-4 h-4 text-[#2563EB] rounded focus:ring-[#2563EB] cursor-pointer"
+            />
+          </label>
 
         </div>
+      </div>
+
+      <div className="lg:col-span-9 space-y-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-slate-600">
+            Showing <span className="text-slate-900 font-extrabold">{filteredListings.length}</span> rooms available in <span className="text-slate-900 font-extrabold">{selectedCity}</span> {startDate && endDate ? <>for <span className="text-slate-900 font-extrabold">{formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}</span></> : ""}
+          </p>
+        </div>
+
+        {isLoadingListings ? (
+          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm">
+            <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm font-medium text-slate-500">Loading rooms...</p>
+          </div>
+        ) : filteredListings.length === 0 ? (
+          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm space-y-4">
+            <div className="w-16 h-16 bg-blue-50 text-[#2563EB] rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <Search className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-bold font-heading text-slate-900">No rooms found</h3>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto">
+              We couldn't find any rooms matching your current filters or search criteria. Try resetting your filters or expanding your search distance.
+            </p>
+            <button
+              onClick={() => {
+                setSelectedCategory("All Categories");
+                setPriceRange(MAX_PRICE);
+                setMaxDistance(50);
+                setInstantBookOnly(false);
+                setSelectedCity(ALL_LOCATIONS);
+                setSearchQuery("");
+                setStartDate("");
+                setEndDate("");
+              }}
+              className="px-6 py-2.5 bg-[#2563EB] text-white rounded-2xl text-xs font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all cursor-pointer"
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredListings.map((item) => {
+              const id = item.id || "";
+              const fav = isFavorite(id);
+              const price = listingDailyPrice(item);
+              const image = listingImage(item);
+              const title = listingTitle(item);
+              const location = listingLocation(item);
+
+              return (
+                <motion.div
+                  key={id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="group bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                >
+                  <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+                    <img
+                      src={image}
+                      alt={title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60" />
+                    
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleFavorite(id);
+                      }}
+                      aria-label="Save to favorites"
+                      className="absolute top-4 right-4 p-2.5 rounded-full bg-white/80 backdrop-blur-md text-slate-700 hover:bg-white hover:text-red-500 shadow-md transition-all cursor-pointer"
+                    >
+                      <Heart className={`w-4 h-4 ${fav ? "fill-red-500 text-red-500" : ""}`} />
+                    </button>
+
+                    {item.instantBooking && (
+                      <div className="absolute top-4 left-4 px-3 py-1 bg-amber-500/90 backdrop-blur-md text-white rounded-full text-[10px] font-extrabold tracking-wide uppercase flex items-center gap-1 shadow-md">
+                        <Zap className="w-3 h-3 fill-current" /> Instant Book
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
+                      <span className="text-xs font-bold px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/20">
+                        {item.category || item.propertyType || "Room"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                        <MapPin className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
+                        <span className="truncate">{location}</span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 line-clamp-1 group-hover:text-[#2563EB] transition-colors">
+                        {title}
+                      </h4>
+
+                      <div className="flex items-center gap-2.5 pt-2">  
+                        <img  
+                          src={item.ownerAvatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"}  
+                          alt={item.ownerName}  
+                          className="h-7 w-7 rounded-full object-cover border border-slate-200"  
+                        />  
+                        <p className="text-xs font-bold text-slate-700 leading-none">{item.ownerName}</p>  
+                      </div>  
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-slate-600">
+                        <span className="text-lg font-extrabold text-slate-900">
+                          ₹{price} <span className="text-xs font-normal text-slate-500">/ night</span>
+                        </span>
+                      </div>
+                      <a
+                        href={`/listings/${id}`}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                      >
+                        Book Now
+                      </a>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
       </main>
 
       <Footer />
@@ -810,7 +803,11 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
 
 export default function BrowsePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">Loading browse...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
       <SearchContent />
     </Suspense>
   );
