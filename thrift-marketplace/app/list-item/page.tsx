@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { 
   Home, Building2, MapPin, Calendar, DollarSign, Eye, RefreshCw, X, UploadCloud, 
   Trash2, Star, Zap, AlertCircle, Check, ArrowRight, ArrowLeft, Save, ShieldCheck, 
-  Info, Sparkles, Users, BedDouble, Clock, Coffee, ChevronDown
+  Info, Sparkles, Users, BedDouble, Clock, Coffee, ChevronDown, Lock
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -18,6 +18,7 @@ import { useAuth } from "@/app/context/AuthContext";
 // TYPES & INTERFACES
 // ==========================================
 type PropertyType = "Shared Room" | "Private Room" | "Apartment" | "";
+type BedType = "Sofa" | "Ground" | "Separate Bed" | "Shared Bed" | "";
 
 interface ListingFormState {
   propertyType: PropertyType;
@@ -41,8 +42,11 @@ interface ListingFormState {
   minStay: string;
   maxStay: string;
 
-  numGuests: string;
-  bedType: "";
+  // Filter-ready backend properties
+  numGuests: number;
+  petsAllowed: boolean;
+
+  bedType: BedType;
 
   amenities: {
     wifi: boolean;
@@ -62,10 +66,28 @@ interface ListingFormState {
   checkInTime: string;
   checkOutTime: string;
   smokingAllowed: boolean;
-  petsAllowed: boolean;
   visitorsAllowed: boolean;
   quietHours: string;
 }
+
+const GERMAN_STATES = [
+  "Baden-Württemberg",
+  "Bavaria (Bayern)",
+  "Berlin",
+  "Brandenburg",
+  "Bremen",
+  "Hamburg",
+  "Hesse (Hessen)",
+  "Lower Saxony (Niedersachsen)",
+  "Mecklenburg-Vorpommern",
+  "North Rhine-Westphalia (Nordrhein-Westfalen)",
+  "Rhineland-Palatinate (Rheinland-Pfalz)",
+  "Saarland",
+  "Saxony (Sachsen)",
+  "Saxony-Anhalt (Sachsen-Anhalt)",
+  "Schleswig-Holstein",
+  "Thuringia (Thüringen)"
+];
 
 export default function ListItemPage() {
   return (
@@ -77,15 +99,27 @@ export default function ListItemPage() {
 
 function ListItemContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [createdProductId, setCreatedProductId] = useState<string | null>(null);
+
+  // Error tracking state for inline validation highlights
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // State for custom dropdown visibility
   const [isPropertyTypeOpen, setIsPropertyTypeOpen] = useState(false);
   const [isBedTypeOpen, setIsBedTypeOpen] = useState(false);
+  const [isStateOpen, setIsStateOpen] = useState(false);
+  const [isPetsAllowedOpen, setIsPetsAllowedOpen] = useState(false);
+  
+  const bedRef = React.useRef<HTMLDivElement>(null);
+  const stateRef = React.useRef<HTMLDivElement>(null);
+  const petsRef = React.useRef<HTMLDivElement>(null);
 
   // Form State
   const [form, setForm] = useState<ListingFormState>({
@@ -110,7 +144,10 @@ function ListItemContent() {
     minStay: "1 Night",
     maxStay: "90 Days",
 
-    numGuests: "1",
+    // Initialized backend-ready fields for filtering
+    numGuests: 1,
+    petsAllowed: false,
+
     bedType: "Separate Bed",
 
     amenities: {
@@ -134,7 +171,6 @@ function ListItemContent() {
     checkInTime: "02:00 PM",
     checkOutTime: "11:00 AM",
     smokingAllowed: false,
-    petsAllowed: false,
     visitorsAllowed: true,
     quietHours: "10:00 PM - 07:00 AM",
   });
@@ -142,16 +178,25 @@ function ListItemContent() {
   const publishListing = async () => {
     console.log("PUBLISH BUTTON CLICKED");
     if (!user) {
-      alert("Please sign in again before publishing your listing.");
+      setErrorMessage("Please sign in again before publishing your listing.");
       return;
     }
     try {
+      // Payload structurally mapped with backend filter properties: numGuests & petsAllowed
+      const payload = {
+        ...form,
+        userId: user.id,
+        category: "Rooms",
+        maxGuests: Number(form.numGuests), // Explicitly structured for backend filter queries
+        petsAllowed: Boolean(form.petsAllowed) // Explicitly structured boolean for backend filter queries
+      };
+
       const response = await fetch("/api/auth/products", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...form, userId: user.id, category: "Rooms" }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -159,31 +204,44 @@ function ListItemContent() {
       if (response.ok) {
         localStorage.removeItem("rentit_listing_draft");
         setIsSubmitted(true);
+        
+        // Capture newly created product ID for dynamic routing (fallback to insertedId if needed)
+        const newId = result.id || result.productId || result._id || result.insertedId;
+        if (newId) {
+          setCreatedProductId(newId);
+        }
       } else {
         console.error("Failed to save room listing", result);
-        alert(result?.error || "Failed to save room listing");
+        setErrorMessage(result?.error || "Failed to save room listing");
       }
     } catch (error) {
       console.error(error);
-      alert("Something went wrong.");
+      setErrorMessage("Something went wrong.");
     }
   };
 
-  // Auto-save draft effect
+  // Auto-save draft effect with QuotaExceededError protection
   useEffect(() => {
     const timer = setTimeout(() => {
       setSavingDraft(true);
-      localStorage.setItem("rentit_listing_draft", JSON.stringify(form));
-      setTimeout(() => {
-        setSavingDraft(false);
+      try {
+        localStorage.setItem("rentit_listing_draft", JSON.stringify(form));
         setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      }, 800);
+      } catch (error) {
+        console.warn("Storage quota exceeded when saving draft (likely due to large base64 images).", error);
+      } finally {
+        setSavingDraft(false);
+      }
     }, 2000);
     return () => clearTimeout(timer);
   }, [form]);
 
   const updateField = (field: keyof ListingFormState, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: false }));
+    }
+    if (errorMessage) setErrorMessage(null);
   };
 
   const updateAmenity = (key: keyof ListingFormState["amenities"], val: boolean) => {
@@ -209,13 +267,47 @@ function ListItemContent() {
           ...prev,
           images: [...prev.images, ...images]
         }));
+        if (errors.images) setErrors(prev => ({ ...prev, images: false }));
       });
     }
 
     e.target.value = "";
   };
 
+  const validateCurrentStep = () => {
+    const newErrors: Record<string, boolean> = {};
+
+    if (currentStep === 1) {
+      if (!form.propertyType) newErrors.propertyType = true;
+      if (!form.productName.trim()) newErrors.productName = true;
+      if (!form.numGuests || form.numGuests < 1) newErrors.numGuests = true;
+      if (!form.bedType) newErrors.bedType = true;
+    } else if (currentStep === 2) {
+      if (!form.country.trim()) newErrors.country = true;
+      if (!form.state.trim()) newErrors.state = true;
+      if (!form.city.trim()) newErrors.city = true;
+      if (!form.postalCode.trim()) newErrors.postalCode = true;
+      if (!form.streetName.trim()) newErrors.streetName = true;
+      if (!form.houseNumber.trim()) newErrors.houseNumber = true;
+    } else if (currentStep === 3) {
+      if (!form.dailyPrice || Number(form.dailyPrice) <= 0) newErrors.dailyPrice = true;
+    } else if (currentStep === 5) {
+      if (form.images.length === 0) newErrors.images = true;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setErrorMessage("Please fill out all required highlighted fields correctly.");
+      return false;
+    }
+
+    setErrors({});
+    setErrorMessage(null);
+    return true;
+  };
+
   const nextStep = () => {
+    if (!validateCurrentStep()) return;
     if (currentStep < totalSteps) {
       setCurrentStep(prev => prev + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -223,6 +315,8 @@ function ListItemContent() {
   };
 
   const prevStep = () => {
+    setErrors({});
+    setErrorMessage(null);
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -246,7 +340,7 @@ function ListItemContent() {
               Property Listed Successfully! 🎉
             </h1>
             <p className="text-gray-600 mb-8">
-              Your room is now live and optimized for maximum trust and booking conversion on RentIt. Verified guests in your area can now discover and book your space.
+              Your room is now live and indexed with backend filter parameters (`numGuests: {form.numGuests}`, `petsAllowed: {form.petsAllowed ? "Yes" : "No"}`). Verified guests can now discover and book your space.
             </p>
 
             <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 text-left flex items-center gap-4 shadow-sm">
@@ -270,7 +364,13 @@ function ListItemContent() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <button 
-                onClick={() => window.location.href = "/dashboard/view-booking"}
+                onClick={() => {
+                  if (createdProductId) {
+                    router.push(`/listings/${createdProductId}`);
+                  } else {
+                    router.push(`/listings/${createdProductId}`);
+                  }
+                }}
                 className="flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] text-white font-semibold shadow-lg shadow-blue-500/25 hover:opacity-95 transition-all cursor-pointer"
               >
                 View Listing
@@ -278,6 +378,7 @@ function ListItemContent() {
               <button 
                 onClick={() => {
                   setIsSubmitted(false);
+                  setCreatedProductId(null);
                   setCurrentStep(1);
                   setForm(prev => ({ ...prev, productName: "" }));
                 }}
@@ -329,6 +430,13 @@ function ListItemContent() {
           </div>
         </div>
 
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700 shadow-sm animate-shake">
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+            <span className="text-sm font-semibold">{errorMessage}</span>
+          </div>
+        )}
+
         <div className="glass-panel rounded-2xl p-4 mb-8 shadow-xs border border-gray-200/80 overflow-x-auto">
           <div className="flex items-center justify-between min-w-[700px] gap-2">
             {[
@@ -344,7 +452,13 @@ function ListItemContent() {
               return (
                 <div 
                   key={step.num} 
-                  onClick={() => step.num < currentStep && setCurrentStep(step.num)}
+                  onClick={() => {
+                    if (step.num < currentStep) {
+                      setCurrentStep(step.num);
+                    } else if (step.num > currentStep && validateCurrentStep()) {
+                      setCurrentStep(step.num);
+                    }
+                  }}
                   className={`flex items-center gap-3 flex-1 px-3 py-2 rounded-xl transition-all ${
                     step.num < currentStep ? "cursor-pointer hover:bg-gray-100/60" : ""
                   }`}
@@ -391,12 +505,13 @@ function ListItemContent() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      {/* CUSTOM THEMED PROPERTY TYPE DROPDOWN */}
                       <div className="relative">
                         <label className="block text-sm font-bold text-gray-800 mb-2">Property Type *</label>
                         <div 
                           onClick={() => setIsPropertyTypeOpen(!isPropertyTypeOpen)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer flex items-center justify-between select-none transition-all hover:border-blue-300"
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs cursor-pointer flex items-center justify-between select-none transition-all border ${
+                            errors.propertyType ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 hover:border-blue-300"
+                          }`}
                         >
                           <span className="flex items-center gap-2">
                             {form.propertyType === "Apartment" && <Building2 className="w-4 h-4 text-[#2563EB]" />}
@@ -406,6 +521,7 @@ function ListItemContent() {
                           </span>
                           <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isPropertyTypeOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
                         </div>
+                        {errors.propertyType && <p className="mt-1 text-xs text-red-500 font-semibold">Please select a property type.</p>}
 
                         <AnimatePresence>
                           {isPropertyTypeOpen && (
@@ -456,8 +572,11 @@ function ListItemContent() {
                           placeholder="e.g., Cozy Private Room near City Center & Metro"
                           value={form.productName}
                           onChange={(e) => updateField("productName", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs border ${
+                            errors.productName ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                          }`}
                         />
+                        {errors.productName && <p className="mt-1 text-xs text-red-500 font-semibold">Please enter a listing title.</p>}
                       </div>
 
                       <div className="sm:col-span-2">
@@ -471,30 +590,77 @@ function ListItemContent() {
                         />
                       </div>
 
+                      {/* Filter-ready backend field: Max Guests Accommodated */}
                       <div>
                         <label className="block text-sm font-bold text-gray-800 mb-2">Max Guests Accommodated *</label>
                         <input 
                           type="number" 
                           min="1"
                           value={form.numGuests}
-                          onChange={(e) => updateField("numGuests", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                          onChange={(e) => updateField("numGuests", parseInt(e.target.value) || 1)}
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs border ${
+                            errors.numGuests ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                          }`}
                         />
+                        {errors.numGuests && <p className="mt-1 text-xs text-red-500 font-semibold">Please specify a valid guest count.</p>}
                       </div>
 
-                      <div>  
-  <label className="block text-sm font-bold text-gray-800 mb-2">Bed Type</label>  
-  <select  
-    value={form.bedType}  
-    onChange={(e) => updateField("bedType", e.target.value)}  
-    className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs cursor-pointer"  
-  >  
-    <option value="Sofa">Sofa</option>  
-    <option value="Ground">Ground</option>  
-    <option value="Separate Bed">Separate Bed</option>  
-    <option value="Shared Bed">Shared Bed</option>  
-  </select>  
-</div>
+                      <div className="relative" ref={bedRef}>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Bed Type *</label>
+                        <div 
+                          onClick={() => setIsBedTypeOpen(!isBedTypeOpen)}
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs cursor-pointer flex items-center justify-between select-none transition-all border ${
+                            errors.bedType ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 hover:border-blue-300"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <BedDouble className="w-4 h-4 text-[#2563EB]" />
+                            {form.bedType || "Select bed type"}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isBedTypeOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+                        </div>
+                        {errors.bedType && <p className="mt-1 text-xs text-red-500 font-semibold">Please select a bed type.</p>}
+
+                        <AnimatePresence>
+                          {isBedTypeOpen && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setIsBedTypeOpen(false)} 
+                              />
+                              <motion.div 
+                                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-20 p-1.5 space-y-1"
+                              >
+                                {(["Sofa", "Ground", "Separate Bed", "Shared Bed"] as BedType[]).map((type) => (
+                                  <div
+                                    key={type}
+                                    onClick={() => {
+                                      updateField("bedType", type);
+                                      setIsBedTypeOpen(false);
+                                    }}
+                                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all ${
+                                      form.bedType === type 
+                                        ? "bg-blue-50 text-[#2563EB]" 
+                                        : "text-gray-700 hover:bg-gray-100/80"
+                                    }`}
+                                  >
+                                    <span className="flex items-center gap-2.5">
+                                      <BedDouble className="w-4 h-4" />
+                                      {type}
+                                    </span>
+                                    {form.bedType === type && <Check className="w-4 h-4 text-[#2563EB]" />}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
                     </div>
                   </motion.div>
                 )}
@@ -515,23 +681,70 @@ function ListItemContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">Country *</label>
-                        <input 
-                          type="text" 
-                          value={form.country}
-                          onChange={(e) => updateField("country", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Country</label>
+                        <div className="w-full px-4 py-3 rounded-2xl bg-gray-100/80 border border-gray-200 font-medium text-gray-700 text-sm shadow-xs flex items-center justify-between select-none cursor-not-allowed">
+                          <span className="flex items-center gap-2">
+                            🇩🇪 Germany
+                          </span>
+                          <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500 bg-gray-200 px-2.5 py-0.5 rounded-full">
+                            <Lock className="w-3 h-3" /> Fixed
+                          </span>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-800 mb-2">State / Region *</label>
-                        <input 
-                          type="text" 
-                          value={form.state}
-                          onChange={(e) => updateField("state", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
-                        />
+                      <div className="relative" ref={stateRef}>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">State / Region (Bundesland) *</label>
+                        <div 
+                          onClick={() => setIsStateOpen(!isStateOpen)}
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs cursor-pointer flex items-center justify-between select-none transition-all border ${
+                            errors.state ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 hover:border-blue-300"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-[#2563EB]" />
+                            {form.state || "Select German state"}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isStateOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+                        </div>
+                        {errors.state && <p className="mt-1 text-xs text-red-500 font-semibold">Please select a state.</p>}
+
+                        <AnimatePresence>
+                          {isStateOpen && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setIsStateOpen(false)} 
+                              />
+                              <motion.div 
+                                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl overflow-y-auto max-h-64 z-20 p-1.5 space-y-1"
+                              >
+                                {GERMAN_STATES.map((stateName) => (
+                                  <div
+                                    key={stateName}
+                                    onClick={() => {
+                                      updateField("state", stateName);
+                                      setIsStateOpen(false);
+                                    }}
+                                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all ${
+                                      form.state === stateName 
+                                        ? "bg-blue-50 text-[#2563EB]" 
+                                        : "text-gray-700 hover:bg-gray-100/80"
+                                    }`}
+                                  >
+                                    <span className="flex items-center gap-2.5">
+                                      {stateName}
+                                    </span>
+                                    {form.state === stateName && <Check className="w-4 h-4 text-[#2563EB]" />}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       <div>
@@ -540,8 +753,11 @@ function ListItemContent() {
                           type="text" 
                           value={form.city}
                           onChange={(e) => updateField("city", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs border ${
+                            errors.city ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                          }`}
                         />
+                        {errors.city && <p className="mt-1 text-xs text-red-500 font-semibold">Required</p>}
                       </div>
 
                       <div>
@@ -550,8 +766,11 @@ function ListItemContent() {
                           type="text" 
                           value={form.postalCode}
                           onChange={(e) => updateField("postalCode", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs border ${
+                            errors.postalCode ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                          }`}
                         />
+                        {errors.postalCode && <p className="mt-1 text-xs text-red-500 font-semibold">Required</p>}
                       </div>
 
                       <div>
@@ -560,8 +779,11 @@ function ListItemContent() {
                           type="text" 
                           value={form.streetName}
                           onChange={(e) => updateField("streetName", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs border ${
+                            errors.streetName ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                          }`}
                         />
+                        {errors.streetName && <p className="mt-1 text-xs text-red-500 font-semibold">Required</p>}
                       </div>
 
                       <div>
@@ -570,8 +792,11 @@ function ListItemContent() {
                           type="text" 
                           value={form.houseNumber}
                           onChange={(e) => updateField("houseNumber", e.target.value)}
-                          className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-medium text-gray-900 text-sm shadow-xs"
+                          className={`w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs border ${
+                            errors.houseNumber ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                          }`}
                         />
+                        {errors.houseNumber && <p className="mt-1 text-xs text-red-500 font-semibold">Required</p>}
                       </div>
                     </div>
                   </motion.div>
@@ -600,9 +825,12 @@ function ListItemContent() {
                             type="number" 
                             value={form.dailyPrice}
                             onChange={(e) => updateField("dailyPrice", e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 rounded-2xl border border-gray-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-[#2563EB] font-bold text-gray-900 text-sm shadow-xs"
+                            className={`w-full pl-9 pr-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-bold text-gray-900 text-sm shadow-xs border ${
+                              errors.dailyPrice ? "border-red-500 ring-2 ring-red-100" : "border-gray-200 focus:ring-2 focus:ring-[#2563EB]"
+                            }`}
                           />
                         </div>
+                        {errors.dailyPrice && <p className="mt-1 text-xs text-red-500 font-semibold">Please enter a valid price per night.</p>}
                       </div>
 
                       <div>
@@ -739,7 +967,9 @@ function ListItemContent() {
                     </div>
 
                     <div className="pt-4 border-t border-gray-100">
-                      <label className="border-2 border-dashed border-gray-300 hover:border-[#2563EB] bg-gray-50/50 rounded-3xl p-6 text-center transition-all cursor-pointer block">
+                      <label className={`border-2 border-dashed bg-gray-50/50 rounded-3xl p-6 text-center transition-all cursor-pointer block ${
+                        errors.images ? "border-red-500 bg-red-50/30" : "border-gray-300 hover:border-[#2563EB]"
+                      }`}>
                         <div className="w-12 h-12 bg-blue-100 text-[#2563EB] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
                           <UploadCloud className="w-6 h-6" />
                         </div>
@@ -756,6 +986,7 @@ function ListItemContent() {
                           className="hidden"
                         />
                       </label>
+                      {errors.images && <p className="mt-1 text-xs text-red-500 font-semibold text-center">Please upload at least one image of your space.</p>}
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                         {form.images.map((imgUrl, idx) => (
@@ -840,7 +1071,60 @@ function ListItemContent() {
                         />
                       </div>
 
-                      <div className="sm:col-span-2 grid grid-cols-3 gap-3 pt-2">
+                      {/* Filter-ready backend field: Pets Allowed (Yes/No Custom UI Dropdown) */}
+                      <div className="relative" ref={petsRef}>
+                        <label className="block text-sm font-bold text-gray-800 mb-2">Pets Allowed (Filter Ready) *</label>
+                        <div 
+                          onClick={() => setIsPetsAllowedOpen(!isPetsAllowedOpen)}
+                          className="w-full px-4 py-3 rounded-2xl bg-white/80 focus:outline-none font-medium text-gray-900 text-sm shadow-xs cursor-pointer flex items-center justify-between select-none transition-all border border-gray-200 hover:border-blue-300"
+                        >
+                          <span className="flex items-center gap-2">
+                            🐾 {form.petsAllowed ? "Yes (Allowed)" : "No (Not Allowed)"}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isPetsAllowedOpen ? "rotate-180 text-[#2563EB]" : ""}`} />
+                        </div>
+
+                        <AnimatePresence>
+                          {isPetsAllowedOpen && (
+                            <>
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setIsPetsAllowedOpen(false)} 
+                              />
+                              <motion.div 
+                                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-20 p-1.5 space-y-1"
+                              >
+                                {[
+                                  { label: "Yes (Allowed)", value: true },
+                                  { label: "No (Not Allowed)", value: false }
+                                ].map((option) => (
+                                  <div
+                                    key={String(option.value)}
+                                    onClick={() => {
+                                      updateField("petsAllowed", option.value);
+                                      setIsPetsAllowedOpen(false);
+                                    }}
+                                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all ${
+                                      form.petsAllowed === option.value 
+                                        ? "bg-blue-50 text-[#2563EB]" 
+                                        : "text-gray-700 hover:bg-gray-100/80"
+                                    }`}
+                                  >
+                                    <span>{option.label}</span>
+                                    {form.petsAllowed === option.value && <Check className="w-4 h-4 text-[#2563EB]" />}
+                                  </div>
+                                ))}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      <div className="sm:col-span-2 grid grid-cols-2 gap-3 pt-2">
                         <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
                           <input 
                             type="checkbox" 
@@ -849,16 +1133,6 @@ function ListItemContent() {
                             className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
                           />
                           <span className="text-xs font-semibold text-gray-800">Smoking Allowed</span>
-                        </label>
-
-                        <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
-                          <input 
-                            type="checkbox" 
-                            checked={form.petsAllowed}
-                            onChange={(e) => updateField("petsAllowed", e.target.checked)}
-                            className="w-4 h-4 text-[#2563EB] rounded focus:ring-blue-500"
-                          />
-                          <span className="text-xs font-semibold text-gray-800">Pets Allowed</span>
                         </label>
 
                         <label className="flex items-center gap-3 p-3.5 rounded-2xl border border-gray-200 bg-white cursor-pointer hover:border-blue-300 transition-all">
@@ -910,12 +1184,12 @@ function ListItemContent() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100 text-center">
                         <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Guests</span>
-                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.numGuests} Max</span>
+                          <span className="text-xs text-gray-500 block">Max Guests</span>
+                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.numGuests} Guest(s)</span>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
-                          <span className="text-xs text-gray-500 block">Location</span>
-                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.city}, {form.state}</span>
+                          <span className="text-xs text-gray-500 block">Pets Policy</span>
+                          <span className="text-xs font-bold text-gray-900 mt-0.5 block">{form.petsAllowed ? "Pets Yes" : "Pets No"}</span>
                         </div>
                         <div className="p-3 bg-gray-50 rounded-2xl">
                           <span className="text-xs text-gray-500 block">Beds</span>
