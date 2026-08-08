@@ -7,7 +7,7 @@ import {
   Search, SlidersHorizontal, MapPin, ShieldCheck, Zap, 
   Package, Sparkles, 
   Check, ArrowUpDown, X, Calendar, ChevronLeft, ChevronRight, ChevronDown, Heart,
-  BedDouble, DoorClosed, Building2, GraduationCap, Briefcase, Backpack, Users, Dog
+  BedDouble, DoorClosed, Building2, Users, Dog
 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/app/context/AuthContext";
@@ -306,7 +306,7 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
       <main className="flex-1 pt-28 pb-20 px-6 lg:px-12 max-w-[1440px] mx-auto w-full">
         
         <section className="relative z-30 mx-auto max-w-full mb-8">
-          <div className="rounded-[28px] glass-panel bg-white/95 p-4 lg:p-5 shadow-2xl shadow-blue-900/10 border border-white/80">
+          <div className="rounded-[28px] glass-panel bg-white/95 p-4 lg:p-5 shadow-2xl shadow-blue-900/10 border border-white/85">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-12 items-center">
               
               <div className="relative md:col-span-5 flex items-center gap-3 rounded-[18px] bg-gray-100/80 px-4 py-3 border border-transparent focus-within:border-[#2563EB] focus-within:bg-white transition-all">
@@ -553,7 +553,25 @@ return matchesSearch && matchesCategory && matchesCity && matchesPrice && matche
           </div>
         </section>
 
+        {/* Categories row styled to match user's category pill list, including the host badge as a direct selectable/scrollable pill element matching the exact layout */}
         <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8">
+          {user && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-slate-900 shadow-xs">
+              {user.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.displayName || "Host"} 
+                  className="w-5 h-5 rounded-full object-cover ring-2 ring-blue-400/50 shadow-xs" 
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-[10px] ring-2 ring-blue-400/50">
+                  {user.displayName?.charAt(0) || user.email?.charAt(0) || "H"}
+                </div>
+              )}
+              <span className="truncate max-w-[140px] font-bold">{user.displayName || user.email || "Host Account"}</span>
+            </div>
+          )}
+
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.name;
             return (
